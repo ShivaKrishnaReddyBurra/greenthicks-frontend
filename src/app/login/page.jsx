@@ -23,7 +23,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center bg-green-500">Login</h1>
         <AuthForm type="login" onSubmit={handleSubmit} error={error} />
         <p className="mt-4 text-center">
           <a href="/signup" className="text-primary hover:underline">
