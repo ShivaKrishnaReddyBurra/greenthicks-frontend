@@ -38,6 +38,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import logo from "@/public/logo.png";
 
 export default function Header() {
   const pathname = usePathname();
@@ -98,7 +99,7 @@ export default function Header() {
               <SheetContent side="left" className="overflow-y-auto">
                 <div className="px-2 py-6">
                   <Link href="/" className="flex items-center mb-6">
-                    <Image src="/logo.png" alt="Green Thicks Logo" width={120} height={60} className="h-10 w-auto" />
+                    <Image src={logo} alt="Green Thicks Logo" width={120} height={60} className="h-10 w-auto" />
                   </Link>
 
                   <div className="flex items-center justify-between mb-6 px-2">
@@ -219,7 +220,7 @@ export default function Header() {
             </Sheet>
 
             <Link href="/" className="ml-4 lg:ml-0 flex items-center">
-              <Image src="/logo.png" alt="Green Thicks Logo" width={120} height={60} className="h-10 w-auto" />
+              <Image src= {logo} alt="Green Thicks Logo" width={120} height={60} className="h-10 w-auto" />
             </Link>
 
             <nav className="hidden lg:flex ml-8 space-x-6">

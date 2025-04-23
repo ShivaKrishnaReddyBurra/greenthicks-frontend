@@ -6,6 +6,7 @@ import { Facebook, Instagram, Twitter, Youtube, Mail, Phone, MapPin } from "luci
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "next-themes";
+import logo from "@/public/logo.png";
 
 export default function Footer() {
   const { theme } = useTheme();
@@ -16,7 +17,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
             <Link href="/" className="inline-block mb-4">
-              <Image src="/logo.png" alt="Green Thicks Logo" width={150} height={75} className="h-12 w-auto" />
+              <Image src={logo} alt="Green Thicks Logo" width={150} height={75} className="h-12 w-auto" />
             </Link>
             <p className="text-muted-foreground mb-4">
               Delivering fresh, certified organic vegetables from farm to table.

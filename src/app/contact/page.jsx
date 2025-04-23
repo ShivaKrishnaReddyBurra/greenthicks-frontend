@@ -68,9 +68,10 @@ export default function ContactPage() {
             </div>
             <h3 className="font-semibold text-lg mb-2">Our Location</h3>
             <p className="text-muted-foreground">
-              123 Organic Way
+              Warangal District
+              Telengana State
               <br />
-              Green City, India
+               India
             </p>
           </div>
 
@@ -82,7 +83,7 @@ export default function ContactPage() {
             <p className="text-muted-foreground">
               Customer Service:
               <br />
-              +91 98765 43210
+              +91 9705045594
             </p>
           </div>
 
@@ -92,9 +93,9 @@ export default function ContactPage() {
             </div>
             <h3 className="font-semibold text-lg mb-2">Email Address</h3>
             <p className="text-muted-foreground">
-              info@greenthicks.com
+              infogreenthicks@gmail.com
               <br />
-              support@greenthicks.com
+              greenthickss@gmailcom.com
             </p>
           </div>
         </div>
@@ -155,15 +156,15 @@ export default function ContactPage() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Monday - Friday</span>
-                  <span>9:00 AM - 6:00 PM</span>
+                  <span>4:00 AM - 6:00 PM</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Saturday</span>
-                  <span>10:00 AM - 4:00 PM</span>
+                  <span>4:00 AM - 4:00 PM</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Sunday</span>
-                  <span>Closed</span>
+                  <span>10:00 AM - 2:00 PM</span>
                 </div>
               </div>
             </div>

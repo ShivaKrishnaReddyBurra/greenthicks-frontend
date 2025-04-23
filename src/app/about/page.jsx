@@ -1,6 +1,7 @@
 import Image from "next/image";
 import React from "react";
 import { Leaf, Truck, Award, Users } from "lucide-react";
+import about from "@/public/About.png";
 
 export default function AboutPage() {
   return (
@@ -11,7 +12,7 @@ export default function AboutPage() {
         <div className="mb-12 relative">
           <div className="aspect-video relative rounded-lg overflow-hidden">
             <Image
-              src="/placeholder.svg?height=600&width=1200"
+              src= {about}
               alt="Organic farm"
               width={1200}
               height={600}
@@ -29,7 +30,7 @@ export default function AboutPage() {
             directly from farms to your table.
           </p>
           <p>
-            Our journey began in 2018 when our founders recognized a growing disconnect between consumers and the source
+            Our journey began in 2025 when our founders recognized a growing disconnect between consumers and the source
             of their food...
           </p>
           <p>
@@ -63,7 +64,7 @@ export default function AboutPage() {
             <li>Harvested at peak ripeness by our partner farmers</li>
             <li>Carefully cleaned and sorted at our local processing centers</li>
             <li>Packed in eco-friendly, temperature-controlled packaging</li>
-            <li>Delivered to your door within 24-48 hours of harvest</li>
+            <li>Delivered to your door within 12-24 hours of harvest</li>
           </ol>
           <p>
             This streamlined approach ensures you receive vegetables with maximum nutritional value and flavor, while
