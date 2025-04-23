@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import React, { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,10 +31,10 @@ export default function DeliveryRegisterPage() {
   const [workingHours, setWorkingHours] = useState("")
 
   // Documents
-  const [aadharCard, setAadharCard] = useState<File | null>(null)
-  const [drivingLicense, setDrivingLicense] = useState<File | null>(null)
-  const [vehicleRegistration, setVehicleRegistration] = useState<File | null>(null)
-  const [profilePhoto, setProfilePhoto] = useState<File | null>(null)
+  const [aadharCard, setAadharCard] = useState(null)
+  const [drivingLicense, setDrivingLicense] = useState(null)
+  const [vehicleRegistration, setVehicleRegistration] = useState(null)
+  const [profilePhoto, setProfilePhoto] = useState(null)
   const [backgroundCheck, setBackgroundCheck] = useState(false)
 
   const handleNext = () => {
@@ -109,7 +107,7 @@ export default function DeliveryRegisterPage() {
     }
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setFile: (file: File | null) => void) => {
+  const handleFileChange = (e, setFile) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0])
     }
@@ -445,7 +443,7 @@ export default function DeliveryRegisterPage() {
                   <Checkbox
                     id="background-check"
                     checked={backgroundCheck}
-                    onCheckedChange={(checked) => setBackgroundCheck(checked as boolean)}
+                    onCheckedChange={(checked) => setBackgroundCheck(checked)}
                   />
                   <div className="grid gap-1.5 leading-none">
                     <Label

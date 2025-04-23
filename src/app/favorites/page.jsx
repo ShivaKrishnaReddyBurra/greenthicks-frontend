@@ -1,5 +1,5 @@
 "use client"
-
+import React from "react"
 import { useState } from "react"
 import { useFavorites } from "@/lib/favorites-context"
 import { useCart } from "@/lib/cart-context"

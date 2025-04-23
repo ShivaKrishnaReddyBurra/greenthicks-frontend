@@ -1,5 +1,5 @@
 "use client"
-
+import React from "react"
 import { useState } from "react"
 import { Package, ShoppingCart, Users, DollarSign, ArrowUpRight, ArrowDownRight, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"

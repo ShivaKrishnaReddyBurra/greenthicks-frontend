@@ -1,5 +1,5 @@
 "use client";
-
+import React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
 
 // Assuming Product and CartItem are defined somewhere in your codebase

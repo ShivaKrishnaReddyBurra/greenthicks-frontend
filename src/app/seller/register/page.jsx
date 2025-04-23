@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import React, { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,9 +30,9 @@ export default function SellerRegisterPage() {
   const [description, setDescription] = useState("")
 
   // Documents
-  const [aadharCard, setAadharCard] = useState<File | null>(null)
-  const [organicCertificate, setOrganicCertificate] = useState<File | null>(null)
-  const [profilePhoto, setProfilePhoto] = useState<File | null>(null)
+  const [aadharCard, setAadharCard] = useState(null)
+  const [organicCertificate, setOrganicCertificate] = useState(null)
+  const [profilePhoto, setProfilePhoto] = useState(null)
 
   const handleNext = () => {
     if (step === 1) {
@@ -94,7 +92,7 @@ export default function SellerRegisterPage() {
     }
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setFile: (file: File | null) => void) => {
+  const handleFileChange = (e, setFile) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0])
     }

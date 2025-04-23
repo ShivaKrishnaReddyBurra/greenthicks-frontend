@@ -1,5 +1,5 @@
 "use client";
-
+import React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
 
 // Assuming Product is defined somewhere in your codebase

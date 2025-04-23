@@ -1,4 +1,5 @@
 import Image from "next/image";
+import React from "react";
 import { Leaf, Truck, Award, Users } from "lucide-react";
 
 export default function AboutPage() {
