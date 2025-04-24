@@ -25,11 +25,11 @@ import Brinjal2 from "@/public/images/Brinjal2.jpg";
 import Brinjal3 from "@/public/images/Brinjal3.jpg";
 import Brinjal4 from "@/public/images/Brinjal4.jpg";
 
-import Green_Chili from "@/public/images/Green Chili.jpg";
-import Green_Chili1 from "@/public/images/Green Chili1.jpg";
-import Green_Chili2 from "@/public/images/Green Chili2.jpg";
-import Green_Chili3 from "@/public/images/Green Chili3.jpg";
-import Green_Chili4 from "@/public/images/Green Chili4.jpg";
+import Green_Chili from "@/public/images/GreenChili.jpg";
+import Green_Chili1 from "@/public/images/GreenChili1.jpg";
+import Green_Chili2 from "@/public/images/GreenChili2.jpg";
+import Green_Chili3 from "@/public/images/GreenChili3.jpg";
+import Green_Chili4 from "@/public/images/GreenChili4.jpg";
 
 import Carrot from "@/public/images/carrot.jpg";
 import Carrot1 from "@/public/images/carrot1.jpg";
@@ -37,11 +37,11 @@ import Carrot2 from "@/public/images/carrot2.jpg";
 import Carrot3 from "@/public/images/carrot3.jpg";
 import Carrot4 from "@/public/images/carrot4.jpg";
 
-import Potato from "@/public/images/Potato.jpg";
-import Potato1 from "@/public/images/Potato1.jpg";
-import Potato2 from "@/public/images/Potato2.jpg";
-import Potato3 from "@/public/images/Potato3.jpg";
-import Potato4 from "@/public/images/Potato4.jpg";
+import Potato from "@/public/images/potato.jpg";
+import Potato1 from "@/public/images/potato1.jpg";
+import Potato2 from "@/public/images/potato2.jpg";
+import Potato3 from "@/public/images/potato3.jpg";
+import Potato4 from "@/public/images/potato4.jpg";
 
 import Onion from "@/public/images/Onion.jpg";
 import Onion1 from "@/public/images/Onion1.jpg";
