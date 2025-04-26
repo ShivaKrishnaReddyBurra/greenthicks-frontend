@@ -75,9 +75,9 @@ export default function Header() {
   ];
 
   const getThemeIcon = () => {
-    if (theme === "dark") return <Moon className="h-5 w-5" />;
-    if (theme === "light") return <Sun className="h-5 w-5" />;
-    return <Laptop className="h-5 w-5" />;
+    if (theme === "dark") return <Moon className="h-6 w-6" />;
+    if (theme === "light") return <Sun className="h-6 w-6" />;
+    return <Laptop className="h-6 w-6" />;
   };
 
   return (
@@ -180,7 +180,11 @@ export default function Header() {
                       )}
                     </Link>
 
-                    <Link
+                      {
+                        /*
+                          temparary disabled
+                          
+                          <Link
                       href="/my-orders"
                       className={`px-2 py-2 text-base flex items-center rounded-md ${
                         pathname === "/my-orders"
@@ -191,6 +195,26 @@ export default function Header() {
                       <Package className="h-5 w-5 mr-3" />
                       My Orders
                     </Link>
+
+                        */
+                      }
+
+                    <Link
+                      href="/my-orders"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        alert("To see your orders, you must be logged in.");
+                      }}
+                      className={`px-2 py-2 text-base flex items-center rounded-md cursor-not-allowed ${
+                        pathname === "/my-orders"
+                          ? "font-medium text-primary bg-primary/10"
+                          : "text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      <Package className="h-5 w-5 mr-3" />
+                      My Orders
+                    </Link>
+
 
                     <h3 className="font-semibold text-sm uppercase text-muted-foreground px-2 py-2 mt-4">Account</h3>
                     <Link
@@ -245,7 +269,7 @@ export default function Header() {
 
             <div className="hidden lg:block">
               <Link href="/favorites" className="relative inline-flex items-center justify-center p-2">
-                <Heart className="h-5 w-5" />
+                <Heart className="h-6 w-6" />
                 {favorites.length > 0 && (
                   <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {favorites.length}
@@ -256,8 +280,23 @@ export default function Header() {
             </div>
 
             <div className="hidden lg:block">
-              <Link href="/my-orders" className="relative inline-flex items-center justify-center p-2">
-                <Package className="h-5 w-5" />
+              {
+                /*
+                    temparally hidden
+                    
+                     <Link href="/my-orders" className="relative inline-flex items-center justify-center p-2">
+                <Package className="h-6 w-6" />
+                <span className="sr-only">My Orders</span>
+              </Link>
+
+                */
+              }
+              <Link href="/my-orders"  onClick={(e) => {
+                        e.preventDefault();
+                        alert("To see your orders, please login first.");
+                      }}
+                      className="w-full flex items-center cursor-not-allowed">
+                <Package className="h-6 w-6" />
                 <span className="sr-only">My Orders</span>
               </Link>
             </div>
@@ -265,7 +304,7 @@ export default function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
+                  <User className="h-6 w-6" />
                   <span className="sr-only">Account</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -278,10 +317,28 @@ export default function Header() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Link href="/my-orders" className="w-full flex items-center">
-                    <Package className="mr-2 h-4 w-4" />
-                    My Orders
+                  {
+                    /*
+                      temparally hidden
+
+                    <Link href="/my-orders" className="w-full flex items-center">
+                      <Package className="mr-2 h-4 w-4" />
+                      My Orders
+                    </Link>
+                    */
+                  }
+                  <Link
+                      href="/my-orders"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        alert("To see your orders, please login first.");
+                      }}
+                      className="w-full flex items-center cursor-not-allowed"
+                    >
+                      <Package className="mr-2 h-4 w-4" />
+                      My Orders
                   </Link>
+
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Link href="/favorites" className="w-full flex items-center">
@@ -295,13 +352,13 @@ export default function Header() {
 
             <Link href="/cart">
               <Button variant="ghost" size="icon" className="relative">
-                <ShoppingCart className="h-5 w-5" />
+                <ShoppingCart className="h-6 w-6" />
                 {totalItems > 0 && (
                   <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {totalItems}
                   </span>
                 )}
-                <span className="sr-only">Cart</span>
+                <span className="sr-only ">Cart</span>
               </Button>
             </Link>
           </div>

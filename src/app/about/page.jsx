@@ -5,7 +5,8 @@ import about from "@/public/About.png";
 
 export default function AboutPage() {
   return (
-    <div className="container mx-auto px-4 py-12">
+    <div className="leaf-pattern">
+        <div className="container mx-auto px-4 py-12">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold text-center mb-8">About Green Thicks</h1>
 
@@ -14,8 +15,7 @@ export default function AboutPage() {
             <Image
               src= {about}
               alt="Organic farm"
-              width={1200}
-              height={600}
+              fill
               className="object-cover"
             />
           </div>
@@ -95,6 +95,7 @@ export default function AboutPage() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

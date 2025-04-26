@@ -83,8 +83,8 @@ export function HeroSection() {
               <Image
                 src={img}
                 alt="Fresh organic vegetables"
-                width={600}
-                height={600}
+                width={1200}
+                height={1200}
                 className="object-cover"
               />
             </div>

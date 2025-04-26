@@ -228,8 +228,20 @@ export default function CartPage() {
                 <Truck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                 <p>Free shipping on orders over $50. Orders placed before 3 PM are shipped same day!</p>
               </div>
+              {
+                /*
+                        temporarily disable
 
-              <Button className="w-full" size="lg" onClick={handleCheckout}>
+                        <Button className="w-full" size="lg" onClick={handleCheckout}>
+                        Checkout <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+
+                */
+              }
+              <Button onClick={(e) => { e.preventDefault();
+                                        alert("checkout is currently unavailable. we are start taking orders very soon. Please check back soon!");
+                                      }}
+                                      className="w-full flex cursor-not-allowed">
                 Checkout <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
 
