@@ -58,7 +58,7 @@ export default function CheckoutSuccessPage() {
   }
 
   return (
-    <div className="leaf-pattern">
+    <div className="leaf-pattern-3">
         <div className="container mx-auto px-4 py-12 max-w-md">
         <div className="flex flex-col items-center text-center">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">

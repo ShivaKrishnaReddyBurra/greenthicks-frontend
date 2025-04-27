@@ -68,7 +68,7 @@ export default function FAQPage() {
   ];
 
   return (
-    <div className="leaf-pattern">
+    <div className="leaf-pattern-2">
         <div className="container mx-auto px-4 py-12">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">

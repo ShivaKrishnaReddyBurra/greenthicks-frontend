@@ -269,13 +269,15 @@ export default function Header() {
 
             <div className="hidden lg:block">
               <Link href="/favorites" className="relative inline-flex items-center justify-center p-2">
-                <Heart className="h-6 w-6" />
+              <Button variant="ghost" size="icon" className="relative">
+              <Heart className="h-5 w-5" />
                 {favorites.length > 0 && (
                   <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {favorites.length}
                   </span>
                 )}
                 <span className="sr-only">Favorites</span>
+              </Button>
               </Link>
             </div>
 
@@ -291,14 +293,16 @@ export default function Header() {
 
                 */
               }
-              <Link href="/my-orders"  onClick={(e) => {
+              <Button variant="ghost" size="icon" className="relative">
+                <Link href="/my-orders"  onClick={(e) => {
                         e.preventDefault();
                         alert("To see your orders, please login first.");
                       }}
                       className="w-full flex items-center cursor-not-allowed">
-                <Package className="h-6 w-6" />
+                <Package className="h-4 w-4" />
                 <span className="sr-only">My Orders</span>
               </Link>
+              </Button>
             </div>
 
             <DropdownMenu>

@@ -5,7 +5,7 @@ import about from "@/public/About.png";
 
 export default function AboutPage() {
   return (
-    <div className="leaf-pattern">
+    <div className="leaf-pattern-2">
         <div className="container mx-auto px-4 py-12">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold text-center mb-8">About Green Thicks</h1>

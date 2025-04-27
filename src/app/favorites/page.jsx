@@ -39,7 +39,8 @@ export default function FavoritesPage() {
 
   if (favorites.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
+      <div className="leaf-pattern-3">
+          <div className="container mx-auto px-4 py-16 text-center">
         <div className="max-w-md mx-auto">
           <Heart className="h-16 w-16 mx-auto mb-6 text-muted-foreground" />
           <h1 className="text-2xl font-bold mb-2">Your favorites list is empty</h1>
@@ -51,11 +52,13 @@ export default function FavoritesPage() {
           </Link>
         </div>
       </div>
+      </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="leaf-pattern-3">
+        <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold mb-2">My Favorites</h1>
@@ -109,6 +112,7 @@ export default function FavoritesPage() {
           <ProductCard key={product.id} product={product} />
         ))}
       </div>
+    </div>
     </div>
   )
 }
