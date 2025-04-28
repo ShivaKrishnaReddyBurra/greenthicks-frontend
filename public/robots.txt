@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://www.greenthicks.live
+
+# Sitemaps
+Sitemap: https://www.greenthicks.live/sitemap.xml
