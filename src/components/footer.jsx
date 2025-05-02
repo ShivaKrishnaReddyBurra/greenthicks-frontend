@@ -106,6 +106,11 @@ export default function Footer() {
                   Terms & Conditions
                 </Link>
               </li>
+              <li>
+                <Link href="/login" className="text-muted-foreground hover:text-primary">
+                  admin
+                </Link>
+              </li>
             </ul>
           </div>
 
