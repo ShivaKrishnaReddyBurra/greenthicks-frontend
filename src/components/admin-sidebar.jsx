@@ -19,10 +19,11 @@ import {
   ShoppingBag,
   FileText,
   Home,
+  FileEdit,
 } from "lucide-react"
 import { clearAdminStatus } from "@/lib/auth-utils"
 import { useTheme } from "next-themes"
-import logo from "@/public/logo.png";
+import logo from "@/public/logo.png"
 
 export default function AdminSidebar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -47,13 +48,14 @@ export default function AdminSidebar() {
     { name: "Delivery", href: "/admin/delivery", icon: Truck },
     { name: "Users", href: "/admin/users", icon: Users },
     { name: "Sellers", href: "/admin/sellers", icon: Store },
+    { name: "Static Pages", href: "/admin/pages", icon: FileEdit },
     { name: "Analytics", href: "/admin/analytics", icon: BarChart },
     { name: "Invoices", href: "/admin/invoices", icon: FileText },
     { name: "Notifications", href: "/admin/notifications", icon: Bell },
     { name: "Settings", href: "/admin/settings", icon: Settings },
   ]
 
-  const logoSrc = mounted && theme === "dark" ? logo : logo
+  const logoSrc = mounted && theme === "dark" ? logo.src : logo.src
 
   return (
     <>
@@ -71,7 +73,7 @@ export default function AdminSidebar() {
               <div className="relative h-8 w-32">
                 {mounted && (
                   <Image
-                    src={logoSrc || "/placeholder.svg"}
+                    src={logo.src || logo.src }
                     alt="Green Thicks"
                     fill
                     style={{ objectFit: "contain" }}

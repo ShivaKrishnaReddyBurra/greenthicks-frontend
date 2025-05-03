@@ -20,6 +20,15 @@ import {
   ChevronRight,
   Store,
 } from "lucide-react"
+import Spinach from "@/public/images/Spinach.jpg"
+
+import Mint from "@/public/images/Mint1.jpg"
+
+import Tomato from "@/public/images/Tomato.jpg"
+
+import Brinjal from "@/public/images/Brinjal.jpg"
+
+import Green_Chili from "@/public/images/GreenChili.jpg"
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -71,11 +80,11 @@ export default function AdminDashboard() {
       ])
 
       setTopProducts([
-        { id: 1, name: "Organic Apples", sales: 234, revenue: 23400, image: "/placeholder.svg?height=40&width=40" },
-        { id: 2, name: "Fresh Spinach", sales: 198, revenue: 9900, image: "/placeholder.svg?height=40&width=40" },
-        { id: 3, name: "Organic Milk", sales: 187, revenue: 18700, image: "/placeholder.svg?height=40&width=40" },
-        { id: 4, name: "Brown Rice", sales: 156, revenue: 15600, image: "/placeholder.svg?height=40&width=40" },
-        { id: 5, name: "Honey", sales: 145, revenue: 21750, image: "/placeholder.svg?height=40&width=40" },
+        { id: 1, name: "Organic Apples", sales: 234, revenue: 23400, image: Spinach, },
+        { id: 2, name: "Fresh Spinach", sales: 198, revenue: 9900, image: Mint, },
+        { id: 3, name: "Organic Milk", sales: 187, revenue: 18700, image: Tomato, },
+        { id: 4, name: "Brown Rice", sales: 156, revenue: 15600, image: Brinjal, },
+        { id: 5, name: "Honey", sales: 145, revenue: 21750, image: Green_Chili, },
       ])
 
       setIsLoading(false)
@@ -405,7 +414,7 @@ export default function AdminDashboard() {
               <li key={index} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                 <div className="flex items-center">
                   <img
-                    src={product.image || "/placeholder.svg"}
+                    src={product.image?.src || "/placeholder.svg"}
                     alt={product.name}
                     className="w-10 h-10 rounded-lg object-cover mr-3"
                   />

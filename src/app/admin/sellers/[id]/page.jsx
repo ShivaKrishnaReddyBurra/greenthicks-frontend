@@ -57,7 +57,7 @@ export default function SellerDetails({ params }) {
         // Sample products data
         const productsData = [
           {
-            id: "PROD-101",
+            id: "1",
             name: "Organic Tomatoes",
             price: 60,
             stock: 100,
@@ -67,7 +67,7 @@ export default function SellerDetails({ params }) {
             submittedDate: "2023-05-01",
           },
           {
-            id: "PROD-104",
+            id: "6",
             name: "Farm Fresh Eggs",
             price: 80,
             stock: 200,
@@ -77,7 +77,7 @@ export default function SellerDetails({ params }) {
             submittedDate: "2023-05-01",
           },
           {
-            id: "PROD-108",
+            id: "9",
             name: "Organic Broccoli",
             price: 70,
             stock: 50,
@@ -87,7 +87,7 @@ export default function SellerDetails({ params }) {
             submittedDate: "2023-05-02",
           },
           {
-            id: "PROD-112",
+            id: "2",
             name: "Fresh Milk",
             price: 60,
             stock: 100,

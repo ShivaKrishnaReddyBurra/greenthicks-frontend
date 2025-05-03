@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Edit, Trash2, Package, Tag, BarChart } from "lucide-react"
+import { getProductById } from "@/lib/products"
 
 export default function AdminProductDetail({ params }) {
   const router = useRouter()
@@ -16,8 +17,13 @@ export default function AdminProductDetail({ params }) {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        // In a real app, this would be an API call
-        const { getProductById } = await import("@/lib/products")
+        // Check if we're on the "add" page - this shouldn't happen now with separate route
+        if (id === "add") {
+          router.push("/admin/products/add")
+          return
+        }
+
+        // Use the imported getProductById function directly
         const productData = getProductById(id)
 
         if (!productData) {
@@ -34,7 +40,7 @@ export default function AdminProductDetail({ params }) {
     }
 
     fetchProduct()
-  }, [id])
+  }, [id, router])
 
   const handleDelete = async () => {
     try {
@@ -106,7 +112,7 @@ export default function AdminProductDetail({ params }) {
           <div className="bg-card rounded-lg shadow-md p-4">
             <div className="aspect-square relative rounded-md overflow-hidden">
               <img
-                src={product.image || "/placeholder.svg"}
+                src={product.image?.src || "/placeholder.svg"}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />

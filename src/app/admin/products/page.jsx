@@ -15,99 +15,248 @@ import {
   Eye,
   Edit,
 } from "lucide-react"
+import Spinach from "@/public/images/Spinach.jpg"
+
+import Mint from "@/public/images/Mint1.jpg"
+
+import Tomato from "@/public/images/Tomato.jpg"
+
+import Brinjal from "@/public/images/Brinjal.jpg"
+
+import Green_Chili from "@/public/images/GreenChili.jpg"
+
+import Carrot from "@/public/images/carrot.jpg"
+
+import Potato from "@/public/images/potato.jpg"
+
+import Onion from "@/public/images/Onion.jpg"
+
+import Garlic from "@/public/images/Garilic.jpg"
+
+import Cabbage from "@/public/images/Cabbage.jpg"
+
+import Cauliflower from "@/public/images/Cauliflower.jpg"
+
+import Drumstick from "@/public/images/Drumstick.jpg"
+
+import Cucumber from "@/public/images/Cucumber.jpg"
+
+import Spring_Onion_Greens from "@/public/images/Spring Onion Greens.jpg"
+
+import Mango from "@/public/images/Mango.jpg"
+
+import Jamun from "@/public/images/Jamun.jpg"
+
+import Watermelon from "@/public/images/Watermelon.jpg"
 
 // Mock product data
 const mockProducts = [
   {
-    id: 1,
-    name: "Organic Apples",
-    category: "Fruits",
-    price: 120,
-    stock: 45,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
+      id: 1,
+      name: "Organic Spinach",
+      description: "Fresh, nutrient-rich organic spinach leaves. Perfect for salads, smoothies, or cooking.",
+      price: 3.99,
+      category: "leafy",
+      unit: "250g bunch",
+      stock: 15,
+      status: "In Stock",
+      discount: 0,
+      image: Spinach,
+    },
+    {
+      id: 2,
+      name: "Organic Mint",
+      description: "Refreshing organic mint. Perfect for teas, cocktails, or garnishing.",
+      price: 2.49,
+      category: "leafy",
+      unit: "500g pack",
+      stock: 30,
+      status: "In Stock",
+      discount: 0,
+      image: Mint,
+    },
+    {
+      id: 3,
+      name: "Organic Tomatoes",
+      description: "Juicy, vine-ripened organic tomatoes. Perfect for salads, sandwiches, or cooking.",
+      price: 4.99,
+      originalPrice: 5.99,
+      category: "fruit",
+      unit: "500g pack",
+      stock: 25,
+      status: "In Stock",
+      discount: 15,
+      image: Tomato,
+    },
+    {
+      id: 4,
+      name: "Organic Brinjal",
+      description: "Healthy, nutrient-rich organic brinjal. Perfect for salads, smoothies, or cooking.",
+      price: 1.99,
+      category: "fruit",
+      unit: "1 Kg pack",
+      stock: 40,
+      status: "Out of Stock",
+      discount: 0,
+      image: Brinjal,
+    },
+    {
+      id: 5,
+      name: "Organic Green Chili",
+      description: "Juicy, nutrient-rich organic green chili. Perfect for salads, sandwiches, or cooking.",
+      price: 3.49,
+      category: "fruit",
+      unit: "200g bunch",
+      stock: 20,
+      status: "In Stock",
+      discount: 0,
+      image: Green_Chili,
+    },
+    {
+      id: 6,
+      name: "Organic Carrot",
+      description: "Healthy, nutrient-rich organic carrots. Perfect for salads, smoothies, or cooking.",
+      price: 4.99,
+      category: "root",
+      unit: "3 pack (red, yellow, green)",
+      stock: 25,
+      status: "Low Stock",
+      discount: 0,
+      image: Carrot,
+    },
+    {
+      id: 7,
+      name: "Organic Potatoes",
+      description: "Versatile organic potatoes. Perfect for roasting, mashing, or frying.",
+      price: 3.99,
+      category: "root",
+      unit: "1kg bag",
+      stock: 50,
+      status: "In Stock",
+      discount: 0,
+      image: Potato,
+    },
+    {
+      id: 8,
+      name: " Organic Onion",
+      description: "Juicy, nutrient-rich organic onions. Perfect for salads, sandwiches, or cooking.",
+      price: 2.99,
+      category: "root",
+      unit: "Head",
+      stock: 35,
+      status: "In Stock",
+      discount: 0,
+      image: Onion,
+    },
+    {
+      id: 9,
+      name: " Organic Garlic",
+      description: "Juicy, nutrient-rich organic garlic. Perfect for salads, sandwiches, or cooking.",
+      price: 2.49,
+      category: "root",
+      unit: "Head",
+      stock: 30,
+      status: "In Stock",
+      discount: 0,
+      image: Garlic,
+    },
+    {
+      id: 10,
+      name: " Organic Cabbage",
+      description: "Healthy, nutrient-rich organic cabbage. Perfect for salads, smoothies, or cooking.",
+      price: 1.99,
+      category: "herbs",
+      unit: "500g bag",
+      stock: 45,
+      status: "In Stock",
+      discount: 0,
+      image: Cabbage,
+    },
   {
-    id: 2,
-    name: "Fresh Spinach",
-    category: "Vegetables",
-    price: 50,
-    stock: 78,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 3,
-    name: "Organic Milk",
-    category: "Dairy",
-    price: 100,
-    stock: 32,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 4,
-    name: "Brown Rice",
-    category: "Grains",
-    price: 100,
-    stock: 120,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 5,
-    name: "Honey",
-    category: "Sweeteners",
-    price: 150,
-    stock: 25,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 6,
-    name: "Organic Eggs",
-    category: "Dairy",
-    price: 80,
-    stock: 48,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 7,
-    name: "Whole Wheat Bread",
-    category: "Bakery",
-    price: 60,
-    stock: 35,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 8,
-    name: "Organic Tomatoes",
-    category: "Vegetables",
-    price: 40,
-    stock: 5,
-    status: "Low Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 9,
-    name: "Almond Milk",
-    category: "Dairy Alternatives",
-    price: 120,
-    stock: 0,
-    status: "Out of Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 10,
-    name: "Quinoa",
-    category: "Grains",
-    price: 180,
-    stock: 42,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
+       id: 11,
+       name: " Organic CauliFlower",
+       description: "Healthy, nutrient-rich organic cauliflower. Perfect for salads, smoothies, or cooking.",
+       price: 2.29,
+       category: "herbs",
+       unit: "3 bulb pack",
+       stock: 40,
+       status: "In Stock",
+       image: Cauliflower,
+     },
+     {
+         id: 12,
+         name: " Organic Drumstick",
+         description: "Fragrant organic drumstick leaves. Ideal for soups, salads, and curries.",
+         price: 1.79,
+         category: "herbs",
+         unit: "Bunch",
+         stock: 25,
+         status: "out of Stock",
+         discount: 0,
+         image: Drumstick,
+      },
+       {
+         id: 13,
+         name: " Organic Cucumber",
+         description: "Juicy, nutrient-rich organic cucumber. Perfect for salads, sandwiches, or cooking.",
+         price: 2.49,
+         category: "herbs",
+         unit: "Each",
+         stock: 30,
+         status: "In Stock",
+         discount: 0,
+         image: Cucumber,
+       },
+       {
+         id: 14,
+         name: "Spring Onion Greens",
+         description: "Fresh, nutrient-rich spring onion greens. Perfect for salads, smoothies, or cooking.",
+         price: 3.49,
+         originalPrice: 3.99,
+         category: "herbs",
+         unit: "500g pack",
+         stock: 20,
+         status: "Low Stock",
+         discount: 10,
+         new: true,
+         image: Spring_Onion_Greens,
+       },
+       {
+         id: 15,
+         name: "Organic Mango",
+         description: "Sweet, juicy organic mango. Perfect for smoothies, desserts, or snacking.",
+         price: 1.99,
+         category: "fruit",
+         unit: "Bunch",
+         stock: 15,
+         status: "In Stock",
+         discount: 0,
+         image: Mango,
+       },
+       {
+         id: 16,
+         name: "Fresh Jamun",
+         description: "Juicy, nutrient-rich fresh jamun. Perfect for salads, sandwiches, or cooking.",
+         price: 3.99,
+         category: "fruit",
+         unit: "Head",
+         stock: 25,
+         status: "In Stock",
+         discount: 0,
+         image: Jamun,
+       },
+       {
+         id: 17,
+         name: "Organic Watermelon",
+         description: "Juicy, nutrient-rich organic watermelon. Perfect for salads, sandwiches, or cooking.",
+         price: 4.99,
+         category: "fruit",
+         unit: "500g pack",
+         stock: 20,
+         status: "In Stock",
+         discount: 0,
+         image: Watermelon,
+       },
 ]
 
 export default function AdminProducts() {
@@ -413,7 +562,7 @@ export default function AdminProducts() {
                       <div className="h-10 w-10 flex-shrink-0">
                         <img
                           className="h-10 w-10 rounded-md object-cover"
-                          src={product.image || "/placeholder.svg"}
+                          src={product.image?.src || "/placeholder.svg"}
                           alt={product.name}
                         />
                       </div>
@@ -454,7 +603,7 @@ export default function AdminProducts() {
                         <Eye size={18} />
                       </Link>
                       <Link
-                        href={`/admin/products/edit/${product.id}`}
+                        href={`/admin/products/editor/${product.id}`}
                         className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
                       >
                         <Edit size={18} />
