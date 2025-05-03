@@ -21,7 +21,7 @@ export default function RootLayout({ children }) {
         <link rel="icon" href={webicon.src} />
       </head>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <Providers>
             <LayoutWrapper>{children}</LayoutWrapper>
           </Providers>
