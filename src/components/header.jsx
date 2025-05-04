@@ -282,6 +282,18 @@ export default function Header() {
             </div>
 
             <div className="hidden lg:block">
+              <Link href="/my-orders" onClick={(e) => {
+                        e.preventDefault();
+                        alert("To see your orders, please login first.");
+                      }}  className="w-full flex items-center cursor-not-allowed">
+              <Button variant="ghost" size="icon" className="relative">
+              <Package className="h-6 w-6" />
+              <span className="sr-only">My Orders</span>
+              </Button>
+              </Link>
+            </div>
+
+            <div className="hidden lg:block">
               {
                 /*
                     temparally hidden
@@ -293,16 +305,6 @@ export default function Header() {
 
                 */
               }
-              <Button variant="ghost" size="icon" className="relative">
-                <Link href="/my-orders"  onClick={(e) => {
-                        e.preventDefault();
-                        alert("To see your orders, please login first.");
-                      }}
-                      className="w-full flex items-center cursor-not-allowed">
-                <Package className="h-4 w-4" />
-                <span className="sr-only">My Orders</span>
-              </Link>
-              </Button>
             </div>
 
             <DropdownMenu>

@@ -31,13 +31,6 @@ export default function Login() {
         router.push("/admin/dashboard");
         return;
       }
-  
-      if (isDeliveryUser(username, password)) {
-        setUserRole("delivery");
-        router.push("/delivery/dashboard");
-        return;
-      }
-  
       await new Promise((resolve) => setTimeout(resolve, 1000));
   
       if (username && password) {

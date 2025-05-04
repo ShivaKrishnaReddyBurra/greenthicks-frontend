@@ -1,7 +1,7 @@
 "use client";
 import Link from 'next/link';
 import { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, User, UserPlus  } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,6 +60,21 @@ export default function Signup() {
                   id="lastName"
                   placeholder="Doe"
                   className="bg-white/50 focus:bg-white/80 transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">User Name</Label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <UserPlus size={16} />
+                </div>
+                <Input
+                  id="User_Name"
+                  type="text"
+                  placeholder="Greenthicks user "
+                  className="pl-10 bg-white/50 focus:bg-white/80 transition-colors"
                 />
               </div>
             </div>
@@ -150,6 +165,9 @@ export default function Signup() {
             </p>
           </CardFooter>
         </Card>
+        <Link href="/login" className="absolute  top-6 left-6 text-[#2e7d32] hover:underline">
+                  ← Back
+                 </Link>
       </div>
     </div>
   );
