@@ -1,226 +1,153 @@
-"use client"
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { isAdminUser, setAdminStatus } from "@/lib/auth-utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import LeafScene from "@/components/three/LeafScene";
+import LogOut from "@/public/logo.png";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import Image from "next/image"
-import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
-import { isAdminUser, setAdminStatus } from "@/lib/auth-utils"
-import { Eye, EyeOff, Mail, Lock } from "lucide-react"
-import logo from "@/public/logo.png"
-
-
-export default function LoginPage() {
-  const [usernameOrEmail, setUsernameOrEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(false)
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const router = useRouter()
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+export default function Login() {
+  const [userRole, setUserRole] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
-      // Check if admin credentials
-      if (isAdminUser(usernameOrEmail, password)) {
-        // Set admin status
-        setAdminStatus(true)
-        // Redirect to admin dashboard
-        router.push("/admin/dashboard")
-        return
+      if (isAdminUser(username, password)) {
+        setUserRole("admin");
+        router.push("/admin/dashboard");
+        return;
       }
-
-      // Regular user login logic (simulate API call)
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // For demo purposes, allow any non-empty credentials
-      if (usernameOrEmail && password) {
-        // Set user as logged in (not admin)
-        localStorage.setItem("isLoggedIn", "true")
-        localStorage.setItem("username", usernameOrEmail)
-        router.push("/")
+  
+      if (isDeliveryUser(username, password)) {
+        setUserRole("delivery");
+        router.push("/delivery/dashboard");
+        return;
+      }
+  
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+  
+      if (username && password) {
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("username", username);
+        router.push("/");
       } else {
-        setError("Please enter both username/email and password")
+        setError("Please enter both username and password");
       }
     } catch (err) {
-      setError("Login failed. Please try again.")
-      console.error(err)
+      setError("Login failed. Please try again.");
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-
-  if (!mounted) return null
+  };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9f3] px-4">
-      <Link href="/auth" className="absolute top-6 left-6 text-[#2e7d32] hover:underline">
-        ← Back
-      </Link>
+    <div className="min-h-screen w-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      <LeafScene />
 
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="mb-6"
-          >
-            <Image src={logo.src} alt="Green Thicks" width={120} height={120} className="mx-auto" />
-          </motion.div>
+      <div className="absolute top-6 left-6 z-10">
+        <img src={LogOut.src} alt="GreenThicks Logo" className="h-16 md:h-20" />
+      </div>
 
-          <motion.h1
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="text-3xl font-bold text-[#2e7d32] mb-2"
-          >
-            Welcome Back
-          </motion.h1>
+      <div className="w-full max-w-md relative z-10">
+        <div className="absolute -top-10 -left-10 w-32 h-32 bg-greenthicks-light/30 rounded-full blur-3xl" />
+        <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-greenthicks-dark/20 rounded-full blur-3xl" />
 
-          <motion.p
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            className="text-gray-600"
-          >
-            Sign in to your account
-          </motion.p>
-        </div>
+        <form onSubmit={handleSubmit}>
+          <Card className="border-greenthicks-light/20 overflow-hidden bg-white/80 backdrop-blur-sm">
+            <CardHeader className="space-y-2 text-center">
+              <h1 className="text-3xl font-extrabold tracking-tight">Welcome Back</h1>
+              <p className="text-sm text-muted-foreground">Sign in to access your GreenThicks account</p>
+            </CardHeader>
 
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded"
-          >
-            {error}
-          </motion.div>
-        )}
+            <CardContent className="space-y-4">
+              {error && <p className="text-red-500 text-sm">{error}</p>}
 
-        <motion.form
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          onSubmit={handleSubmit}
-          className="space-y-6 bg-white p-8 rounded-lg shadow-sm"
-        >
-          <div>
-            <label htmlFor="usernameOrEmail" className="block text-sm font-medium text-gray-700 mb-1">
-              Username or Email
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <motion.div
-                  animate={{
-                    y: [0, -5, 0],
-                    rotate: [0, -10, 0, 10, 0],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Number.POSITIVE_INFINITY,
-                    repeatDelay: 3,
-                  }}
-                >
-                  <Mail size={18} className="text-gray-400" />
-                </motion.div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email or Username</Label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    <Mail size={18} />
+                  </div>
+                  <Input
+                    id="email"
+                    type="text"
+                    placeholder="you@example.com"
+                    className="pl-10 bg-white/50 focus:bg-white/80"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                  />
+                </div>
               </div>
-              <input
-                id="usernameOrEmail"
-                name="usernameOrEmail"
-                type="text"
-                autoComplete="username email"
-                required
-                value={usernameOrEmail}
-                onChange={(e) => setUsernameOrEmail(e.target.value)}
-                className="pl-10 block w-full rounded-md border border-gray-300 py-3 px-4 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2e7d32] focus:border-[#2e7d32]"
-                placeholder="Username or Email"
-              />
-            </div>
-          </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <Link href="/auth/forgot-password" className="text-sm text-[#2e7d32] hover:underline">
-                Forgot password?
-              </Link>
-            </div>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock size={18} className="text-gray-400" />
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+                    Forgot Password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    <Lock size={18} />
+                  </div>
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    className="pl-10 bg-white/50 focus:bg-white/80"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <div
+                    className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </div>
+                </div>
               </div>
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 block w-full rounded-md border border-gray-300 py-3 px-4 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2e7d32] focus:border-[#2e7d32]"
-                placeholder="••••••••"
-              />
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+
+              <div className="flex flex-col gap-3 pt-2">
+                <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-greenthicks-dark to-greenthicks hover:from-greenthicks hover:to-greenthicks-light transition-all duration-300 border-none">
+                  {loading ? "Signing In..." : "Sign In"}
+                </Button>
               </div>
-            </div>
-          </div>
+            </CardContent>
 
-          <div className="flex items-center">
-            <input
-              id="remember-me"
-              name="remember-me"
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 text-[#2e7d32] focus:ring-[#2e7d32] border-gray-300 rounded"
-            />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-              Remember me
-            </label>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#2e7d32] hover:bg-[#1b5e20] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2e7d32] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
-          </div>
-        </motion.form>
-
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.6, duration: 0.5 }}
-          className="mt-6"
-        >
-          <div className="relative">
+            <CardFooter className="flex flex-col space-y-4">
+              <p className="text-sm text-center text-muted-foreground">
+                Don't have an account?{" "}
+                <Link href="./signup" className="text-primary font-medium hover:underline">
+                  Create one
+                </Link>
+              </p>
+            </CardFooter>
+          </Card>
+          <Link href="/login" className="absolute  top-6 left-6 text-[#2e7d32] hover:underline">
+          ← Back
+         </Link>
+        </form>
+        <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+              <div className="mt-6 w-full border-t border-gray-300"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-[#f8f9f3] text-gray-500">Or continue with</span>
+              <span className="mt-6 px-2 bg-[#f8f9f3]  text-gray-500">Or continue with</span>
             </div>
           </div>
 
@@ -262,28 +189,7 @@ export default function LoginPage() {
               </svg>
             </button>
           </div>
-        </motion.div>
-
-        <motion.p
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.7, duration: 0.5 }}
-          className="mt-8 text-center text-sm text-gray-600"
-        >
-          Don&apos;t have an account?{" "}
-          <Link href="/login/signup" className="font-medium text-[#2e7d32] hover:underline">
-            Sign up
-          </Link>
-        </motion.p>
-
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.8, duration: 0.5 }}
-          className="mt-6 text-center text-xs text-gray-500"
-        >
-        </motion.div>
       </div>
     </div>
-  )
+  );
 }

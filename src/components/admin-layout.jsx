@@ -1,26 +1,28 @@
-"use client"
+"use client";
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import AdminSidebar from "@/components/admin-sidebar"
-import { checkAdminStatus } from "@/lib/auth-utils"
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import AdminSidebar from "@/components/admin-sidebar";
+import { checkAdminStatus } from "@/lib/auth-utils";
 
 export default function AdminLayout({ children }) {
-  const router = useRouter()
+  const router = useRouter();
 
   useEffect(() => {
-    // Check if user is admin
     if (!checkAdminStatus()) {
-      router.push("/login")
+      router.push("/login");
     }
-  }, [router])
+  }, [router]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex min-h-screen bg-white text-black dark:bg-gray-950 dark:text-white transition-colors duration-300">
+      {/* Sidebar stays fixed */}
       <AdminSidebar />
-      <div className="flex-1 md:ml-64 pt-16">
+
+      {/* Main content area */}
+      <div className="flex-1 pt-16 md:ml-64">
         <main className="p-4 md:p-8">{children}</main>
       </div>
     </div>
-  )
+  );
 }
