@@ -1,102 +1,78 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { isAdminUser, setAdminStatus } from "@/lib/auth-utils"
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import Image from "next/image"
+import { motion } from "framer-motion"
+import logo from "@/public/logo.png"
 
-export default function LoginPage() {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
+export default function AuthLandingPage() {
+  const [mounted, setMounted] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
-    try {
-      // Check if admin credentials
-      if (isAdminUser(username, password)) {
-        // Set admin status
-        setAdminStatus(true)
-        // Redirect to admin dashboard
-        router.push("/admin/dashboard")
-        return
-      }
-
-      // Regular user login logic (simulate API call)
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // For demo purposes, allow any non-empty credentials
-      if (username && password) {
-        // Set user as logged in (not admin)
-        localStorage.setItem("isLoggedIn", "true")
-        localStorage.setItem("username", username)
-        router.push("/")
-      } else {
-        setError("Please enter both username and password")
-      }
-    } catch (err) {
-      setError("Login failed. Please try again.")
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  if (!mounted) return null
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-md mx-auto bg-card rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold mb-6 text-center">Login to Green Thicks</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9f3] px-4">
+      <div className="w-full max-w-md text-center">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="mb-6"
+        >
+          <Image src={logo.src} alt="Green Thicks" width={180} height={180} className="mx-auto" />
+        </motion.div>
 
-        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+        <motion.h1
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="text-5xl font-bold text-[#2e7d32] mb-4"
+        >
+          GreenThicks
+        </motion.h1>
 
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="username" className="block text-sm font-medium mb-2">
-              Username
-            </label>
-            <input
-              type="text"
-              id="username"
-              className="w-full p-2 border rounded-md bg-background"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
+        <motion.p
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="text-[#2e7d32] text-lg mb-10 max-w-sm mx-auto"
+        >
+          Fresh from farm to table. Experience our sustainable produce with just a click.
+        </motion.p>
 
-          <div className="mb-6">
-            <label htmlFor="password" className="block text-sm font-medium mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              className="w-full p-2 border rounded-md bg-background"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors"
-            disabled={loading}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.6, duration: 0.5 }}
+          className="flex flex-col sm:flex-row gap-4 justify-center"
+        >
+          <Link
+            href="/login/login"
+            className="px-8 py-3 bg-[#2e7d32] text-white font-medium rounded-md hover:bg-[#1b5e20] transition-colors"
           >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
+            Sign In
+          </Link>
+          <Link
+            href="/login/signup"
+            className="px-8 py-3 bg-transparent text-[#2e7d32] font-medium border border-[#2e7d32] rounded-md hover:bg-[#e8f5e9] transition-colors"
+          >
+            Create Account
+          </Link>
+        </motion.div>
 
-        <div className="mt-4 text-center">
-          <p className="text-sm">
-            Don&apos;t have an account?{" "}
-            <a href="/register" className="text-primary hover:underline">
-              Register
-            </a>
-          </p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8, duration: 0.5 }}
+          className="mt-16 text-sm text-[#2e7d32]/70 uppercase tracking-wider"
+        >
+          FRESH FROM FARM TO TABLE
+        </motion.div>
       </div>
     </div>
   )

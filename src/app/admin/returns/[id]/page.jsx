@@ -1,0 +1,407 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useParams } from "next/navigation"
+import Link from "next/link"
+import {
+  ArrowLeft,
+  Calendar,
+  User,
+  Mail,
+  Phone,
+  FileText,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Camera,
+  MessageSquare,
+} from "lucide-react"
+
+// Mock data for the return
+const getReturnData = (id) => {
+  return {
+    id: id,
+    orderId: "ORD-9876",
+    date: "2023-05-01T14:30:00",
+    requestDate: "2023-05-01T10:30:00",
+    status: "Approved",
+    reason: "Damaged product",
+    explanation: "The product arrived with visible damage to the packaging and the contents were partially crushed.",
+    refundAmount: 450,
+    customer: {
+      name: "Rahul Sharma",
+      email: "rahul.sharma@example.com",
+      phone: "+91 9876543210",
+    },
+    items: [
+      {
+        id: "1",
+        name: "Organic Tomatoes",
+        price: 80,
+        quantity: 5,
+        total: 400,
+        image: "/placeholder.svg?height=80&width=80",
+      },
+      {
+        id: "2",
+        name: "Fresh Spinach Bundle",
+        price: 60,
+        quantity: 2,
+        total: 120,
+        image: "/placeholder.svg?height=80&width=80",
+      },
+    ],
+    photos: [
+      "/placeholder.svg?height=300&width=400",
+      "/placeholder.svg?height=300&width=400",
+      "/placeholder.svg?height=300&width=400",
+    ],
+    timeline: [
+      {
+        status: "Return Requested",
+        date: "2023-05-01T10:30:00",
+        description: "Customer requested return",
+      },
+      {
+        status: "Return Approved",
+        date: "2023-05-01T14:30:00",
+        description: "Return request approved by admin",
+      },
+      {
+        status: "Refund Initiated",
+        date: "2023-05-01T15:45:00",
+        description: "Refund of ₹450 initiated to original payment method",
+      },
+      {
+        status: "Refund Completed",
+        date: "2023-05-02T09:15:00",
+        description: "Refund successfully processed",
+      },
+    ],
+    feedback:
+      "The customer service was excellent in handling my return request. Very satisfied with the quick resolution.",
+  }
+}
+
+export default function ReturnDetails() {
+  const params = useParams()
+  const [returnData, setReturnData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [selectedPhoto, setSelectedPhoto] = useState(null)
+
+  useEffect(() => {
+    // Simulate API call
+    setTimeout(() => {
+      setReturnData(getReturnData(params.id))
+      setLoading(false)
+    }, 500)
+  }, [params.id])
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(amount)
+  }
+
+  const getStatusBadge = (status) => {
+    switch (status.toLowerCase()) {
+      case "approved":
+        return (
+          <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+            {status}
+          </span>
+        )
+      case "pending":
+        return (
+          <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+            {status}
+          </span>
+        )
+      case "rejected":
+        return (
+          <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+            {status}
+          </span>
+        )
+      default:
+        return (
+          <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+            {status}
+          </span>
+        )
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            </div>
+            <div className="h-60 bg-gray-200 dark:bg-gray-700 rounded mt-6"></div>
+            <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded mt-6"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!returnData) {
+    return (
+      <div className="p-8">
+        <div className="max-w-6xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Return Not Found</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">
+            The return record you are looking for does not exist or has been removed.
+          </p>
+          <Link
+            href="/admin/returns"
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Returns
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center">
+            <Link
+              href="/admin/returns"
+              className="mr-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Return #{returnData.id}</h1>
+              <p className="text-gray-500 dark:text-gray-400">
+                for Order #{returnData.orderId} • {formatDate(returnData.date)}
+              </p>
+            </div>
+          </div>
+          <div>{getStatusBadge(returnData.status)}</div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {/* Return Summary */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Return Summary</h2>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Request Date:</span>
+                <span className="font-medium text-gray-800 dark:text-white flex items-center">
+                  <Calendar className="h-4 w-4 mr-1 text-gray-500 dark:text-gray-400" />
+                  {formatDate(returnData.requestDate)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Reason:</span>
+                <span className="font-medium text-gray-800 dark:text-white">{returnData.reason}</span>
+              </div>
+              <div className="pt-3 mt-3 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex justify-between">
+                  <span className="font-semibold text-gray-800 dark:text-white">Refund Amount:</span>
+                  <span className="font-bold text-green-600">{formatCurrency(returnData.refundAmount)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Customer Information */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Customer Information</h2>
+            <div className="space-y-4">
+              <div className="flex items-start">
+                <User className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-gray-800 dark:text-white">{returnData.customer.name}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Customer</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <Mail className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-gray-800 dark:text-white">{returnData.customer.email}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <Phone className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-gray-800 dark:text-white">{returnData.customer.phone}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Phone</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Return Explanation */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Customer Explanation</h2>
+            <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg">
+              <p className="text-gray-600 dark:text-gray-300">{returnData.explanation}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Returned Items */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Returned Items</h2>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {returnData.items.map((item) => (
+              <div key={item.id} className="p-6 flex items-center">
+                <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
+                  <img
+                    src={item.image || "/placeholder.svg"}
+                    alt={item.name}
+                    className="h-full w-full object-cover object-center"
+                  />
+                </div>
+                <div className="ml-6 flex-1">
+                  <div className="flex justify-between">
+                    <h3 className="text-base font-medium text-gray-800 dark:text-white">{item.name}</h3>
+                    <p className="ml-4 text-base font-medium text-gray-800 dark:text-white">
+                      {formatCurrency(item.total)}
+                    </p>
+                  </div>
+                  <div className="mt-1 flex text-sm">
+                    <p className="text-gray-600 dark:text-gray-400">
+                      {formatCurrency(item.price)} x {item.quantity}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Return Photos */}
+        {returnData.photos && returnData.photos.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Product Photos</h2>
+              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                <Camera className="h-4 w-4 mr-1" />
+                {returnData.photos.length} photos provided
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {returnData.photos.map((photo, index) => (
+                  <div
+                    key={index}
+                    className="relative h-48 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 cursor-pointer"
+                    onClick={() => setSelectedPhoto(photo)}
+                  >
+                    <img
+                      src={photo || "/placeholder.svg"}
+                      alt={`Return photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Customer Feedback */}
+        {returnData.feedback && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center">
+                <MessageSquare className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
+                Customer Feedback
+              </h2>
+            </div>
+            <div className="p-6">
+              <div className="bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg">
+                <p className="text-gray-600 dark:text-gray-300 italic">"{returnData.feedback}"</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Return Timeline */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Return Timeline</h2>
+          </div>
+          <div className="p-6">
+            <ol className="relative border-l border-gray-200 dark:border-gray-700">
+              {returnData.timeline.map((event, index) => (
+                <li key={index} className="mb-10 ml-6">
+                  <span className="absolute flex items-center justify-center w-6 h-6 bg-green-100 rounded-full -left-3 ring-8 ring-white dark:ring-gray-800 dark:bg-green-900">
+                    {event.status === "Return Requested" && (
+                      <AlertTriangle className="w-3 h-3 text-green-800 dark:text-green-300" />
+                    )}
+                    {event.status === "Return Approved" && (
+                      <CheckCircle className="w-3 h-3 text-green-800 dark:text-green-300" />
+                    )}
+                    {event.status === "Refund Initiated" && (
+                      <FileText className="w-3 h-3 text-green-800 dark:text-green-300" />
+                    )}
+                    {event.status === "Refund Completed" && (
+                      <CheckCircle className="w-3 h-3 text-green-800 dark:text-green-300" />
+                    )}
+                    {event.status === "Return Rejected" && (
+                      <XCircle className="w-3 h-3 text-red-800 dark:text-red-300" />
+                    )}
+                  </span>
+                  <h3 className="flex items-center mb-1 text-lg font-semibold text-gray-800 dark:text-white">
+                    {event.status}
+                  </h3>
+                  <time className="block mb-2 text-sm font-normal leading-none text-gray-500 dark:text-gray-400">
+                    {formatDate(event.date)}
+                  </time>
+                  <p className="text-base font-normal text-gray-600 dark:text-gray-400">{event.description}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      {/* Photo Modal */}
+      {selectedPhoto && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <div className="max-w-4xl max-h-full">
+            <img
+              src={selectedPhoto || "/placeholder.svg"}
+              alt="Return photo"
+              className="max-w-full max-h-[90vh] object-contain"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

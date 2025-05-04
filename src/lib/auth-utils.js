@@ -2,7 +2,7 @@
 
 // Check if the credentials match admin credentials
 export const isAdminUser = (username, password) => {
-  return username === "Gnanadeep" && password === "Gnanadeep.26"
+  return username === "a" && password === "a"
 }
 
 // Check if the current user is an admin (for client-side)
