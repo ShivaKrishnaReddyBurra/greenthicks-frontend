@@ -1,7 +1,5 @@
 "use client";
 
-import React from "react";
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
@@ -9,7 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Leaf, Filter } from "lucide-react";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger
+} from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { products } from "@/lib/products";
@@ -23,7 +28,6 @@ export default function ProductsPage() {
   const [priceRange, setPriceRange] = useState([0, 100]);
   const [searchQuery, setSearchQuery] = useState(searchQueryParam || "");
 
-  // Update state when URL parameters change
   useEffect(() => {
     if (categoryParam) {
       setSelectedCategory(categoryParam);
@@ -43,21 +47,9 @@ export default function ProductsPage() {
   ];
 
   const filteredProducts = products.filter((product) => {
-    // Category filter
-    if (selectedCategory !== "all" && product.category !== selectedCategory) {
-      return false;
-    }
-
-    // Price filter
-    if (product.price < priceRange[0] || product.price > priceRange[1]) {
-      return false;
-    }
-
-    // Search filter
-    if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-
+    if (selectedCategory !== "all" && product.category !== selectedCategory) return false;
+    if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
+    if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
 
@@ -69,10 +61,12 @@ export default function ProductsPage() {
             {selectedCategory !== "all"
               ? categories.find((c) => c.id === selectedCategory)?.name || "Organic Vegetables"
               : searchQuery
-                ? `Search Results for "${searchQuery}"`
-                : "Organic Vegetables"}
+              ? `Search Results for "${searchQuery}"`
+              : "Organic Vegetables"}
           </h1>
-          <p className="text-muted-foreground">Fresh, certified organic produce delivered to your doorstep</p>
+          <p className="text-muted-foreground">
+            Fresh, certified organic produce delivered to your doorstep
+          </p>
         </div>
 
         <div className="w-full md:w-auto flex gap-2">
@@ -147,7 +141,6 @@ export default function ProductsPage() {
       </div>
 
       <div className="flex flex-col md:flex-row gap-8">
-        {/* Desktop Sidebar */}
         <div className="hidden md:block w-64 shrink-0">
           <div className="sticky top-20">
             <div className="bg-card rounded-lg border p-4">
@@ -187,34 +180,10 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {/* Product Grid */}
-        <div className="flex-1">
-          <div className="flex gap-2 overflow-x-auto pb-4 md:hidden">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`category-button whitespace-nowrap ${
-                  selectedCategory === category.id ? "bg-primary text-white hover:bg-primary/90" : ""
-                }`}
-              >
-                {category.name}
-              </button>
-            ))}
-          </div>
-
-          {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <h3 className="text-lg font-medium mb-2">No products found</h3>
-              <p className="text-muted-foreground">Try adjusting your filters or search query</p>
-            </div>
-          )}
+        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
         </div>
       </div>
     </div>

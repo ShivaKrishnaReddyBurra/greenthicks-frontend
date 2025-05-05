@@ -2,6 +2,18 @@
 
 import { useState } from "react"
 import { Save, RefreshCw } from "lucide-react"
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch"
+import { useTheme } from "next-themes"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select"; // Adjust the path if needed
+
+
 
 export default function AdminSettings() {
   const [generalSettings, setGeneralSettings] = useState({
@@ -11,6 +23,9 @@ export default function AdminSettings() {
     contactPhone: "+91 9876543210",
     address: "123 Main St, Hyderabad, 500001",
   })
+
+  
+const [darkMode, setDarkMode] = useState(false);
 
   const [paymentSettings, setPaymentSettings] = useState({
     enableCashOnDelivery: true,
@@ -71,6 +86,14 @@ export default function AdminSettings() {
       [name]: checked,
     })
   }
+
+  const [emailNotifications, setEmailNotifications] = useState(false);
+  const [pushNotifications, setPushNotifications] = useState(false);
+  const [smsNotifications, setSmsNotifications] = useState(false);
+  const [soundAlerts, setSoundAlerts] = useState(false);
+  const [selectedRingtone, setSelectedRingtone] = useState("default");
+  const [selectedVibration, setSelectedVibration] = useState("default");
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -151,8 +174,15 @@ export default function AdminSettings() {
         {/* General Settings */}
         {activeTab === "general" && (
           <div>
-            <h2 className="text-xl font-bold mb-4">General Settings</h2>
-
+            
+              <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+               <Label className="text-base ">Dark Mode</Label>
+                  <p className="text-sm text-muted-foreground pb-9">Toggle dark theme</p>
+               </div>
+              <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+             </div>
+             <h2 className="text-xl font-bold mb-4">General Settings</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="mb-4">
                 <label htmlFor="siteName" className="block text-sm font-medium mb-2">
@@ -224,6 +254,7 @@ export default function AdminSettings() {
                 onChange={handleGeneralChange}
               ></textarea>
             </div>
+
           </div>
         )}
 
@@ -462,6 +493,56 @@ export default function AdminSettings() {
                 </div>
               </div>
             </div>
+
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5 mt-5">
+                    <h3 className="text-base">Email Notifications</h3>
+                    <p className="text-sm text-muted-foreground">Receive emails for updates</p>
+                  </div>
+                  <Switch className="space-y-0.5 mt-5" checked={emailNotifications} onCheckedChange={setEmailNotifications} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5 mt-5">
+                    <h3 className="text-base">Push Notifications</h3>
+                    <p className="text-sm text-muted-foreground">Receive push alerts on device</p>
+                  </div>
+                  <Switch className="space-y-0.5 mt-5" checked={pushNotifications} onCheckedChange={setPushNotifications} />
+                </div>
+                <div className="flex items-center justify-between ">
+                  <div className="space-y-0.5 mt-5">
+                    <h3 className="text-base">SMS Notifications</h3>
+                    <p className="text-sm text-muted-foreground">Receive SMS updates</p>
+                  </div>
+                  <Switch className="space-y-0.5 mt-5" checked={smsNotifications} onCheckedChange={setSmsNotifications} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5 mt-5">
+                    <h3 className="text-base">Sound Alerts</h3>
+                    <p className="text-sm text-muted-foreground space-y-9">Enable sound for notifications</p>
+                  </div>
+                  <Switch className="space-y-0.5 mt-5" checked={soundAlerts} onCheckedChange={setSoundAlerts} />
+                </div>
+
+                {/* NEW: Ringtone Select */}
+                <div className="space-y-2 mt-5">
+                  <h3 htmlFor="ringtone">Notification Ringtone</h3>
+                  <Select className="space-y-0.5 mt-5" value={selectedRingtone} onValueChange={setSelectedRingtone}>
+                    <SelectTrigger id="ringtone" className="w-[200px]">
+                      <SelectValue placeholder="Select ringtone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Default</SelectItem>
+                      <SelectItem value="chime">Chime</SelectItem>
+                      <SelectItem value="ping">Ping</SelectItem>
+                      <SelectItem value="alert">Alert</SelectItem>
+                      <SelectItem value="beep">Beep</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+
+
           </div>
         )}
 

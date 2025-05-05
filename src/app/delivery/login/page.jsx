@@ -1,28 +1,28 @@
-"use client"
+"use client";
 
-import React, { useState } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useToast } from "@/hooks/use-toast"
-import { ArrowLeft } from "lucide-react"
+import { useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft } from "lucide-react";
 
 export default function DeliveryLoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const { toast } = useToast()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const { toast } = useToast();
 
   const handleLogin = (e) => {
-    e.preventDefault()
+    e.preventDefault();
     // In a real app, you would authenticate with a backend
     toast({
       title: "Delivery partner login successful",
       description: "Welcome back to your delivery dashboard!",
-    })
+    });
     // Redirect to delivery dashboard
-    window.location.href = "/delivery/dashboard"
-  }
+    window.location.href = "/delivery/dashboard";
+  };
 
   return (
     <div className="container mx-auto px-4 py-16">
@@ -84,5 +84,5 @@ export default function DeliveryLoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

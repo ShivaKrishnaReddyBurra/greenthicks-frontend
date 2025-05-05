@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Search, Filter, ChevronRight, ChevronLeft, Eye, Download, Calendar } from "lucide-react"
+import { Search, Filter, ChevronRight, ChevronLeft, Eye, Download, Calendar, CheckCircle, XCircle } from "lucide-react"
 
 export default function ReturnsPage() {
   const [returns, setReturns] = useState([])
@@ -98,9 +98,25 @@ export default function ReturnsPage() {
         )
       case "Pending":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-            {status}
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+              {status}
+            </span>
+            <div className="flex space-x-1">
+              <button
+                className="p-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded hover:bg-green-200 dark:hover:bg-green-800/50"
+                title="Approve"
+              >
+                <CheckCircle size={14} />
+              </button>
+              <button
+                className="p-1 bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-800/50"
+                title="Reject"
+              >
+                <XCircle size={14} />
+              </button>
+            </div>
+          </div>
         )
       case "Rejected":
         return (
