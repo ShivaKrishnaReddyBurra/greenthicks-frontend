@@ -2,6 +2,7 @@ import React from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import AdminReturnButton from "@/components/admin-return-button";
 import { Providers } from "./providers";
 import webicon from "@/public/favicon.ico";
 import LayoutWrapper from "@/components/layout-wrapper"; // new wrapper
@@ -26,6 +27,7 @@ export default function RootLayout({ children }) {
             <LayoutWrapper>{children}</LayoutWrapper>
           </Providers>
         </ThemeProvider>
+        <AdminReturnButton href="/admin/dashboard" className="fixed bottom-4 right-4 z-50" />
       </body>
     </html>
   );
