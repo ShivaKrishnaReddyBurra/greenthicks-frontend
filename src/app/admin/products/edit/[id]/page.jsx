@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Upload, X } from "lucide-react"
-import Logo from "@/public/logo.png"
+
+import { getProductById, updateProduct } from "@/lib/api"
+import { use } from "react" // Import React's use
 
 
 export default function EditProduct({ params }) {
   const router = useRouter()
-  const { id } = params
+  const { id } = use(params) // Unwrap params with React.use()
 
   const [formData, setFormData] = useState({
     name: "",
@@ -17,12 +19,14 @@ export default function EditProduct({ params }) {
     discount: "",
     category: "",
     description: "",
+    unit: "",
     featured: false,
     bestseller: false,
     new: false,
     seasonal: false,
   })
-  const [imagePreview, setImagePreview] = useState(null)
+  const [images, setImages] = useState([])
+  const [imagePreviews, setImagePreviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
@@ -50,10 +54,7 @@ export default function EditProduct({ params }) {
 
     const fetchProduct = async () => {
       try {
-        // In a real app, this would be an API call
-        const { getProductById } = await import("@/lib/products")
-        const product = getProductById(id)
-
+        const product = await getProductById(id)
         if (!product) {
           throw new Error("Product not found")
         }
@@ -65,15 +66,17 @@ export default function EditProduct({ params }) {
           discount: product.discount ? product.discount.toString() : "0",
           category: product.category,
           description: product.description || "",
+          unit: product.unit || "",
           featured: product.featured || false,
           bestseller: product.bestseller || false,
           new: product.new || false,
           seasonal: product.seasonal || false,
         })
 
-        setImagePreview(product.image)
+        setImagePreviews(product.images || [])
       } catch (error) {
         console.error("Error fetching product:", error)
+        setErrorotiation
         setError("Failed to load product. Please try again.")
       } finally {
         setLoading(false)
@@ -92,18 +95,31 @@ export default function EditProduct({ params }) {
   }
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreview(reader.result)
-      }
-      reader.readAsDataURL(file)
+    const files = Array.from(e.target.files)
+    if (images.length + files.length > 5) {
+      setError("You can upload a maximum of 5 images")
+      return
     }
+
+    const newImages = [...images, ...files]
+    setImages(newImages)
+
+    const previews = files.map((file) => {
+      return new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result)
+        reader.readAsDataURL(file)
+      })
+    })
+
+    Promise.all(previews).then((results) => {
+      setImagePreviews([...imagePreviews, ...results])
+    })
   }
 
-  const removeImage = () => {
-    setImagePreview(null)
+  const removeImage = (index) => {
+    setImages(images.filter((_, i) => i !== index))
+    setImagePreviews(imagePreviews.filter((_, i) => i !== index))
   }
 
   const handleSubmit = async (e) => {
@@ -113,18 +129,29 @@ export default function EditProduct({ params }) {
 
     try {
       // Validate form
-      if (!formData.name || !formData.price || !formData.stock || !formData.category || !formData.description) {
+      if (
+        !formData.name ||
+        !formData.price ||
+        !formData.stock ||
+        !formData.category ||
+        !formData.description ||
+        !formData.unit
+      ) {
         throw new Error("Please fill all required fields")
       }
 
-      if (!imagePreview) {
-        throw new Error("Product image is required")
+      if (imagePreviews.length === 0 && images.length === 0) {
+        throw new Error("At least one product image is required")
       }
 
-      // In a real app, this would be an API call to update the product
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const productData = {
+        ...formData,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock),
+        discount: formData.discount ? parseInt(formData.discount) : 0,
+      }
 
-      // Redirect to products page
+      await updateProduct(id, productData, images)
       router.push("/admin/products")
     } catch (err) {
       setError(err.message)
@@ -134,18 +161,7 @@ export default function EditProduct({ params }) {
     }
   }
 
-  const categories = [
-    "Vegetables",
-    "Fruits",
-    "Dairy",
-    "Bakery",
-    "Meat",
-    "Seafood",
-    "Snacks",
-    "Beverages",
-    "Organic",
-    "Gluten-free",
-  ]
+  const categories = ["leafy", "fruit", "root", "herbs"]
 
   if (loading) {
     return (
@@ -249,10 +265,25 @@ export default function EditProduct({ params }) {
                 <option value="">Select a category</option>
                 {categories.map((category) => (
                   <option key={category} value={category}>
-                    {category}
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="mb-4">
+              <label htmlFor="unit" className="block text-sm font-medium mb-2">
+                Unit <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="unit"
+                name="unit"
+                className="w-full p-2 border rounded-md bg-background"
+                value={formData.unit}
+                onChange={handleChange}
+                required
+              />
             </div>
           </div>
 
@@ -260,43 +291,48 @@ export default function EditProduct({ params }) {
           <div>
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">
-                Product Image <span className="text-red-500">*</span>
+                Product Images (up to 5) <span className="text-red-500">*</span>
               </label>
-              {imagePreview ? (
-                <div className="relative w-full h-64 border rounded-md overflow-hidden">
-                  <img
-                    src={Logo.src}
-                    alt="Product preview"
-                    className="w-full h-full object-contain"
-                  />
-                  <button
-                    type="button"
-                    onClick={removeImage}
-                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full"
-                  >
-                    <X size={16} />
-                  </button>
+
+              {imagePreviews.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative w-full h-24 border rounded-md overflow-hidden">
+                      <img
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-full object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center h-64">
-                  <Upload size={48} className="text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-500 mb-2">Click or drag to upload image</p>
-                  <input
-                    type="file"
-                    id="image"
-                    name="image"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageChange}
-                  />
-                  <label
-                    htmlFor="image"
-                    className="bg-primary text-primary-foreground px-4 py-2 rounded-md cursor-pointer hover:bg-primary/90 transition-colors"
-                  >
-                    Select Image
-                  </label>
-                </div>
-              )}
+              ) : null}
+              <div className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center h-64">
+                <Upload size={48} className="text-gray-400 mb-2" />
+                <p className="text-sm text-gray-500 mb-2">Click or drag to upload new images</p>
+                <input
+                  type="file"
+                  id="images"
+                  name="images"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+                <label
+                  htmlFor="images"
+                  className="bg-primary text-primary-foreground px-4 py-2 rounded-md cursor-pointer hover:bg-primary/90 transition-colors"
+                >
+                  Select Images
+                </label>
+              </div>
             </div>
 
             <div className="mb-4">

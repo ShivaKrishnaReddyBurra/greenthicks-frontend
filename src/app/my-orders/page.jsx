@@ -9,80 +9,74 @@ import { Badge } from "@/components/ui/badge";
 import { Package, Truck, CheckCircle, Clock, Search, ShoppingBag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { getUserOrders, getProductById } from "@/lib/api";
+import { getAuthToken } from "@/lib/auth-utils";
+import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
-    // Check if there's an order in session storage
-    const orderId = sessionStorage.getItem("orderId");
-
-    // Generate mock orders
-    const mockOrders = [];
-
-    // Add the real order from session storage if it exists
-    if (orderId) {
-      const orderDate = new Date(sessionStorage.getItem("orderDate") || "");
-      const deliveryDate = new Date(sessionStorage.getItem("deliveryDate") || "");
-      const orderItems = JSON.parse(sessionStorage.getItem("orderItems") || "[]");
-      const orderTotal = Number.parseFloat(sessionStorage.getItem("orderTotal") || "0");
-      const orderStatus = sessionStorage.getItem("orderStatus") || "processing";
-
-      mockOrders.push({
-        id: orderId,
-        date: orderDate.toLocaleDateString(),
-        status: orderStatus,
-        items: orderItems,
-        total: orderTotal,
-        estimatedDelivery: deliveryDate.toLocaleDateString(),
-      });
+    // Check if user is authenticated
+    if (!getAuthToken()) {
+      router.push("/login");
+      return;
     }
 
-    // Add some additional mock orders
-    const statuses = ["processing", "shipped", "delivered", "cancelled"];
-
-    for (let i = 1; i <= 5; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() - i * 5);
-
-      const deliveryDate = new Date(date);
-      deliveryDate.setDate(deliveryDate.getDate() + 3);
-
-      const status = statuses[Math.floor(Math.random() * statuses.length)];
-
-      mockOrders.push({
-        id: `ORD-${Math.floor(10000 + Math.random() * 90000)}`,
-        date: date.toLocaleDateString(),
-        status,
-        items: [
-          {
-            id: Math.floor(Math.random() * 16) + 1,
-            name: ["Organic Spinach", "Fresh Carrots", "Organic Tomatoes", "Fresh Cucumber"][
-              Math.floor(Math.random() * 4)
-            ],
-            quantity: Math.floor(Math.random() * 3) + 1,
-            price: (Math.random() * 5 + 1).toFixed(2),
-            image: "/placeholder.svg?height=64&width=64",
-          },
-          {
-            id: Math.floor(Math.random() * 16) + 1,
-            name: ["Organic Kale", "Bell Peppers", "Organic Potatoes", "Fresh Broccoli"][Math.floor(Math.random() * 4)],
-            quantity: Math.floor(Math.random() * 3) + 1,
-            price: (Math.random() * 5 + 1).toFixed(2),
-            image: "/placeholder.svg?height=64&width=64",
-          },
-        ],
-        total: (Math.random() * 50 + 20).toFixed(2),
-        estimatedDelivery: deliveryDate.toLocaleDateString(),
-      });
+    async function fetchOrders() {
+      try {
+        const fetchedOrders = await getUserOrders();
+        // Fetch product details for each order item
+        const enrichedOrders = await Promise.all(
+          fetchedOrders.map(async (order) => {
+            const itemsWithDetails = await Promise.all(
+              order.items.map(async (item) => {
+                try {
+                  const product = await getProductById(item.productId);
+                  return {
+                    ...item,
+                    name: product.name,
+                    image: product.images[0]?.url || "/placeholder.svg",
+                  };
+                } catch (error) {
+                  return {
+                    ...item,
+                    name: "Unknown Product",
+                    image: "/placeholder.svg",
+                  };
+                }
+              })
+            );
+            return {
+              id: order.id,
+              date: new Date(order.orderDate).toLocaleDateString(),
+              status: order.status,
+              items: itemsWithDetails,
+              total: order.total,
+              estimatedDelivery: new Date(order.deliveryDate).toLocaleDateString(),
+            };
+          })
+        );
+        setOrders(enrichedOrders);
+        setLoading(false);
+      } catch (error) {
+        toast({
+          title: "Error fetching orders",
+          description: error.message || "An error occurred while fetching your orders.",
+          variant: "destructive",
+        });
+        setLoading(false);
+      }
     }
-
-    setOrders(mockOrders);
-    setLoading(false);
-  }, []);
+    fetchOrders();
+  }, [toast, router]);
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -142,19 +136,16 @@ export default function MyOrdersPage() {
   };
 
   const filteredOrders = orders.filter((order) => {
-    // Filter by tab
     if (activeTab !== "all" && order.status !== activeTab) {
       return false;
     }
-
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
-        order.id.toLowerCase().includes(query) || order.items.some((item) => item.name.toLowerCase().includes(query))
+        order.id.toLowerCase().includes(query) ||
+        order.items.some((item) => item.name.toLowerCase().includes(query))
       );
     }
-
     return true;
   });
 
@@ -186,7 +177,6 @@ export default function MyOrdersPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">My Orders</h1>
-
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
           <TabsList>
@@ -196,7 +186,6 @@ export default function MyOrdersPage() {
             <TabsTrigger value="delivered">Delivered</TabsTrigger>
           </TabsList>
         </Tabs>
-
         <div className="relative w-full md:w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -207,7 +196,6 @@ export default function MyOrdersPage() {
           />
         </div>
       </div>
-
       <div className="space-y-6">
         {filteredOrders.length > 0 ? (
           filteredOrders.map((order) => (
@@ -242,20 +230,21 @@ export default function MyOrdersPage() {
                       {order.items.slice(0, 2).map((item, index) => (
                         <div key={index} className="flex items-center gap-4">
                           <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                            <Link href={`/products/${item.id}`}>
-                              <img
-                                src={item.image || "/placeholder.svg"}
+                            <Link href={`/products/${item.productId}`}>
+                              <Image
+                                src={item.image}
                                 alt={item.name}
-                                className="h-full w-full object-cover"
+                                fill
+                                className="object-cover"
                               />
                             </Link>
                           </div>
                           <div className="flex-1">
-                            <Link href={`/products/${item.id}`} className="font-medium hover:text-primary">
+                            <Link href={`/products/${item.productId}`} className="font-medium hover:text-primary">
                               {item.name}
                             </Link>
                             <p className="text-sm text-muted-foreground">
-                              {item.quantity} x ₹{item.price}
+                              {item.quantity} x ₹{item.price.toFixed(2)}
                             </p>
                           </div>
                         </div>
@@ -265,15 +254,13 @@ export default function MyOrdersPage() {
                       )}
                     </div>
                   </div>
-
                   <Separator orientation="vertical" className="hidden md:block" />
-
                   <div className="md:w-64">
                     <h3 className="font-medium mb-3">Order Summary</h3>
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Total</span>
-                        <span className="font-medium">₹{order.total}</span>
+                        <span className="font-medium">₹{order.total.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Status</span>

@@ -24,7 +24,7 @@ import {
   RefreshCw,
   ShoppingCartIcon,
 } from "lucide-react"
-import { clearAdminStatus } from "@/lib/auth-utils"
+import { clearAuth } from "@/lib/auth-utils"
 import { useTheme } from "next-themes"
 import ThemeToggle from "@/components/theme-toggle"
 import logo from "@/public/logo.png"
@@ -41,7 +41,7 @@ export default function AdminSidebar() {
   }, [])
 
   const handleLogout = () => {
-    clearAdminStatus()
+    clearAuth()
     router.push("/login")
   }
 

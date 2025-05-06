@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
@@ -17,16 +19,34 @@ import {
 } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { products } from "@/lib/products";
+import { getProducts } from "@/lib/api";
 
 export default function ProductsPage() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category");
   const searchQueryParam = searchParams.get("search");
 
+  const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(categoryParam || "all");
   const [priceRange, setPriceRange] = useState([0, 100]);
   const [searchQuery, setSearchQuery] = useState(searchQueryParam || "");
+  const [loading, setLoading] = useState(true);
+
+  // Fetch products from the backend
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await getProducts();
+        setProducts(data);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   useEffect(() => {
     if (categoryParam) {
@@ -43,7 +63,6 @@ export default function ProductsPage() {
     { id: "root", name: "Root Vegetables" },
     { id: "fruit", name: "Fruit Vegetables" },
     { id: "herbs", name: "Herbs & Aromatics" },
-    { id: "seasonal", name: "Seasonal Specials" },
   ];
 
   const filteredProducts = products.filter((product) => {
@@ -52,6 +71,14 @@ export default function ProductsPage() {
     if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -180,10 +207,36 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+
+        {/* Product Grid */}
+        <div className="flex-1">
+          <div className="flex gap-2 overflow-x-auto pb-4 md:hidden">
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={`category-button whitespace-nowrap ${
+                  selectedCategory === category.id ? "bg-primary text-white hover:bg-primary/90" : ""
+                }`}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
+
+          {filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.globalId} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <h3 className="text-lg font-medium mb-2">No products found</h3>
+              <p className="text-muted-foreground">Try adjusting your filters or search query</p>
+            </div>
+          )}
+
         </div>
       </div>
     </div>

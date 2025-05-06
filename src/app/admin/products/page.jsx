@@ -15,249 +15,8 @@ import {
   Eye,
   Edit,
 } from "lucide-react"
-import Spinach from "@/public/images/Spinach.jpg"
 
-import Mint from "@/public/images/Mint1.jpg"
-
-import Tomato from "@/public/images/Tomato.jpg"
-
-import Brinjal from "@/public/images/Brinjal.jpg"
-
-import Green_Chili from "@/public/images/GreenChili.jpg"
-
-import Carrot from "@/public/images/carrot.jpg"
-
-import Potato from "@/public/images/potato.jpg"
-
-import Onion from "@/public/images/Onion.jpg"
-
-import Garlic from "@/public/images/Garilic.jpg"
-
-import Cabbage from "@/public/images/Cabbage.jpg"
-
-import Cauliflower from "@/public/images/Cauliflower.jpg"
-
-import Drumstick from "@/public/images/Drumstick.jpg"
-
-import Cucumber from "@/public/images/Cucumber.jpg"
-
-import Spring_Onion_Greens from "@/public/images/Spring Onion Greens.jpg"
-
-import Mango from "@/public/images/Mango.jpg"
-
-import Jamun from "@/public/images/Jamun.jpg"
-
-import Watermelon from "@/public/images/Watermelon.jpg"
-
-// Mock product data
-const mockProducts = [
-  {
-      id: 1,
-      name: "Organic Spinach",
-      description: "Fresh, nutrient-rich organic spinach leaves. Perfect for salads, smoothies, or cooking.",
-      price: 3.99,
-      category: "leafy",
-      unit: "250g bunch",
-      stock: 15,
-      status: "In Stock",
-      discount: 0,
-      image: Spinach,
-    },
-    {
-      id: 2,
-      name: "Organic Mint",
-      description: "Refreshing organic mint. Perfect for teas, cocktails, or garnishing.",
-      price: 2.49,
-      category: "leafy",
-      unit: "500g pack",
-      stock: 30,
-      status: "In Stock",
-      discount: 0,
-      image: Mint,
-    },
-    {
-      id: 3,
-      name: "Organic Tomatoes",
-      description: "Juicy, vine-ripened organic tomatoes. Perfect for salads, sandwiches, or cooking.",
-      price: 4.99,
-      originalPrice: 5.99,
-      category: "fruit",
-      unit: "500g pack",
-      stock: 25,
-      status: "In Stock",
-      discount: 15,
-      image: Tomato,
-    },
-    {
-      id: 4,
-      name: "Organic Brinjal",
-      description: "Healthy, nutrient-rich organic brinjal. Perfect for salads, smoothies, or cooking.",
-      price: 1.99,
-      category: "fruit",
-      unit: "1 Kg pack",
-      stock: 40,
-      status: "Out of Stock",
-      discount: 0,
-      image: Brinjal,
-    },
-    {
-      id: 5,
-      name: "Organic Green Chili",
-      description: "Juicy, nutrient-rich organic green chili. Perfect for salads, sandwiches, or cooking.",
-      price: 3.49,
-      category: "fruit",
-      unit: "200g bunch",
-      stock: 20,
-      status: "In Stock",
-      discount: 0,
-      image: Green_Chili,
-    },
-    {
-      id: 6,
-      name: "Organic Carrot",
-      description: "Healthy, nutrient-rich organic carrots. Perfect for salads, smoothies, or cooking.",
-      price: 4.99,
-      category: "root",
-      unit: "3 pack (red, yellow, green)",
-      stock: 25,
-      status: "Low Stock",
-      discount: 0,
-      image: Carrot,
-    },
-    {
-      id: 7,
-      name: "Organic Potatoes",
-      description: "Versatile organic potatoes. Perfect for roasting, mashing, or frying.",
-      price: 3.99,
-      category: "root",
-      unit: "1kg bag",
-      stock: 50,
-      status: "In Stock",
-      discount: 0,
-      image: Potato,
-    },
-    {
-      id: 8,
-      name: " Organic Onion",
-      description: "Juicy, nutrient-rich organic onions. Perfect for salads, sandwiches, or cooking.",
-      price: 2.99,
-      category: "root",
-      unit: "Head",
-      stock: 35,
-      status: "In Stock",
-      discount: 0,
-      image: Onion,
-    },
-    {
-      id: 9,
-      name: " Organic Garlic",
-      description: "Juicy, nutrient-rich organic garlic. Perfect for salads, sandwiches, or cooking.",
-      price: 2.49,
-      category: "root",
-      unit: "Head",
-      stock: 30,
-      status: "In Stock",
-      discount: 0,
-      image: Garlic,
-    },
-    {
-      id: 10,
-      name: " Organic Cabbage",
-      description: "Healthy, nutrient-rich organic cabbage. Perfect for salads, smoothies, or cooking.",
-      price: 1.99,
-      category: "herbs",
-      unit: "500g bag",
-      stock: 45,
-      status: "In Stock",
-      discount: 0,
-      image: Cabbage,
-    },
-  {
-       id: 11,
-       name: " Organic CauliFlower",
-       description: "Healthy, nutrient-rich organic cauliflower. Perfect for salads, smoothies, or cooking.",
-       price: 2.29,
-       category: "herbs",
-       unit: "3 bulb pack",
-       stock: 40,
-       status: "In Stock",
-       image: Cauliflower,
-     },
-     {
-         id: 12,
-         name: " Organic Drumstick",
-         description: "Fragrant organic drumstick leaves. Ideal for soups, salads, and curries.",
-         price: 1.79,
-         category: "herbs",
-         unit: "Bunch",
-         stock: 25,
-         status: "out of Stock",
-         discount: 0,
-         image: Drumstick,
-      },
-       {
-         id: 13,
-         name: " Organic Cucumber",
-         description: "Juicy, nutrient-rich organic cucumber. Perfect for salads, sandwiches, or cooking.",
-         price: 2.49,
-         category: "herbs",
-         unit: "Each",
-         stock: 30,
-         status: "In Stock",
-         discount: 0,
-         image: Cucumber,
-       },
-       {
-         id: 14,
-         name: "Spring Onion Greens",
-         description: "Fresh, nutrient-rich spring onion greens. Perfect for salads, smoothies, or cooking.",
-         price: 3.49,
-         originalPrice: 3.99,
-         category: "herbs",
-         unit: "500g pack",
-         stock: 20,
-         status: "Low Stock",
-         discount: 10,
-         new: true,
-         image: Spring_Onion_Greens,
-       },
-       {
-         id: 15,
-         name: "Organic Mango",
-         description: "Sweet, juicy organic mango. Perfect for smoothies, desserts, or snacking.",
-         price: 1.99,
-         category: "fruit",
-         unit: "Bunch",
-         stock: 15,
-         status: "In Stock",
-         discount: 0,
-         image: Mango,
-       },
-       {
-         id: 16,
-         name: "Fresh Jamun",
-         description: "Juicy, nutrient-rich fresh jamun. Perfect for salads, sandwiches, or cooking.",
-         price: 3.99,
-         category: "fruit",
-         unit: "Head",
-         stock: 25,
-         status: "In Stock",
-         discount: 0,
-         image: Jamun,
-       },
-       {
-         id: 17,
-         name: "Organic Watermelon",
-         description: "Juicy, nutrient-rich organic watermelon. Perfect for salads, sandwiches, or cooking.",
-         price: 4.99,
-         category: "fruit",
-         unit: "500g pack",
-         stock: 20,
-         status: "In Stock",
-         discount: 0,
-         image: Watermelon,
-       },
-]
+import { getProducts, deleteProduct } from "@/lib/api"
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([])
@@ -269,13 +28,22 @@ export default function AdminProducts() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedProducts, setSelectedProducts] = useState([])
   const [selectAll, setSelectAll] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [productsPerPage] = useState(10)
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setProducts(mockProducts)
-      setIsLoading(false)
-    }, 1000)
+    const fetchProducts = async () => {
+      try {
+        const data = await getProducts()
+        setProducts(data)
+      } catch (error) {
+        console.error("Error fetching products:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProducts()
   }, [])
 
   const handleSort = (field) => {
@@ -289,21 +57,24 @@ export default function AdminProducts() {
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value)
+    setCurrentPage(1)
   }
 
   const handleFilterCategory = (e) => {
     setFilterCategory(e.target.value)
+    setCurrentPage(1)
   }
 
   const handleFilterStatus = (e) => {
     setFilterStatus(e.target.value)
+    setCurrentPage(1)
   }
 
   const handleSelectAll = () => {
     if (selectAll) {
       setSelectedProducts([])
     } else {
-      setSelectedProducts(filteredProducts.map((product) => product.id))
+      setSelectedProducts(currentProducts.map((product) => product.globalId))
     }
     setSelectAll(!selectAll)
   }
@@ -316,16 +87,86 @@ export default function AdminProducts() {
     }
   }
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
     if (window.confirm(`Are you sure you want to delete ${selectedProducts.length} products?`)) {
-      setProducts(products.filter((product) => !selectedProducts.includes(product.id)))
-      setSelectedProducts([])
-      setSelectAll(false)
+      try {
+        await Promise.all(selectedProducts.map((id) => deleteProduct(id)))
+        setProducts(products.filter((product) => !selectedProducts.includes(product.globalId)))
+        setSelectedProducts([])
+        setSelectAll(false)
+      } catch (error) {
+        console.error("Error deleting products:", error)
+        alert("Failed to delete some products. Please try again.")
+      }
     }
   }
 
+  const handleDeleteProduct = async (id, name) => {
+    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
+      try {
+        await deleteProduct(id)
+        setProducts(products.filter((product) => product.globalId !== id))
+      } catch (error) {
+        console.error("Error deleting product:", error)
+        alert("Failed to delete product. Please try again.")
+      }
+    }
+  }
+
+  const handleExport = () => {
+    const headers = ["ID,Name,Category,Price,Stock,Status"]
+    const rows = filteredProducts.map((product) => {
+      const status = product.stock === 0 ? "Out of Stock" : product.stock <= 10 ? "Low Stock" : "In Stock"
+      return `${product.globalId},${product.name},${product.category},${product.price},${product.stock},${status}`
+    })
+    const csvContent = [...headers, ...rows].join("\n")
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", "products_export.csv")
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      const text = event.target.result
+      const rows = text.split("\n").slice(1) // Skip header
+      const importedProducts = rows
+        .filter((row) => row.trim())
+        .map((row) => {
+          const [id, name, category, price, stock] = row.split(",")
+          return {
+            globalId: parseInt(id),
+            name,
+            category,
+            price: parseFloat(price),
+            stock: parseInt(stock),
+          }
+        })
+
+      // Note: You'll need a backend endpoint to handle imports (e.g., POST /api/products/import)
+      // For now, we'll just log the imported data
+      console.log("Imported products:", importedProducts)
+      alert("Import functionality requires a backend endpoint. Check console for imported data.")
+    }
+    reader.readAsText(file)
+  }
+
+  // Derive status from stock
+  const productsWithStatus = products.map((product) => ({
+    ...product,
+    status: product.stock === 0 ? "Out of Stock" : product.stock <= 10 ? "Low Stock" : "In Stock",
+  }))
+
   // Apply filters and sorting
-  const filteredProducts = products
+  const filteredProducts = productsWithStatus
     .filter(
       (product) =>
         (filterCategory === "All" || product.category === filterCategory) &&
@@ -342,6 +183,16 @@ export default function AdminProducts() {
           : b[sortField].localeCompare(a[sortField])
       }
     })
+
+  // Pagination logic
+  const indexOfLastProduct = currentPage * productsPerPage
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage
+  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct)
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+  }
 
   // Get unique categories for filter
   const categories = ["All", ...new Set(products.map((product) => product.category))]
@@ -383,14 +234,23 @@ export default function AdminProducts() {
             <Trash2 className="h-4 w-4 mr-2" />
             Delete Selected
           </button>
-          <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+          <button
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            onClick={handleExport}
+          >
             <Download className="h-4 w-4 mr-2" />
             Export
           </button>
-          <button className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
+          <label className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors cursor-pointer">
             <Upload className="h-4 w-4 mr-2" />
             Import
-          </button>
+            <input
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleImport}
+            />
+          </label>
         </div>
       </div>
 
@@ -547,13 +407,13 @@ export default function AdminProducts() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+              {currentProducts.map((product) => (
+                <tr key={product.globalId} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input
                       type="checkbox"
-                      checked={selectedProducts.includes(product.id)}
-                      onChange={() => handleSelectProduct(product.id)}
+                      checked={selectedProducts.includes(product.globalId)}
+                      onChange={() => handleSelectProduct(product.globalId)}
                       className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                     />
                   </td>
@@ -562,13 +422,14 @@ export default function AdminProducts() {
                       <div className="h-10 w-10 flex-shrink-0">
                         <img
                           className="h-10 w-10 rounded-md object-cover"
-                          src={product.image?.src || "/placeholder.svg"}
+                          src={product.images[0] || "/placeholder.svg"}
+
                           alt={product.name}
                         />
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">ID: {product.id}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">ID: {product.globalId}</div>
                       </div>
                     </div>
                   </td>
@@ -597,23 +458,21 @@ export default function AdminProducts() {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
                       <Link
-                        href={`/admin/products/${product.id}`}
+                        href={`/admin/products/${product.globalId}`}
                         className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         <Eye size={18} />
                       </Link>
                       <Link
-                        href={`/admin/products/editor/${product.id}`}
+
+                        href={`/admin/products/edit/${product.globalId}`}
+
                         className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
                       >
                         <Edit size={18} />
                       </Link>
                       <button
-                        onClick={() => {
-                          if (window.confirm(`Are you sure you want to delete ${product.name}?`)) {
-                            setProducts(products.filter((p) => p.id !== product.id))
-                          }
-                        }}
+                        onClick={() => handleDeleteProduct(product.globalId, product.name)}
                         className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                       >
                         <Trash2 size={18} />
@@ -630,31 +489,57 @@ export default function AdminProducts() {
       {/* Pagination */}
       <div className="bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6 mt-4 rounded-lg shadow">
         <div className="flex-1 flex justify-between sm:hidden">
-          <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Previous
           </button>
-          <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Next
           </button>
         </div>
         <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-gray-700 dark:text-gray-300">
-              Showing <span className="font-medium">1</span> to{" "}
-              <span className="font-medium">{filteredProducts.length}</span> of{" "}
+              Showing <span className="font-medium">{indexOfFirstProduct + 1}</span> to{" "}
+              <span className="font-medium">{Math.min(indexOfLastProduct, filteredProducts.length)}</span> of{" "}
               <span className="font-medium">{filteredProducts.length}</span> results
             </p>
           </div>
           <div>
             <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <span className="sr-only">Previous</span>
                 <ChevronDown className="h-5 w-5 rotate-90" />
               </button>
-              <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
-                1
-              </button>
-              <button className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium ${
+                    currentPage === page
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <span className="sr-only">Next</span>
                 <ChevronDown className="h-5 w-5 -rotate-90" />
               </button>

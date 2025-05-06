@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft, Save, X } from "lucide-react"
+import { Upload, X } from "lucide-react"
+import { createProduct } from "@/lib/api"
+
 
 export default function AddProduct() {
   const router = useRouter()
@@ -13,13 +14,17 @@ export default function AddProduct() {
     price: "",
     stock: "",
     category: "",
-    unit: "kg",
+    description: "",
+    unit: "", // Added unit field
     featured: false,
     bestseller: false,
     new: false,
     seasonal: false,
     discount: 0,
   })
+
+  const [images, setImages] = useState([])
+  const [imagePreviews, setImagePreviews] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -31,16 +36,64 @@ export default function AddProduct() {
     })
   }
 
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files)
+    if (images.length + files.length > 5) {
+      setError("You can upload a maximum of 5 images")
+      return
+    }
+
+    const newImages = [...images, ...files]
+    setImages(newImages)
+
+    const previews = files.map((file) => {
+      return new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result)
+        reader.readAsDataURL(file)
+      })
+    })
+
+    Promise.all(previews).then((results) => {
+      setImagePreviews([...imagePreviews, ...results])
+    })
+  }
+
+  const removeImage = (index) => {
+    setImages(images.filter((_, i) => i !== index))
+    setImagePreviews(imagePreviews.filter((_, i) => i !== index))
+  }
+
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError("")
 
     try {
-      // In a real app, this would be an API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      // Redirect to products page
+      // Validate form
+      if (
+        !formData.name ||
+        !formData.price ||
+        !formData.stock ||
+        !formData.category ||
+        !formData.description ||
+        !formData.unit ||
+        images.length === 0
+      ) {
+        throw new Error("Please fill all required fields and upload at least one image")
+      }
+
+      // Prepare data for the backend
+      const productData = {
+        ...formData,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock),
+        discount: formData.discount ? parseInt(formData.discount) : 0,
+      }
+
+      await createProduct(productData, images)
       router.push("/admin/products")
     } catch (error) {
       console.error("Error adding product:", error)
@@ -49,6 +102,10 @@ export default function AddProduct() {
       setLoading(false)
     }
   }
+
+
+  const categories = ["leafy", "fruit", "root", "herbs"]
+
 
   return (
     <div>
@@ -171,66 +228,90 @@ export default function AddProduct() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="stock" className="block text-sm font-medium text-muted-foreground mb-1">
-                  Stock *
-                </label>
-                <input
-                  type="number"
-                  id="stock"
-                  name="stock"
-                  value={formData.stock}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  className="w-full p-2 border rounded-md"
-                />
-              </div>
+            <div className="mb-4">
+              <label htmlFor="category" className="block text-sm font-medium mb-2">
+                Category <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="category"
+                name="category"
+                className="w-full p-2 border rounded-md bg-background"
+                value={formData.category}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select a category</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                  </option>
+                ))}
+              </select>
 
-              <div>
-                <label htmlFor="unit" className="block text-sm font-medium text-muted-foreground mb-1">
-                  Unit *
-                </label>
-                <select
-                  id="unit"
-                  name="unit"
-                  value={formData.unit}
-                  onChange={handleChange}
-                  required
-                  className="w-full p-2 border rounded-md"
-                >
-                  <option value="kg">Kilogram (kg)</option>
-                  <option value="g">Gram (g)</option>
-                  <option value="piece">Piece</option>
-                  <option value="bundle">Bundle</option>
-                  <option value="dozen">Dozen</option>
-                  <option value="liter">Liter</option>
-                  <option value="ml">Milliliter (ml)</option>
-                  <option value="box">Box</option>
-                  <option value="bottle">Bottle</option>
-                </select>
-              </div>
+            </div>
+
+            <div className="mb-4">
+              <label htmlFor="unit" className="block text-sm font-medium mb-2">
+                Unit <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="unit"
+                name="unit"
+                className="w-full p-2 border rounded-md bg-background"
+                value={formData.unit}
+                onChange={handleChange}
+                required
+              />
             </div>
           </div>
         </div>
 
-        {/* Product Tags */}
-        <div className="mt-6 pt-6 border-t">
-          <h2 className="text-lg font-semibold mb-4">Product Tags</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="featured"
-                name="featured"
-                checked={formData.featured}
-                onChange={handleChange}
-                className="mr-2"
-              />
-              <label htmlFor="featured" className="text-sm">
-                Featured Product
+          {/* Right Column */}
+          <div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">
+                Product Images (up to 5) <span className="text-red-500">*</span>
               </label>
+              {imagePreviews.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative w-full h-24 border rounded-md overflow-hidden">
+                      <img
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-full object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <div className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center h-64">
+                <Upload size={48} className="text-gray-400 mb-2" />
+                <p className="text-sm text-gray-500 mb-2">Click or drag to upload images</p>
+                <input
+                  type="file"
+                  id="images"
+                  name="images"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+                <label
+                  htmlFor="images"
+                  className="bg-primary text-primary-foreground px-4 py-2 rounded-md cursor-pointer hover:bg-primary/90 transition-colors"
+                >
+                  Select Images
+                </label>
+              </div>
             </div>
             <div className="flex items-center">
               <input

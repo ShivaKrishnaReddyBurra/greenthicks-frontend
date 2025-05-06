@@ -26,8 +26,8 @@ export function ProductCard({ product }) {
   };
 
   const toggleFavorite = () => {
-    if (isFavorite(product.id)) {
-      removeFromFavorites(product.id);
+    if (isFavorite(product.globalId)) {
+      removeFromFavorites(product.globalId);
       toast({
         title: "Removed from favorites",
         description: `${product.name} has been removed from your favorites.`,
@@ -56,10 +56,10 @@ export function ProductCard({ product }) {
   return (
     <div className="product-card group">
       <div className="relative">
-        <Link href={`/products/${product.id}`}>
+        <Link href={`/products/${product.globalId}`}>
           <div className="aspect-square overflow-hidden rounded-md bg-muted">
             <Image
-              src={product.image || "/placeholder.svg?height=300&width=300"}
+              src={product.images[0] || "/placeholder.svg?height=300&width=300"}
               alt={product.name}
               width={300}
               height={300}
@@ -74,8 +74,8 @@ export function ProductCard({ product }) {
           className="absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm"
           onClick={toggleFavorite}
         >
-          <Heart className={`h-4 w-4 ${isFavorite(product.id) ? "fill-red-500 text-red-500" : ""}`} />
-          <span className="sr-only">{isFavorite(product.id) ? "Remove from favorites" : "Add to favorites"}</span>
+          <Heart className={`h-4 w-4 ${isFavorite(product.globalId) ? "fill-red-500 text-red-500" : ""}`} />
+          <span className="sr-only">{isFavorite(product.globalId) ? "Remove from favorites" : "Add to favorites"}</span>
         </Button>
 
         {product.discount > 0 && <Badge className="absolute top-2 left-2 bg-red-500">-{product.discount}%</Badge>}
@@ -97,7 +97,7 @@ export function ProductCard({ product }) {
 
       <div className="pt-4">
         <div className="mb-2 flex items-center justify-between">
-          <Link href={`/products/${product.id}`}>
+          <Link href={`/products/${product.globalId}`}>
             <h3 className="font-medium">{product.name}</h3>
           </Link>
           <div className="text-sm font-medium">

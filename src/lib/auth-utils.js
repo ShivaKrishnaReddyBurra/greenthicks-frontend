@@ -1,28 +1,59 @@
-// Authentication utilities for the admin portal
+import { jwtDecode } from "jwt-decode";
 
-// Check if the credentials match admin credentials
-export const isAdminUser = (username, password) => {
-  return username === "a" && password === "a"
-}
 
-// Check if the current user is an admin (for client-side)
+// Store JWT token in localStorage
+export const setAuthToken = (token) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("authToken", token);
+  }
+};
+
+
+// Get JWT token from localStorage
+export const getAuthToken = () => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("authToken");
+  }
+  return null;
+};
+
+// Get user ID from JWT token
+export const getUserId = () => {
+  if (typeof window !== "undefined") {
+    const token = getAuthToken();
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        return decoded.id;
+      } catch (error) {
+        console.error("Error decoding token:", error);
+        return null;
+      }
+    }
+  }
+  return null;
+};
+
+// Check if the current user is an admin (client-side)
 export const checkAdminStatus = () => {
   if (typeof window !== "undefined") {
-    return localStorage.getItem("isAdmin") === "true"
+    const token = getAuthToken();
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        return decoded.isAdmin === true;
+      } catch (error) {
+        console.error("Error decoding token:", error);
+        return false;
+      }
+    }
   }
-  return false
-}
+  return false;
+};
 
-// Set admin status in localStorage
-export const setAdminStatus = (status) => {
+// Clear authentication data
+export const clearAuth = () => {
   if (typeof window !== "undefined") {
-    localStorage.setItem("isAdmin", status)
+    localStorage.removeItem("authToken");
   }
-}
-
-// Clear admin status
-export const clearAdminStatus = () => {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem("isAdmin")
-  }
-}
+};

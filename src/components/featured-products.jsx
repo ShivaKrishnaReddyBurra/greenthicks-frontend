@@ -1,13 +1,15 @@
 "use client";
 import React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
-import { products } from "@/lib/products";
+import { getProducts } from "@/lib/api";
 
 export function FeaturedProducts() {
   const [activeTab, setActiveTab] = useState("featured");
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const tabs = [
     { id: "featured", label: "Featured" },
@@ -15,6 +17,22 @@ export function FeaturedProducts() {
     { id: "new", label: "New Arrivals" },
     { id: "seasonal", label: "Seasonal" },
   ];
+
+  // Fetch products from the backend
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await getProducts();
+        setProducts(data);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   // Filter products based on active tab
   const filteredProducts = products
@@ -26,6 +44,16 @@ export function FeaturedProducts() {
       return false;
     })
     .slice(0, 8);
+
+  if (loading) {
+    return (
+      <section className="py-12 md:py-20">
+        <div className="container mx-auto px-4 flex justify-center items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-12 md:py-20">
@@ -48,11 +76,17 @@ export function FeaturedProducts() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {filteredProducts.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {filteredProducts.map((product) => (
+              <ProductCard key={product.globalId} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No products found for this category.</p>
+          </div>
+        )}
 
         <div className="mt-12 text-center">
           <Link href="/products">

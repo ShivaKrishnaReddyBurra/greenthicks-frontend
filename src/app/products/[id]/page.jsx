@@ -1,83 +1,70 @@
-"use client"
-import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { useToast } from "@/hooks/use-toast"
-import { useCart } from "@/lib/cart-context"
-import { useFavorites } from "@/lib/favorites-context"
-import { products } from "@/lib/products"
-import {
-  Heart,
-  ShoppingCart,
-  Plus,
-  Minus,
-  Star,
-  ArrowLeft,
-  Truck,
-  Shield,
-  RotateCcw,
-  Check,
-  X,
-  Camera,
-} from "lucide-react"
+"use client";
+import React from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { useCart } from "@/lib/cart-context";
+import { useFavorites } from "@/lib/favorites-context";
+import { getProductById, getProducts } from "@/lib/api";
+import { Heart, ShoppingCart, Plus, Minus, Star, ArrowLeft, Truck, Shield, RotateCcw } from "lucide-react";
 
-export default function ProductDetailPage({ params }) {
-  const router = useRouter()
-  const { toast } = useToast()
-  const { addToCart } = useCart()
-  const { addToFavorites, removeFromFavorites, isFavorite } = useFavorites()
-  const [quantity, setQuantity] = useState(1)
-  const [activeTab, setActiveTab] = useState("description")
-  const [product, setProduct] = useState(null)
-  const [similarProducts, setSimilarProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [selectedImage, setSelectedImage] = useState(0)
-  const [reviewImages, setReviewImages] = useState([])
-  const [showReviewForm, setShowReviewForm] = useState(false)
-  const fileInputRef = useRef(null)
+export default function ProductDetailPage({ params: paramsPromise }) {
+  const params = React.use(paramsPromise); // Unwrap the params Promise
+  const router = useRouter();
+  const { toast } = useToast();
+  const { addToCart } = useCart();
+  const { addToFavorites, removeFromFavorites, isFavorite } = useFavorites();
+  const [quantity, setQuantity] = useState(1);
+  const [activeTab, setActiveTab] = useState("description");
+  const [product, setProduct] = useState(null);
+  const [similarProducts, setSimilarProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Find the product by ID
-    const productId = Number.parseInt(params.id)
-    const foundProduct = products.find((p) => p.id === productId)
+    const fetchData = async () => {
+      try {
+        // Fetch the product
+        const productId = Number.parseInt(params.id);
+        const foundProduct = await getProductById(productId);
 
-    if (foundProduct) {
-      setProduct(foundProduct)
+        if (foundProduct) {
+          setProduct(foundProduct);
 
-      // Find similar products (same category)
-      const similar = products
-        .filter((p) => p.category === foundProduct.category && p.id !== foundProduct.id)
-        .slice(0, 4)
-      setSimilarProducts(similar)
-    }
+          // Fetch all products to find similar ones
+          const allProducts = await getProducts();
+          const similar = allProducts
+            .filter((p) => p.category === foundProduct.category && p.globalId !== foundProduct.globalId)
+            .slice(0, 4);
+          setSimilarProducts(similar);
+        }
+      } catch (error) {
+        console.error("Error fetching product:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    setLoading(false)
-  }, [params.id])
+    fetchData();
+  }, [params.id]);
 
   const handleAddToCart = () => {
     if (product) {
-      addToCart(product, quantity)
-      toast({
-        title: "Added to cart",
-        description: `${quantity} x ${product.name} has been added to your cart.`,
-      })
+      addToCart(product, quantity);
     }
   }
 
   const toggleFavorite = () => {
     if (!product) return
 
-    if (isFavorite(product.id)) {
-      removeFromFavorites(product.id)
+    if (isFavorite(product.globalId)) {
+      removeFromFavorites(product.globalId);
+
       toast({
         title: "Removed from favorites",
         description: `${product.name} has been removed from your favorites.`,
@@ -174,16 +161,15 @@ export default function ProductDetailPage({ params }) {
       <div className="grid md:grid-cols-2 gap-8 mb-10">
         {/* Product Images Section */}
         <div className="space-y-4">
-          <div className="relative rounded-xl overflow-hidden border bg-background">
-            <div className="aspect-square w-full max-w-[400px] mx-auto">
-              <Image
-                src={getProductImage(selectedImage) || "/placeholder.svg"}
-                alt={product.name}
-                width={500}
-                height={500}
-                className="object-contain h-full w-full"
-              />
-            </div>
+
+          <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
+            <Image
+              src={product.images[0] || "/placeholder.svg?height=600&width=600"}
+              alt={product.name}
+              fill
+              className="object-cover"
+            />
+
             {product.discount > 0 && (
               <Badge className="absolute top-4 left-4 bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700">
                 -{product.discount}% OFF
@@ -203,23 +189,19 @@ export default function ProductDetailPage({ params }) {
             )}
           </div>
 
-          <div className="grid grid-cols-4 gap-3">
-            {[0, 1, 2, 3].map((index) => (
-              <button
-                key={index}
-                className={`aspect-square overflow-hidden rounded-md border ${
-                  selectedImage === index ? "ring-2 ring-primary ring-offset-2" : "opacity-70 hover:opacity-100"
-                } bg-background`}
-                onClick={() => setSelectedImage(index)}
-              >
+
+          <div className="grid grid-cols-4 gap-2">
+            {product.images.slice(1).map((image, index) => (
+              <div key={index} className="aspect-square overflow-hidden rounded-md border bg-muted">
                 <Image
-                  src={getProductImage(index) || "/placeholder.svg"}
+                  src={image || "/placeholder.svg?height=150&width=150"}
                   alt={`${product.name} - view ${index + 1}`}
-                  width={120}
-                  height={120}
+                  width={150}
+                  height={150}
                   className="h-full w-full object-cover"
                 />
-              </button>
+              </div>
+
             ))}
           </div>
         </div>
@@ -231,17 +213,9 @@ export default function ProductDetailPage({ params }) {
               <Badge variant="outline" className="text-primary border-primary">
                 {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
               </Badge>
-              {product.organic && (
-                <Badge
-                  variant="outline"
-                  className="text-green-600 dark:text-green-400 border-green-600 dark:border-green-400"
-                >
-                  100% Organic
-                </Badge>
-              )}
-              {product.new && (
-                <Badge className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700">New</Badge>
-              )}
+
+              {product.new && <Badge className="bg-blue-500">New</Badge>}
+
             </div>
 
             <h1 className="text-3xl font-bold mb-3">{product.name}</h1>
@@ -332,15 +306,10 @@ export default function ProductDetailPage({ params }) {
                   Add to Cart
                 </Button>
 
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className={`h-10 w-10 ${isFavorite(product.id) ? "bg-red-50 dark:bg-red-950/30" : ""}`}
-                  onClick={toggleFavorite}
-                >
-                  <Heart
-                    className={`h-5 w-5 ${isFavorite(product.id) ? "fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400" : ""}`}
-                  />
+
+                <Button variant="outline" size="icon" className="h-10 w-10" onClick={toggleFavorite}>
+                  <Heart className={`h-5 w-5 ${isFavorite(product.globalId) ? "fill-red-500 text-red-500" : ""}`} />
+
                 </Button>
                 <Card className="mb-6 bg-muted/40 border-muted">
               <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -741,12 +710,14 @@ export default function ProductDetailPage({ params }) {
         <h2 className="text-2xl font-bold mb-6">Similar Products</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {similarProducts.map((product) => (
-            <Card key={product.id} className="product-card group overflow-hidden bg-card">
-              <Link href={`/products/${product.id}`}>
+
+            <div key={product.globalId} className="product-card group">
+              <Link href={`/products/${product.globalId}`}>
+
                 <div className="relative">
                   <div className="aspect-square overflow-hidden bg-background">
                     <Image
-                      src={product.image || "/placeholder.svg?height=300&width=300"}
+                      src={product.images[0] || "/placeholder.svg?height=300&width=300"}
                       alt={product.name}
                       width={300}
                       height={300}
@@ -781,5 +752,7 @@ export default function ProductDetailPage({ params }) {
         </div>
       </div>
     </div>
-  )
+
+  );
 }
+
