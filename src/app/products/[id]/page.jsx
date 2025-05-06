@@ -312,27 +312,27 @@ export default function ProductDetailPage({ params: paramsPromise }) {
 
                 </Button>
                 <Card className="mb-6 bg-muted/40 border-muted">
-              <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="flex items-center gap-2 py-1">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <Truck className="h-5 w-5 text-primary" />
-                  </div>
-                  <span className="text-sm">Free delivery over ₹500</span>
-                </div>
-                <div className="flex items-center gap-2 py-1">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <Shield className="h-5 w-5 text-primary" />
-                  </div>
-                  <span className="text-sm">100% organic certified</span>
-                </div>
-                <div className="flex items-center gap-2 py-1">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <RotateCcw className="h-5 w-5 text-primary" />
-                  </div>
-                  <span className="text-sm">30-day return policy</span>
-                </div>
-              </CardContent>
-            </Card>
+                  <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="flex items-center gap-2 py-1">
+                      <div className="bg-primary/10 p-2 rounded-full">
+                        <Truck className="h-5 w-5 text-primary" />
+                      </div>
+                      <span className="text-sm">Free delivery over ₹500</span>
+                    </div>
+                    <div className="flex items-center gap-2 py-1">
+                      <div className="bg-primary/10 p-2 rounded-full">
+                        <Shield className="h-5 w-5 text-primary" />
+                      </div>
+                      <span className="text-sm">100% organic certified</span>
+                    </div>
+                    <div className="flex items-center gap-2 py-1">
+                      <div className="bg-primary/10 p-2 rounded-full">
+                        <RotateCcw className="h-5 w-5 text-primary" />
+                      </div>
+                      <span className="text-sm">30-day return policy</span>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
@@ -710,10 +710,8 @@ export default function ProductDetailPage({ params: paramsPromise }) {
         <h2 className="text-2xl font-bold mb-6">Similar Products</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {similarProducts.map((product) => (
-
-            <div key={product.globalId} className="product-card group">
+            <Card key={product.globalId} className="product-card group">
               <Link href={`/products/${product.globalId}`}>
-
                 <div className="relative">
                   <div className="aspect-square overflow-hidden bg-background">
                     <Image

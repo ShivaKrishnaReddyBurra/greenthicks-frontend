@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Upload, X } from "lucide-react"
+import Link from "next/link"
+import { Upload, X, ArrowLeft, Save } from "lucide-react"
 import { createProduct } from "@/lib/api"
-
 
 export default function AddProduct() {
   const router = useRouter()
@@ -14,8 +14,7 @@ export default function AddProduct() {
     price: "",
     stock: "",
     category: "",
-    description: "",
-    unit: "", // Added unit field
+    unit: "",
     featured: false,
     bestseller: false,
     new: false,
@@ -64,15 +63,12 @@ export default function AddProduct() {
     setImagePreviews(imagePreviews.filter((_, i) => i !== index))
   }
 
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError("")
 
     try {
-
-      // Validate form
       if (
         !formData.name ||
         !formData.price ||
@@ -85,7 +81,6 @@ export default function AddProduct() {
         throw new Error("Please fill all required fields and upload at least one image")
       }
 
-      // Prepare data for the backend
       const productData = {
         ...formData,
         price: parseFloat(formData.price),
@@ -103,9 +98,7 @@ export default function AddProduct() {
     }
   }
 
-
   const categories = ["leafy", "fruit", "root", "herbs"]
-
 
   return (
     <div>
@@ -135,7 +128,6 @@ export default function AddProduct() {
           {/* Basic Information */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold mb-4">Basic Information</h2>
-
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-muted-foreground mb-1">
                 Product Name *
@@ -150,7 +142,6 @@ export default function AddProduct() {
                 className="w-full p-2 border rounded-md"
               />
             </div>
-
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-muted-foreground mb-1">
                 Description *
@@ -165,7 +156,6 @@ export default function AddProduct() {
                 className="w-full p-2 border rounded-md"
               />
             </div>
-
             <div>
               <label htmlFor="category" className="block text-sm font-medium text-muted-foreground mb-1">
                 Category *
@@ -179,14 +169,11 @@ export default function AddProduct() {
                 className="w-full p-2 border rounded-md"
               >
                 <option value="">Select a category</option>
-                <option value="vegetables">Vegetables</option>
-                <option value="fruit">Fruits</option>
-                <option value="dairy">Dairy</option>
-                <option value="leafy">Leafy Greens</option>
-                <option value="root">Root Vegetables</option>
-                <option value="herbs">Herbs</option>
-                <option value="organic">Organic Products</option>
-                <option value="seasonal">Seasonal Items</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -194,7 +181,6 @@ export default function AddProduct() {
           {/* Pricing & Inventory */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold mb-4">Pricing & Inventory</h2>
-
             <div>
               <label htmlFor="price" className="block text-sm font-medium text-muted-foreground mb-1">
                 Price (₹) *
@@ -211,7 +197,6 @@ export default function AddProduct() {
                 className="w-full p-2 border rounded-md"
               />
             </div>
-
             <div>
               <label htmlFor="discount" className="block text-sm font-medium text-muted-foreground mb-1">
                 Discount (%)
@@ -227,91 +212,98 @@ export default function AddProduct() {
                 className="w-full p-2 border rounded-md"
               />
             </div>
-
-            <div className="mb-4">
-              <label htmlFor="category" className="block text-sm font-medium mb-2">
-                Category <span className="text-red-500">*</span>
+            <div>
+              <label htmlFor="stock" className="block text-sm font-medium text-muted-foreground mb-1">
+                Stock *
               </label>
-              <select
-                id="category"
-                name="category"
-                className="w-full p-2 border rounded-md bg-background"
-                value={formData.category}
+              <input
+                type="number"
+                id="stock"
+                name="stock"
+                value={formData.stock}
                 onChange={handleChange}
                 required
-              >
-                <option value="">Select a category</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                  </option>
-                ))}
-              </select>
-
+                min="0"
+                className="w-full p-2 border rounded-md"
+              />
             </div>
-
-            <div className="mb-4">
-              <label htmlFor="unit" className="block text-sm font-medium mb-2">
-                Unit <span className="text-red-500">*</span>
+            <div>
+              <label htmlFor="unit" className="block text-sm font-medium text-muted-foreground mb-1">
+                Unit *
               </label>
               <input
                 type="text"
                 id="unit"
                 name="unit"
-                className="w-full p-2 border rounded-md bg-background"
                 value={formData.unit}
                 onChange={handleChange}
                 required
+                className="w-full p-2 border rounded-md"
               />
             </div>
           </div>
         </div>
 
-          {/* Right Column */}
-          <div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
-                Product Images (up to 5) <span className="text-red-500">*</span>
-              </label>
-              {imagePreviews.length > 0 ? (
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {imagePreviews.map((preview, index) => (
-                    <div key={index} className="relative w-full h-24 border rounded-md overflow-hidden">
-                      <img
-                        src={preview}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-full object-contain"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              <div className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center h-64">
-                <Upload size={48} className="text-gray-400 mb-2" />
-                <p className="text-sm text-gray-500 mb-2">Click or drag to upload images</p>
-                <input
-                  type="file"
-                  id="images"
-                  name="images"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handleImageChange}
-                />
-                <label
-                  htmlFor="images"
-                  className="bg-primary text-primary-foreground px-4 py-2 rounded-md cursor-pointer hover:bg-primary/90 transition-colors"
-                >
-                  Select Images
-                </label>
+        {/* Image Upload and Tags */}
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold mb-4">Images & Tags</h2>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2">
+              Product Images (up to 5) <span className="text-red-500">*</span>
+            </label>
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative w-full h-24 border rounded-md overflow-hidden">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-full object-contain"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
               </div>
+            )}
+            <div className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center h-64">
+              <Upload size={48} className="text-gray-400 mb-2" />
+              <p className="text-sm text-gray-500 mb-2">Click or drag to upload images</p>
+              <input
+                type="file"
+                id="images"
+                name="images"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImageChange}
+              />
+              <label
+                htmlFor="images"
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-md cursor-pointer hover:bg-primary/90 transition-colors"
+              >
+                Select Images
+              </label>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="featured"
+                name="featured"
+                checked={formData.featured}
+                onChange={handleChange}
+                className="mr-2"
+              />
+              <label htmlFor="featured" className="text-sm">
+                Featured
+              </label>
             </div>
             <div className="flex items-center">
               <input
@@ -352,21 +344,6 @@ export default function AddProduct() {
                 Seasonal
               </label>
             </div>
-          </div>
-        </div>
-
-        {/* Image Upload - Placeholder */}
-        <div className="mt-6 pt-6 border-t">
-          <h2 className="text-lg font-semibold mb-4">Product Image</h2>
-          <div className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center">
-            <p className="text-muted-foreground">Drag and drop an image here, or click to select a file</p>
-            <button
-              type="button"
-              className="mt-2 px-4 py-2 bg-muted hover:bg-muted/80 rounded-md"
-              onClick={() => alert("Image upload functionality would be implemented here")}
-            >
-              Select Image
-            </button>
           </div>
         </div>
 
