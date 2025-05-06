@@ -1,7 +1,5 @@
 "use client";
-import React from "react";
-
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -23,13 +21,14 @@ import {
   HelpCircle,
   FileText,
   ChevronDown,
+  LogOut,
+  User2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useCart } from "@/lib/cart-context";
 import { useFavorites } from "@/lib/favorites-context";
 import { useTheme } from "next-themes";
-import { ModeToggle } from "@/components/mode-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +37,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { getAuthToken, clearAuth } from "@/lib/auth-utils";
 import logo from "@/public/logo.png";
 
 export default function Header() {
@@ -47,17 +47,47 @@ export default function Header() {
   const { favorites } = useFavorites();
   const [isScrolled, setIsScrolled] = useState(false);
   const { theme, setTheme } = useTheme();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
 
   useEffect(() => {
+    // Check authentication status
+    const checkAuth = () => {
+      const token = getAuthToken();
+      setIsAuthenticated(!!token);
+    };
+
+    // Initial check
+    checkAuth();
+
+    // Listen for storage changes (e.g., login/logout in another tab)
+    window.addEventListener("storage", checkAuth);
+
+    // Check auth on route changes
+    checkAuth();
+
+    // Handle scroll for sticky header
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
-
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+
+    // Set mounted for theme hydration
+    setMounted(true);
+
+    return () => {
+      window.removeEventListener("storage", checkAuth);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [pathname]);
+
+  const handleLogout = () => {
+    clearAuth();
+    setIsAuthenticated(false);
+    router.push("/login");
+  };
 
   const navLinks = [
     { href: "/", label: "Home", icon: <Home className="h-5 w-5 mr-3" /> },
@@ -75,6 +105,7 @@ export default function Header() {
   ];
 
   const getThemeIcon = () => {
+    if (!mounted) return <Laptop className="h-6 w-6" />;
     if (theme === "dark") return <Moon className="h-6 w-6" />;
     if (theme === "light") return <Sun className="h-6 w-6" />;
     return <Laptop className="h-6 w-6" />;
@@ -108,7 +139,7 @@ export default function Header() {
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="flex items-center gap-2">
                           {getThemeIcon()}
-                          <span className="capitalize">{theme}</span>
+                          <span className="capitalize">{mounted ? theme : "system"}</span>
                           <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -180,50 +211,54 @@ export default function Header() {
                       )}
                     </Link>
 
-                      {
-                        /*
-                          temparary disabled
-                          
-                          <Link
+                    <Link
                       href="/my-orders"
                       className={`px-2 py-2 text-base flex items-center rounded-md ${
                         pathname === "/my-orders"
                           ? "font-medium text-primary bg-primary/10"
                           : "text-foreground hover:bg-muted"
                       }`}
+                      onClick={(e) => {
+                        if (!isAuthenticated) {
+                          e.preventDefault();
+                          alert("To see your orders, please login first.");
+                          router.push("/login");
+                        }
+                      }}
                     >
                       <Package className="h-5 w-5 mr-3" />
                       My Orders
                     </Link>
 
-                        */
-                      }
-
+                    <h3 className="font-semibold text-sm uppercase text-muted-foreground px-2 py-2 mt-4">Account</h3>
                     <Link
-                      href="/my-orders"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        alert("To see your orders, you must be logged in.");
-                      }}
-                      className={`px-2 py-2 text-base flex items-center rounded-md cursor-not-allowed ${
-                        pathname === "/my-orders"
+                      href="/profile"
+                      className={`px-2 py-2 text-base flex items-center rounded-md ${
+                        pathname === "/profile"
                           ? "font-medium text-primary bg-primary/10"
                           : "text-foreground hover:bg-muted"
                       }`}
                     >
-                      <Package className="h-5 w-5 mr-3" />
-                      My Orders
+                      <User2 className="h-5 w-5 mr-3" />
+                      Profile
                     </Link>
-
-
-                    <h3 className="font-semibold text-sm uppercase text-muted-foreground px-2 py-2 mt-4">Account</h3>
-                    <Link
-                      href="https://green-thicks-login-vibe.lovable.app/"
-                      className="px-2 py-2 text-base flex items-center rounded-md text-foreground hover:bg-muted"
-                    >
-                      <LogIn className="h-5 w-5 mr-3" />
-                      Login / Register
-                    </Link>
+                    {isAuthenticated ? (
+                      <button
+                        onClick={handleLogout}
+                        className="px-2 py-2 text-base flex items-center rounded-md text-foreground hover:bg-muted w-full text-left"
+                      >
+                        <LogOut className="h-5 w-5 mr-3" />
+                        Logout
+                      </button>
+                    ) : (
+                      <Link
+                        href="/login"
+                        className="px-2 py-2 text-base flex items-center rounded-md text-foreground hover:bg-muted"
+                      >
+                        <LogIn className="h-5 w-5 mr-3" />
+                        Login / Register
+                      </Link>
+                    )}
 
                     <h3 className="font-semibold text-sm uppercase text-muted-foreground px-2 py-2 mt-4">
                       More Information
@@ -244,7 +279,7 @@ export default function Header() {
             </Sheet>
 
             <Link href="/" className="ml-4 lg:ml-0 flex items-center">
-              <Image src= {logo} alt="Green Thicks Logo" width={120} height={60} className="h-10 w-auto" />
+              <Image src={logo} alt="Green Thicks Logo" width={120} height={60} className="h-10 w-auto" />
             </Link>
 
             <nav className="hidden lg:flex ml-8 space-x-6">
@@ -263,45 +298,61 @@ export default function Header() {
           </div>
 
           <div className="flex items-center space-x-2">
-            <div className="hidden lg:flex">
-              <ModeToggle />
+            <div className="hidden lg:block">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="flex items-center gap-2">
+                    {getThemeIcon()}
+                    <span className="sr-only">Theme</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setTheme("light")} className="flex items-center gap-2">
+                    <Sun className="h-4 w-4" />
+                    Light
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("dark")} className="flex items-center gap-2">
+                    <Moon className="h-4 w-4" />
+                    Dark
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("system")} className="flex items-center gap-2">
+                    <Laptop className="h-4 w-4" />
+                    System
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <div className="hidden lg:block">
               <Link href="/favorites" className="relative inline-flex items-center justify-center p-2">
-              <Button variant="ghost" size="icon" className="relative">
-              <Heart className="h-5 w-5" />
-                {favorites.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {favorites.length}
-                  </span>
-                )}
-                <span className="sr-only">Favorites</span>
-              </Button>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Heart className="h-5 w-5" />
+                  {favorites.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {favorites.length}
+                    </span>
+                  )}
+                  <span className="sr-only">Favorites</span>
+                </Button>
               </Link>
             </div>
 
             <div className="hidden lg:block">
-              {
-                /*
-                    temparally hidden
-                    
-                     <Link href="/my-orders" className="relative inline-flex items-center justify-center p-2">
-                <Package className="h-6 w-6" />
-                <span className="sr-only">My Orders</span>
-              </Link>
-
-                */
-              }
               <Button variant="ghost" size="icon" className="relative">
-                <Link href="/my-orders"  onClick={(e) => {
-                        e.preventDefault();
-                        alert("To see your orders, please login first.");
-                      }}
-                      className="w-full flex items-center cursor-not-allowed">
-                <Package className="h-4 w-4" />
-                <span className="sr-only">My Orders</span>
-              </Link>
+                <Link
+                  href="/my-orders"
+                  className="w-full flex items-center"
+                  onClick={(e) => {
+                    if (!isAuthenticated) {
+                      e.preventDefault();
+                      alert("To see your orders, please login first.");
+                      router.push("/login");
+                    }
+                  }}
+                >
+                  <Package className="h-4 w-4" />
+                  <span className="sr-only">My Orders</span>
+                </Link>
               </Button>
             </div>
 
@@ -316,33 +367,16 @@ export default function Header() {
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
-                  <Link href="https://green-thicks-login-vibe.lovable.app/" className="w-full flex">
-                    Login / Register
+                  <Link href="/profile" className="w-full flex items-center">
+                    <User2 className="mr-2 h-4 w-4" />
+                    Profile
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  {
-                    /*
-                      temparally hidden
-
-                    <Link href="/my-orders" className="w-full flex items-center">
-                      <Package className="mr-2 h-4 w-4" />
-                      My Orders
-                    </Link>
-                    */
-                  }
-                  <Link
-                      href="/my-orders"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        alert("To see your orders, please login first.");
-                      }}
-                      className="w-full flex items-center cursor-not-allowed"
-                    >
-                      <Package className="mr-2 h-4 w-4" />
-                      My Orders
+                  <Link href="/my-orders" className="w-full flex items-center">
+                    <Package className="mr-2 h-4 w-4" />
+                    My Orders
                   </Link>
-
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Link href="/favorites" className="w-full flex items-center">
@@ -351,6 +385,20 @@ export default function Header() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                {isAuthenticated ? (
+                  <DropdownMenuItem>
+                    <button onClick={handleLogout} className="w-full flex items-center">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </button>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem>
+                    <Link href="/login" className="w-full flex">
+                      Login / Register
+                    </Link>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -362,7 +410,7 @@ export default function Header() {
                     {totalItems}
                   </span>
                 )}
-                <span className="sr-only ">Cart</span>
+                <span className="sr-only">Cart</span>
               </Button>
             </Link>
           </div>

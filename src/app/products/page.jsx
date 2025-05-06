@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
@@ -12,16 +11,34 @@ import { Leaf, Filter } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { products } from "@/lib/products";
+import { getProducts } from "@/lib/api";
 
 export default function ProductsPage() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category");
   const searchQueryParam = searchParams.get("search");
 
+  const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(categoryParam || "all");
   const [priceRange, setPriceRange] = useState([0, 100]);
   const [searchQuery, setSearchQuery] = useState(searchQueryParam || "");
+  const [loading, setLoading] = useState(true);
+
+  // Fetch products from the backend
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await getProducts();
+        setProducts(data);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   // Update state when URL parameters change
   useEffect(() => {
@@ -39,7 +56,6 @@ export default function ProductsPage() {
     { id: "root", name: "Root Vegetables" },
     { id: "fruit", name: "Fruit Vegetables" },
     { id: "herbs", name: "Herbs & Aromatics" },
-    { id: "seasonal", name: "Seasonal Specials" },
   ];
 
   const filteredProducts = products.filter((product) => {
@@ -60,6 +76,14 @@ export default function ProductsPage() {
 
     return true;
   });
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -206,7 +230,7 @@ export default function ProductsPage() {
           {filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard key={product.globalId} product={product} />
               ))}
             </div>
           ) : (

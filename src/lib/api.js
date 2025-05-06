@@ -1,0 +1,146 @@
+import { getAuthToken } from "@/lib/auth-utils";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+// Generic fetch function with error handling
+export const fetchWithAuth = async (url, options = {}) => {
+  const token = getAuthToken();
+  const headers = {
+    ...options.headers,
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${url}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Something went wrong');
+  }
+
+  return response.json();
+};
+
+// Generic fetch function for multipart/form-data (for file uploads)
+export const fetchWithAuthFormData = async (url, formData, method = 'POST') => {
+  const token = getAuthToken();
+  const headers = {};
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${url}`, {
+    method,
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Something went wrong');
+  }
+
+  return response.json();
+};
+
+// Product API functions
+export const getProducts = async () => {
+  return fetchWithAuth('/api/products');
+};
+
+export const getProductById = async (globalId) => {
+  return fetchWithAuth(`/api/products/${globalId}`);
+};
+
+export const createProduct = async (productData, images) => {
+  const formData = new FormData();
+  
+  Object.keys(productData).forEach((key) => {
+    formData.append(key, productData[key]);
+  });
+
+  images.forEach((image) => {
+    formData.append('images', image);
+  });
+
+  return fetchWithAuthFormData('/api/products', formData, 'POST');
+};
+
+export const updateProduct = async (globalId, productData, images) => {
+  const formData = new FormData();
+
+  Object.keys(productData).forEach((key) => {
+    formData.append(key, productData[key]);
+  });
+
+  if (images && images.length > 0) {
+    images.forEach((image) => {
+      formData.append('images', image);
+    });
+  }
+
+  return fetchWithAuthFormData(`/api/products/${globalId}`, formData, 'PUT');
+};
+
+export const deleteProduct = async (globalId) => {
+  return fetchWithAuth(`/api/products/${globalId}`, { method: 'DELETE' });
+};
+
+// Order API functions
+export const createOrder = async (orderData) => {
+  return fetchWithAuth('/api/orders', {
+    method: 'POST',
+    body: JSON.stringify(orderData),
+  });
+};
+
+export const getUserOrders = async () => {
+  return fetchWithAuth('/api/orders/my-orders');
+};
+
+export const getOrder = async (globalId) => {
+  return fetchWithAuth(`/api/orders/${globalId}`);
+};
+
+export const cancelOrder = async (globalId) => {
+  return fetchWithAuth(`/api/orders/${globalId}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status: 'cancelled' }),
+  });
+};
+
+// Cart API functions
+export const addToCart = async (productId, quantity) => {
+  return fetchWithAuth('/api/cart', {
+    method: 'POST',
+    body: JSON.stringify({ productId, quantity }),
+  });
+};
+
+export const getCart = async () => {
+  return fetchWithAuth('/api/cart');
+};
+
+export const removeFromCart = async (productId) => {
+  return fetchWithAuth(`/api/cart/item/${productId}`, {
+    method: 'DELETE',
+  });
+};
+
+export const clearCart = async () => {
+  return fetchWithAuth('/api/cart', {
+    method: 'DELETE',
+  });
+};
+
+// User Profile API function
+export const getUserProfile = async () => {
+  return fetchWithAuth('/api/auth/profile');
+};

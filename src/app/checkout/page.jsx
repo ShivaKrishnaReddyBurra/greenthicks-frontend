@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CreditCard, Truck, ShieldCheck, LockIcon, MapPin } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { createOrder, getUserProfile } from "@/lib/api";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -49,32 +50,43 @@ export default function CheckoutPage() {
     currentLocation: null,
   });
 
+  // Fetch user profile to pre-fill shipping details
   useEffect(() => {
-    // Calculate order summary from cart
-    if (cart.length > 0) {
-      const subtotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
-      const shipping = subtotal > 50 ? 0 : 5.99;
-      const discount = 0; // You can implement discount logic here
-      const total = subtotal + shipping - discount;
+    const fetchUserProfile = async () => {
+      try {
+        const profile = await getUserProfile();
+        setFormData((prev) => ({
+          ...prev,
+          firstName: profile.firstName || "",
+          lastName: profile.lastName || "",
+          email: profile.email || "",
+          phone: profile.phone || "",
+          address: profile.address?.address || "",
+          city: profile.address?.city || "",
+          state: profile.address?.state || "",
+          zipCode: profile.address?.zipCode || "",
+        }));
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error);
+      }
+    };
+    fetchUserProfile();
 
-      setOrderSummary({
-        subtotal,
-        shipping,
-        discount,
-        total,
-        appliedCoupon: "",
-      });
+    // Load order summary from session storage
+    const subtotal = parseFloat(sessionStorage.getItem("cartSubtotal") || "0");
+    const shipping = parseFloat(sessionStorage.getItem("cartShipping") || "0");
+    const discount = parseFloat(sessionStorage.getItem("cartDiscount") || "0");
+    const total = parseFloat(sessionStorage.getItem("cartTotal") || "0");
+    const appliedCoupon = sessionStorage.getItem("appliedCoupon") || "";
 
-      // Store in session storage
-      sessionStorage.setItem("cartSubtotal", subtotal.toString());
-      sessionStorage.setItem("cartShipping", shipping.toString());
-      sessionStorage.setItem("cartDiscount", discount.toString());
-      sessionStorage.setItem("cartTotal", total.toString());
-    } else {
-      // Redirect to cart if cart is empty
-      router.push("/success");
-    }
-  }, [cart, router]);
+    setOrderSummary({
+      subtotal,
+      shipping,
+      discount,
+      total,
+      appliedCoupon,
+    });
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -84,12 +96,11 @@ export default function CheckoutPage() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validate form
     const requiredFields = ["firstName", "lastName", "email", "phone", "address", "city", "state", "zipCode"];
-
     const missingFields = requiredFields.filter((field) => !formData[field]);
 
     if (missingFields.length > 0) {
@@ -165,46 +176,53 @@ export default function CheckoutPage() {
       }
     }
 
-    // Process payment
+    // Process order
     setIsProcessing(true);
 
-    // Generate a random order ID
-    const orderId = `ORD-${Math.floor(10000 + Math.random() * 90000)}`;
+    try {
+      const orderData = {
+        paymentMethod,
+        shippingAddress: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode,
+        },
+        couponCode: orderSummary.appliedCoupon,
+      };
 
-    // Calculate estimated delivery date (3-5 days from now)
-    const deliveryDate = new Date();
-    deliveryDate.setDate(deliveryDate.getDate() + Math.floor(3 + Math.random() * 3));
+      const response = await createOrder(orderData);
 
-    // Store order information in session storage
-    sessionStorage.setItem("orderId", orderId);
-    sessionStorage.setItem("orderDate", new Date().toISOString());
-    sessionStorage.setItem("deliveryDate", deliveryDate.toISOString());
-    sessionStorage.setItem("orderStatus", "processing");
-    sessionStorage.setItem("orderItems", JSON.stringify(cart));
-    sessionStorage.setItem("orderTotal", orderSummary.total.toString());
-    sessionStorage.setItem("paymentMethod", paymentMethod);
-    sessionStorage.setItem(
-      "shippingAddress",
-      JSON.stringify({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        zipCode: formData.zipCode,
-        location: formData.useCurrentLocation ? formData.currentLocation : null,
-      })
-    );
+      // Store order information in session storage
+      sessionStorage.setItem("orderId", response.order.id);
+      sessionStorage.setItem("orderDate", response.order.orderDate);
+      sessionStorage.setItem("deliveryDate", response.order.deliveryDate);
+      sessionStorage.setItem("orderStatus", response.order.status);
+      sessionStorage.setItem("orderItems", JSON.stringify(response.order.items));
+      sessionStorage.setItem("orderTotal", response.order.total.toString());
+      sessionStorage.setItem("paymentMethod", response.order.paymentMethod);
+      sessionStorage.setItem("shippingAddress", JSON.stringify(response.order.shippingAddress));
 
-    // Simulate payment processing
-    setTimeout(() => {
-      setIsProcessing(false);
+      toast({
+        title: "Order placed successfully",
+        description: `Your order ${response.order.id} has been placed.`,
+      });
 
       // Clear cart and redirect to success page
       clearCart();
-      console.log("Redirecting to success page..."); // Debugging statement
-      router.push("/success"); // Ensure the path is correct
-    }, 2000);
+      router.push("/success");
+    } catch (error) {
+      console.error("Failed to create order:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to place order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (cart.length === 0) {
@@ -265,7 +283,13 @@ export default function CheckoutPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone *</Label>
-                  <Input id="phone" name="phone" value={formData.phone} onChange={handleInputChange} required />
+                  <Input
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    required
+                  />
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
@@ -335,18 +359,36 @@ export default function CheckoutPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="city">City *</Label>
-                  <Input id="city" name="city" value={formData.city} onChange={handleInputChange} required />
+                  <Input
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    required
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="state">State *</Label>
-                    <Input id="state" name="state" value={formData.state} onChange={handleInputChange} required />
+                    <Input
+                      id="state"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleInputChange}
+                      required
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="zipCode">ZIP Code *</Label>
-                    <Input id="zipCode" name="zipCode" value={formData.zipCode} onChange={handleInputChange} required />
+                    <Input
+                      id="zipCode"
+                      name="zipCode"
+                      value={formData.zipCode}
+                      onChange={handleInputChange}
+                      required
+                    />
                   </div>
                 </div>
               </div>
@@ -452,7 +494,13 @@ export default function CheckoutPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="cvv">CVV *</Label>
-                      <Input id="cvv" name="cvv" placeholder="123" value={formData.cvv} onChange={handleInputChange} />
+                      <Input
+                        id="cvv"
+                        name="cvv"
+                        placeholder="123"
+                        value={formData.cvv}
+                        onChange={handleInputChange}
+                      />
                     </div>
                   </div>
 
@@ -517,7 +565,7 @@ function OrderSummary({ cart, orderSummary }) {
 
       <div className="max-h-80 overflow-y-auto mb-4">
         {cart.map((item) => (
-          <div key={item.id} className="flex items-center gap-3 py-3 border-b last:border-0">
+          <div key={item.productId} className="flex items-center gap-3 py-3 border-b last:border-0">
             <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
               <Image
                 src={item.image || "/placeholder.svg?height=64&width=64"}
@@ -531,7 +579,6 @@ function OrderSummary({ cart, orderSummary }) {
             </div>
             <div className="flex-1">
               <h3 className="font-medium text-sm">{item.name}</h3>
-              <p className="text-xs text-muted-foreground">{item.unit}</p>
             </div>
             <div className="text-sm font-medium">₹{(item.price * item.quantity).toFixed(2)}</div>
           </div>

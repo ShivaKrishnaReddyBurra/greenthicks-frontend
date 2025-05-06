@@ -4,10 +4,12 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Edit, Trash2, Package, Tag, BarChart } from "lucide-react"
+import { getProductById, deleteProduct } from "@/lib/api"
+import { use } from "react" // Import React's use
 
 export default function AdminProductDetail({ params }) {
   const router = useRouter()
-  const { id } = params
+  const { id } = use(params) // Unwrap params with React.use()
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -16,14 +18,10 @@ export default function AdminProductDetail({ params }) {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        // In a real app, this would be an API call
-        const { getProductById } = await import("@/lib/products")
-        const productData = getProductById(id)
-
+        const productData = await getProductById(id)
         if (!productData) {
           throw new Error("Product not found")
         }
-
         setProduct(productData)
       } catch (error) {
         console.error("Error fetching product:", error)
@@ -38,17 +36,14 @@ export default function AdminProductDetail({ params }) {
 
   const handleDelete = async () => {
     try {
-      // In a real app, this would be an API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Redirect to products page
+      await deleteProduct(id)
       router.push("/admin/products")
     } catch (error) {
       console.error("Error deleting product:", error)
       setError("Failed to delete product. Please try again.")
     }
   }
-
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -83,7 +78,7 @@ export default function AdminProductDetail({ params }) {
         <h1 className="text-3xl font-bold mb-4 md:mb-0">{product.name}</h1>
         <div className="flex space-x-2">
           <Link
-            href={`/admin/products/edit/${product.id}`}
+            href={`/admin/products/edit/${product.globalId}`}
             className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center hover:bg-blue-600 transition-colors"
           >
             <Edit size={18} className="mr-2" />
@@ -101,22 +96,33 @@ export default function AdminProductDetail({ params }) {
 
       {/* Product Content */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Product Image */}
+        {/* Product Images */}
         <div className="md:col-span-1">
           <div className="bg-card rounded-lg shadow-md p-4">
             <div className="aspect-square relative rounded-md overflow-hidden">
               <img
-                src={product.image || "/placeholder.svg"}
+                src={product.images[0] || "/placeholder.svg"}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
             </div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {product.images.slice(1).map((image, index) => (
+                <div key={index} className="aspect-square relative rounded-md overflow-hidden">
+                  <img
+                    src={image}
+                    alt={`${product.name} view ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
             <div className="mt-4">
               <Link
-                href={`/admin/products/edit/${product.id}`}
+                href={`/admin/products/edit/${product.globalId}`}
                 className="w-full bg-muted hover:bg-muted/80 text-center py-2 rounded-md block"
               >
-                Change Image
+                Change Images
               </Link>
             </div>
           </div>
@@ -131,7 +137,7 @@ export default function AdminProductDetail({ params }) {
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm text-muted-foreground">Product ID</p>
-                    <p className="font-medium">{product.id}</p>
+                    <p className="font-medium">{product.globalId}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Name</p>
@@ -211,14 +217,14 @@ export default function AdminProductDetail({ params }) {
             <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <Link
-                href={`/admin/products/edit/${product.id}`}
+                href={`/admin/products/edit/${product.globalId}`}
                 className="bg-muted hover:bg-muted/80 p-4 rounded-lg text-center flex flex-col items-center"
               >
                 <Edit size={24} className="mb-2" />
                 <span>Edit Product</span>
               </Link>
               <Link
-                href={`/products/${product.id}`}
+                href={`/products/${product.globalId}`}
                 className="bg-muted hover:bg-muted/80 p-4 rounded-lg text-center flex flex-col items-center"
               >
                 <Package size={24} className="mb-2" />
@@ -232,7 +238,7 @@ export default function AdminProductDetail({ params }) {
                 <span>Update Stock</span>
               </button>
               <Link
-                href={`/admin/analytics/products/${product.id}`}
+                href={`/admin/analytics/products/${product.globalId}`}
                 className="bg-muted hover:bg-muted/80 p-4 rounded-lg text-center flex flex-col items-center"
               >
                 <BarChart size={24} className="mb-2" />

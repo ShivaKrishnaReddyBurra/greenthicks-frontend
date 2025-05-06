@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchWithAuth } from "@/lib/api";
-import { checkAdminStatus, setAuthToken } from "@/lib/auth-utils";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -18,25 +18,15 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const data = await fetchWithAuth("/api/auth/login", {
+      await fetchWithAuth("/api/auth/signup", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, isAdmin }),
       });
 
-      // Store JWT token
-      setAuthToken(data.token);
-
-      // Check admin status from token
-      const isAdmin = checkAdminStatus();
-
-      // Redirect based on admin status
-      if (isAdmin) {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/");
-      }
+      // Redirect to login page on successful registration
+      router.push("/login");
     } catch (err) {
-      setError(err.message || "Login failed. Please try again.");
+      setError(err.message || "Registration failed. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -46,7 +36,7 @@ export default function LoginPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-md mx-auto bg-card rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold mb-6 text-center">Login to Green Thicks</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center">Register for Green Thicks</h1>
 
         {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
 
@@ -65,7 +55,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="mb-6">
+          <div className="mb-4">
             <label htmlFor="password" className="block text-sm font-medium mb-2">
               Password
             </label>
@@ -79,20 +69,32 @@ export default function LoginPage() {
             />
           </div>
 
+          <div className="mb-6">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                className="mr-2"
+                checked={isAdmin}
+                onChange={(e) => setIsAdmin(e.target.checked)}
+              />
+              <span className="text-sm font-medium">Register as Admin (for testing)</span>
+            </label>
+          </div>
+
           <button
             type="submit"
             className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors"
             disabled={loading}
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading ? "Registering..." : "Register"}
           </button>
         </form>
 
         <div className="mt-4 text-center">
           <p className="text-sm">
-            Don't have an account?{" "}
-            <a href="/register" className="text-primary hover:underline">
-              Register
+            Already have an account?{" "}
+            <a href="/login" className="text-primary hover:underline">
+              Login
             </a>
           </p>
         </div>

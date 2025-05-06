@@ -15,100 +15,7 @@ import {
   Eye,
   Edit,
 } from "lucide-react"
-
-// Mock product data
-const mockProducts = [
-  {
-    id: 1,
-    name: "Organic Apples",
-    category: "Fruits",
-    price: 120,
-    stock: 45,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 2,
-    name: "Fresh Spinach",
-    category: "Vegetables",
-    price: 50,
-    stock: 78,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 3,
-    name: "Organic Milk",
-    category: "Dairy",
-    price: 100,
-    stock: 32,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 4,
-    name: "Brown Rice",
-    category: "Grains",
-    price: 100,
-    stock: 120,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 5,
-    name: "Honey",
-    category: "Sweeteners",
-    price: 150,
-    stock: 25,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 6,
-    name: "Organic Eggs",
-    category: "Dairy",
-    price: 80,
-    stock: 48,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 7,
-    name: "Whole Wheat Bread",
-    category: "Bakery",
-    price: 60,
-    stock: 35,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 8,
-    name: "Organic Tomatoes",
-    category: "Vegetables",
-    price: 40,
-    stock: 5,
-    status: "Low Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 9,
-    name: "Almond Milk",
-    category: "Dairy Alternatives",
-    price: 120,
-    stock: 0,
-    status: "Out of Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-  {
-    id: 10,
-    name: "Quinoa",
-    category: "Grains",
-    price: 180,
-    stock: 42,
-    status: "In Stock",
-    image: "/placeholder.svg?height=50&width=50",
-  },
-]
+import { getProducts, deleteProduct } from "@/lib/api"
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([])
@@ -120,13 +27,22 @@ export default function AdminProducts() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedProducts, setSelectedProducts] = useState([])
   const [selectAll, setSelectAll] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [productsPerPage] = useState(10)
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setProducts(mockProducts)
-      setIsLoading(false)
-    }, 1000)
+    const fetchProducts = async () => {
+      try {
+        const data = await getProducts()
+        setProducts(data)
+      } catch (error) {
+        console.error("Error fetching products:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProducts()
   }, [])
 
   const handleSort = (field) => {
@@ -140,21 +56,24 @@ export default function AdminProducts() {
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value)
+    setCurrentPage(1)
   }
 
   const handleFilterCategory = (e) => {
     setFilterCategory(e.target.value)
+    setCurrentPage(1)
   }
 
   const handleFilterStatus = (e) => {
     setFilterStatus(e.target.value)
+    setCurrentPage(1)
   }
 
   const handleSelectAll = () => {
     if (selectAll) {
       setSelectedProducts([])
     } else {
-      setSelectedProducts(filteredProducts.map((product) => product.id))
+      setSelectedProducts(currentProducts.map((product) => product.globalId))
     }
     setSelectAll(!selectAll)
   }
@@ -167,16 +86,86 @@ export default function AdminProducts() {
     }
   }
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
     if (window.confirm(`Are you sure you want to delete ${selectedProducts.length} products?`)) {
-      setProducts(products.filter((product) => !selectedProducts.includes(product.id)))
-      setSelectedProducts([])
-      setSelectAll(false)
+      try {
+        await Promise.all(selectedProducts.map((id) => deleteProduct(id)))
+        setProducts(products.filter((product) => !selectedProducts.includes(product.globalId)))
+        setSelectedProducts([])
+        setSelectAll(false)
+      } catch (error) {
+        console.error("Error deleting products:", error)
+        alert("Failed to delete some products. Please try again.")
+      }
     }
   }
 
+  const handleDeleteProduct = async (id, name) => {
+    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
+      try {
+        await deleteProduct(id)
+        setProducts(products.filter((product) => product.globalId !== id))
+      } catch (error) {
+        console.error("Error deleting product:", error)
+        alert("Failed to delete product. Please try again.")
+      }
+    }
+  }
+
+  const handleExport = () => {
+    const headers = ["ID,Name,Category,Price,Stock,Status"]
+    const rows = filteredProducts.map((product) => {
+      const status = product.stock === 0 ? "Out of Stock" : product.stock <= 10 ? "Low Stock" : "In Stock"
+      return `${product.globalId},${product.name},${product.category},${product.price},${product.stock},${status}`
+    })
+    const csvContent = [...headers, ...rows].join("\n")
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", "products_export.csv")
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      const text = event.target.result
+      const rows = text.split("\n").slice(1) // Skip header
+      const importedProducts = rows
+        .filter((row) => row.trim())
+        .map((row) => {
+          const [id, name, category, price, stock] = row.split(",")
+          return {
+            globalId: parseInt(id),
+            name,
+            category,
+            price: parseFloat(price),
+            stock: parseInt(stock),
+          }
+        })
+
+      // Note: You'll need a backend endpoint to handle imports (e.g., POST /api/products/import)
+      // For now, we'll just log the imported data
+      console.log("Imported products:", importedProducts)
+      alert("Import functionality requires a backend endpoint. Check console for imported data.")
+    }
+    reader.readAsText(file)
+  }
+
+  // Derive status from stock
+  const productsWithStatus = products.map((product) => ({
+    ...product,
+    status: product.stock === 0 ? "Out of Stock" : product.stock <= 10 ? "Low Stock" : "In Stock",
+  }))
+
   // Apply filters and sorting
-  const filteredProducts = products
+  const filteredProducts = productsWithStatus
     .filter(
       (product) =>
         (filterCategory === "All" || product.category === filterCategory) &&
@@ -193,6 +182,16 @@ export default function AdminProducts() {
           : b[sortField].localeCompare(a[sortField])
       }
     })
+
+  // Pagination logic
+  const indexOfLastProduct = currentPage * productsPerPage
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage
+  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct)
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+  }
 
   // Get unique categories for filter
   const categories = ["All", ...new Set(products.map((product) => product.category))]
@@ -234,14 +233,23 @@ export default function AdminProducts() {
             <Trash2 className="h-4 w-4 mr-2" />
             Delete Selected
           </button>
-          <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+          <button
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            onClick={handleExport}
+          >
             <Download className="h-4 w-4 mr-2" />
             Export
           </button>
-          <button className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
+          <label className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors cursor-pointer">
             <Upload className="h-4 w-4 mr-2" />
             Import
-          </button>
+            <input
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleImport}
+            />
+          </label>
         </div>
       </div>
 
@@ -398,13 +406,13 @@ export default function AdminProducts() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+              {currentProducts.map((product) => (
+                <tr key={product.globalId} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input
                       type="checkbox"
-                      checked={selectedProducts.includes(product.id)}
-                      onChange={() => handleSelectProduct(product.id)}
+                      checked={selectedProducts.includes(product.globalId)}
+                      onChange={() => handleSelectProduct(product.globalId)}
                       className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                     />
                   </td>
@@ -413,13 +421,13 @@ export default function AdminProducts() {
                       <div className="h-10 w-10 flex-shrink-0">
                         <img
                           className="h-10 w-10 rounded-md object-cover"
-                          src={product.image || "/placeholder.svg"}
+                          src={product.images[0] || "/placeholder.svg"}
                           alt={product.name}
                         />
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">ID: {product.id}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">ID: {product.globalId}</div>
                       </div>
                     </div>
                   </td>
@@ -448,23 +456,19 @@ export default function AdminProducts() {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
                       <Link
-                        href={`/admin/products/${product.id}`}
+                        href={`/admin/products/${product.globalId}`}
                         className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         <Eye size={18} />
                       </Link>
                       <Link
-                        href={`/admin/products/edit/${product.id}`}
+                        href={`/admin/products/edit/${product.globalId}`}
                         className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
                       >
                         <Edit size={18} />
                       </Link>
                       <button
-                        onClick={() => {
-                          if (window.confirm(`Are you sure you want to delete ${product.name}?`)) {
-                            setProducts(products.filter((p) => p.id !== product.id))
-                          }
-                        }}
+                        onClick={() => handleDeleteProduct(product.globalId, product.name)}
                         className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                       >
                         <Trash2 size={18} />
@@ -481,31 +485,57 @@ export default function AdminProducts() {
       {/* Pagination */}
       <div className="bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6 mt-4 rounded-lg shadow">
         <div className="flex-1 flex justify-between sm:hidden">
-          <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Previous
           </button>
-          <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Next
           </button>
         </div>
         <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-gray-700 dark:text-gray-300">
-              Showing <span className="font-medium">1</span> to{" "}
-              <span className="font-medium">{filteredProducts.length}</span> of{" "}
+              Showing <span className="font-medium">{indexOfFirstProduct + 1}</span> to{" "}
+              <span className="font-medium">{Math.min(indexOfLastProduct, filteredProducts.length)}</span> of{" "}
               <span className="font-medium">{filteredProducts.length}</span> results
             </p>
           </div>
           <div>
             <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <span className="sr-only">Previous</span>
                 <ChevronDown className="h-5 w-5 rotate-90" />
               </button>
-              <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
-                1
-              </button>
-              <button className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium ${
+                    currentPage === page
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <span className="sr-only">Next</span>
                 <ChevronDown className="h-5 w-5 -rotate-90" />
               </button>

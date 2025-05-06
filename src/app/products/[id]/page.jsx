@@ -11,10 +11,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/lib/cart-context";
 import { useFavorites } from "@/lib/favorites-context";
-import { products } from "@/lib/products";
+import { getProductById, getProducts } from "@/lib/api";
 import { Heart, ShoppingCart, Plus, Minus, Star, ArrowLeft, Truck, Shield, RotateCcw } from "lucide-react";
 
-export default function ProductDetailPage({ params }) {
+export default function ProductDetailPage({ params: paramsPromise }) {
+  const params = React.use(paramsPromise); // Unwrap the params Promise
   const router = useRouter();
   const { toast } = useToast();
   const { addToCart } = useCart();
@@ -26,38 +27,43 @@ export default function ProductDetailPage({ params }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Find the product by ID
-    const productId = Number.parseInt(params.id);
-    const foundProduct = products.find((p) => p.id === productId);
+    const fetchData = async () => {
+      try {
+        // Fetch the product
+        const productId = Number.parseInt(params.id);
+        const foundProduct = await getProductById(productId);
 
-    if (foundProduct) {
-      setProduct(foundProduct);
+        if (foundProduct) {
+          setProduct(foundProduct);
 
-      // Find similar products (same category)
-      const similar = products
-        .filter((p) => p.category === foundProduct.category && p.id !== foundProduct.id)
-        .slice(0, 4);
-      setSimilarProducts(similar);
-    }
+          // Fetch all products to find similar ones
+          const allProducts = await getProducts();
+          const similar = allProducts
+            .filter((p) => p.category === foundProduct.category && p.globalId !== foundProduct.globalId)
+            .slice(0, 4);
+          setSimilarProducts(similar);
+        }
+      } catch (error) {
+        console.error("Error fetching product:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    setLoading(false);
+    fetchData();
   }, [params.id]);
 
   const handleAddToCart = () => {
     if (product) {
       addToCart(product, quantity);
-      toast({
-        title: "Added to cart",
-        description: `${quantity} x ${product.name} has been added to your cart.`,
-      });
     }
   };
 
   const toggleFavorite = () => {
     if (!product) return;
 
-    if (isFavorite(product.id)) {
-      removeFromFavorites(product.id);
+    if (isFavorite(product.globalId)) {
+      removeFromFavorites(product.globalId);
       toast({
         title: "Removed from favorites",
         description: `${product.name} has been removed from your favorites.`,
@@ -116,7 +122,7 @@ export default function ProductDetailPage({ params }) {
         <div className="space-y-4">
           <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
             <Image
-              src={product.image || "/placeholder.svg?height=600&width=600"}
+              src={product.images[0] || "/placeholder.svg?height=600&width=600"}
               alt={product.name}
               fill
               className="object-cover"
@@ -139,42 +145,17 @@ export default function ProductDetailPage({ params }) {
           </div>
 
           <div className="grid grid-cols-4 gap-2">
-            <div className="aspect-square overflow-hidden rounded-md border bg-muted">
-              <Image
-                src={product.image1 || "/placeholder.svg?height=150&width=150"}
-                alt={product.name}
-                width={150}
-                height={150}
-                className="h-full w-full object-cover"
-              />
-            </div>
-            <div className="aspect-square overflow-hidden rounded-md border bg-muted">
-              <Image
-                src={product.image2 || "/placeholder.svg?height=150&width=150"}
-                alt={`${product.name} - view 2`}
-                width={150}
-                height={150}
-                className="h-full w-full object-cover"
-              />
-            </div>
-            <div className="aspect-square overflow-hidden rounded-md border bg-muted">
-              <Image
-                src={product.image3 || "/placeholder.svg?height=150&width=150"}
-                alt={`${product.name} - view 3`}
-                width={150}
-                height={150}
-                className="h-full w-full object-cover"
-              />
-            </div>
-            <div className="aspect-square overflow-hidden rounded-md border bg-muted">
-              <Image
-                src={product.image4 || "/placeholder.svg?height=150&width=150"}
-                alt={`${product.name} - view 4`}
-                width={150}
-                height={150}
-                className="h-full w-full object-cover"
-              />
-            </div>
+            {product.images.slice(1).map((image, index) => (
+              <div key={index} className="aspect-square overflow-hidden rounded-md border bg-muted">
+                <Image
+                  src={image || "/placeholder.svg?height=150&width=150"}
+                  alt={`${product.name} - view ${index + 1}`}
+                  width={150}
+                  height={150}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ))}
           </div>
         </div>
 
@@ -184,11 +165,6 @@ export default function ProductDetailPage({ params }) {
               <Badge variant="outline" className="text-primary border-primary">
                 {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
               </Badge>
-              {product.organic && (
-                <Badge variant="outline" className="text-green-600 border-green-600">
-                  100% Organic
-                </Badge>
-              )}
               {product.new && <Badge className="bg-blue-500">New</Badge>}
             </div>
 
@@ -269,7 +245,7 @@ export default function ProductDetailPage({ params }) {
                 </Button>
 
                 <Button variant="outline" size="icon" className="h-10 w-10" onClick={toggleFavorite}>
-                  <Heart className={`h-5 w-5 ${isFavorite(product.id) ? "fill-red-500 text-red-500" : ""}`} />
+                  <Heart className={`h-5 w-5 ${isFavorite(product.globalId) ? "fill-red-500 text-red-500" : ""}`} />
                 </Button>
               </div>
 
@@ -504,12 +480,12 @@ export default function ProductDetailPage({ params }) {
         <h2 className="text-2xl font-bold mb-6">Similar Products</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {similarProducts.map((product) => (
-            <div key={product.id} className="product-card group">
-              <Link href={`/products/${product.id}`}>
+            <div key={product.globalId} className="product-card group">
+              <Link href={`/products/${product.globalId}`}>
                 <div className="relative">
                   <div className="aspect-square overflow-hidden rounded-md bg-muted">
                     <Image
-                      src={product.image || "/placeholder.svg?height=300&width=300"}
+                      src={product.images[0] || "/placeholder.svg?height=300&width=300"}
                       alt={product.name}
                       width={300}
                       height={300}
@@ -527,7 +503,7 @@ export default function ProductDetailPage({ params }) {
                       {product.originalPrice && product.originalPrice > product.price ? (
                         <div className="flex items-center gap-1">
                           <span className="text-muted-foreground line-through">
-                          ₹{product.originalPrice.toFixed(2)}
+                            ₹{product.originalPrice.toFixed(2)}
                           </span>
                           <span className="text-red-500">₹{product.price.toFixed(2)}</span>
                         </div>
