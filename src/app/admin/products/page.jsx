@@ -15,6 +15,7 @@ import {
   Eye,
   Edit,
 } from "lucide-react"
+
 import { getProducts, deleteProduct } from "@/lib/api"
 
 export default function AdminProducts() {
@@ -422,6 +423,7 @@ export default function AdminProducts() {
                         <img
                           className="h-10 w-10 rounded-md object-cover"
                           src={product.images[0] || "/placeholder.svg"}
+
                           alt={product.name}
                         />
                       </div>
@@ -462,7 +464,9 @@ export default function AdminProducts() {
                         <Eye size={18} />
                       </Link>
                       <Link
+
                         href={`/admin/products/edit/${product.globalId}`}
+
                         className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
                       >
                         <Edit size={18} />

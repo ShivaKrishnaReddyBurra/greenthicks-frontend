@@ -4,8 +4,10 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Edit, Trash2, Package, Tag, BarChart } from "lucide-react"
+
 import { getProductById, deleteProduct } from "@/lib/api"
 import { use } from "react" // Import React's use
+
 
 export default function AdminProductDetail({ params }) {
   const router = useRouter()
@@ -32,7 +34,7 @@ export default function AdminProductDetail({ params }) {
     }
 
     fetchProduct()
-  }, [id])
+  }, [id, router])
 
   const handleDelete = async () => {
     try {

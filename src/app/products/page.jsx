@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
@@ -8,7 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Leaf, Filter } from "lucide-react";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger
+} from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { getProducts } from "@/lib/api";
@@ -40,7 +48,6 @@ export default function ProductsPage() {
     fetchProducts();
   }, []);
 
-  // Update state when URL parameters change
   useEffect(() => {
     if (categoryParam) {
       setSelectedCategory(categoryParam);
@@ -59,21 +66,9 @@ export default function ProductsPage() {
   ];
 
   const filteredProducts = products.filter((product) => {
-    // Category filter
-    if (selectedCategory !== "all" && product.category !== selectedCategory) {
-      return false;
-    }
-
-    // Price filter
-    if (product.price < priceRange[0] || product.price > priceRange[1]) {
-      return false;
-    }
-
-    // Search filter
-    if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-
+    if (selectedCategory !== "all" && product.category !== selectedCategory) return false;
+    if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
+    if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
 
@@ -93,10 +88,12 @@ export default function ProductsPage() {
             {selectedCategory !== "all"
               ? categories.find((c) => c.id === selectedCategory)?.name || "Organic Vegetables"
               : searchQuery
-                ? `Search Results for "${searchQuery}"`
-                : "Organic Vegetables"}
+              ? `Search Results for "${searchQuery}"`
+              : "Organic Vegetables"}
           </h1>
-          <p className="text-muted-foreground">Fresh, certified organic produce delivered to your doorstep</p>
+          <p className="text-muted-foreground">
+            Fresh, certified organic produce delivered to your doorstep
+          </p>
         </div>
 
         <div className="w-full md:w-auto flex gap-2">
@@ -171,7 +168,6 @@ export default function ProductsPage() {
       </div>
 
       <div className="flex flex-col md:flex-row gap-8">
-        {/* Desktop Sidebar */}
         <div className="hidden md:block w-64 shrink-0">
           <div className="sticky top-20">
             <div className="bg-card rounded-lg border p-4">
@@ -211,6 +207,7 @@ export default function ProductsPage() {
           </div>
         </div>
 
+
         {/* Product Grid */}
         <div className="flex-1">
           <div className="flex gap-2 overflow-x-auto pb-4 md:hidden">
@@ -239,6 +236,7 @@ export default function ProductsPage() {
               <p className="text-muted-foreground">Try adjusting your filters or search query</p>
             </div>
           )}
+
         </div>
       </div>
     </div>

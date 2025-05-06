@@ -1,5 +1,5 @@
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
 
 /**
  * Merges class names using clsx and tailwind-merge.
@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge";
  * @returns {string} - Merged class names.
  */
 export function cn(...inputs) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
 /**
@@ -21,7 +21,7 @@ export function formatDate(date) {
     year: "numeric",
     month: "long",
     day: "numeric",
-  });
+  })
 }
 
 /**
@@ -34,5 +34,5 @@ export function formatTime(date) {
     hour: "numeric",
     minute: "numeric",
     hour12: true,
-  });
+  })
 }

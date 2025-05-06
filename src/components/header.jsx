@@ -232,12 +232,14 @@ export default function Header() {
 
                     <h3 className="font-semibold text-sm uppercase text-muted-foreground px-2 py-2 mt-4">Account</h3>
                     <Link
+
                       href="/profile"
                       className={`px-2 py-2 text-base flex items-center rounded-md ${
                         pathname === "/profile"
                           ? "font-medium text-primary bg-primary/10"
                           : "text-foreground hover:bg-muted"
                       }`}
+
                     >
                       <User2 className="h-5 w-5 mr-3" />
                       Profile
@@ -338,6 +340,7 @@ export default function Header() {
             </div>
 
             <div className="hidden lg:block">
+
               <Button variant="ghost" size="icon" className="relative">
                 <Link
                   href="/my-orders"
@@ -354,6 +357,7 @@ export default function Header() {
                   <span className="sr-only">My Orders</span>
                 </Link>
               </Button>
+
             </div>
 
             <DropdownMenu>
@@ -367,9 +371,11 @@ export default function Header() {
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
+
                   <Link href="/profile" className="w-full flex items-center">
                     <User2 className="mr-2 h-4 w-4" />
                     Profile
+
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>

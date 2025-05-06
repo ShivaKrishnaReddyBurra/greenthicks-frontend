@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Upload, X } from "lucide-react"
+
 import { getProductById, updateProduct } from "@/lib/api"
 import { use } from "react" // Import React's use
+
 
 export default function EditProduct({ params }) {
   const router = useRouter()
@@ -30,6 +32,26 @@ export default function EditProduct({ params }) {
   const [error, setError] = useState("")
 
   useEffect(() => {
+    // Check if we're in preview mode with the literal [id] parameter
+    if (id === "[id]") {
+      // Use a default product for preview
+      setFormData({
+        name: "Sample Product",
+        price: "100",
+        stock: "50",
+        discount: "10",
+        category: "Vegetables",
+        description: "This is a sample product description for preview mode.",
+        featured: true,
+        bestseller: false,
+        new: true,
+        seasonal: false,
+      })
+      setImagePreview("/placeholder.svg?height=300&width=300")
+      setLoading(false)
+      return
+    }
+
     const fetchProduct = async () => {
       try {
         const product = await getProductById(id)
@@ -271,6 +293,7 @@ export default function EditProduct({ params }) {
               <label className="block text-sm font-medium mb-2">
                 Product Images (up to 5) <span className="text-red-500">*</span>
               </label>
+
               {imagePreviews.length > 0 ? (
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   {imagePreviews.map((preview, index) => (

@@ -1,11 +1,13 @@
 import { jwtDecode } from "jwt-decode";
 
+
 // Store JWT token in localStorage
 export const setAuthToken = (token) => {
   if (typeof window !== "undefined") {
     localStorage.setItem("authToken", token);
   }
 };
+
 
 // Get JWT token from localStorage
 export const getAuthToken = () => {

@@ -79,14 +79,32 @@ export default function LoginPage() {
             />
           </div>
 
-          <button
-            type="submit"
-            className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition-colors"
-            disabled={loading}
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
+
+
+      <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-gradient mb-4 text-center">
+        GreenThicks
+      </h1>
+      <p className="text-xl text-greenthicks-dark mb-8 text-center max-w-lg">
+        Fresh from farm to table. Experience our sustainable produce with just a click.
+      </p>
+
+      <div className="flex flex-col sm:flex-row gap-4">
+        <Button asChild className="bg-greenthicks hover:bg-greenthicks-dark text-white px-8 py-6 text-lg">
+          <Link href="/login/login"onClick={(e) => {
+                        e.preventDefault();
+                        alert("Your not created an account.");
+                      }}
+                      className="w-full flex items-center cursor-not-allowed">Sign In</Link>
+        </Button>
+        <Button asChild variant="outline" className="border-greenthicks text-greenthicks hover:bg-greenthicks/10 px-8 py-6 text-lg">
+          <Link href="./login/signup" onClick={(e) => {
+                        e.preventDefault();
+                        alert("we start taking new users from 19th-5-2025.");
+                      }}
+                      className="w-full flex items-center cursor-not-allowed">Create Account</Link>
+        </Button>
+      </div>
+
 
         <div className="mt-4 text-center">
           <p className="text-sm">
@@ -100,3 +118,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

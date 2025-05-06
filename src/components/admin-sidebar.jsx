@@ -16,13 +16,18 @@ import {
   Menu,
   X,
   LogOut,
-  ShoppingBag,
+  ShoppingBagIcon,
   FileText,
   Home,
+  FileEdit,
+  AlertTriangle,
+  RefreshCw,
+  ShoppingCartIcon,
 } from "lucide-react"
 import { clearAuth } from "@/lib/auth-utils"
 import { useTheme } from "next-themes"
-import logo from "@/public/logo.png";
+import ThemeToggle from "@/components/theme-toggle"
+import logo from "@/public/logo.png"
 
 export default function AdminSidebar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -43,17 +48,20 @@ export default function AdminSidebar() {
   const navItems = [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Products", href: "/admin/products", icon: Package },
-    { name: "Orders", href: "/admin/orders", icon: ShoppingBag },
+    { name: "Orders", href: "/admin/orders", icon: ShoppingCartIcon },
     { name: "Delivery", href: "/admin/delivery", icon: Truck },
+    { name: "Cancellations", href: "/admin/cancellations", icon: AlertTriangle },
+    { name: "Returns", href: "/admin/returns", icon: RefreshCw },
     { name: "Users", href: "/admin/users", icon: Users },
     { name: "Sellers", href: "/admin/sellers", icon: Store },
+    { name: "Static Pages", href: "/admin/pages", icon: FileEdit },
     { name: "Analytics", href: "/admin/analytics", icon: BarChart },
     { name: "Invoices", href: "/admin/invoices", icon: FileText },
     { name: "Notifications", href: "/admin/notifications", icon: Bell },
     { name: "Settings", href: "/admin/settings", icon: Settings },
   ]
 
-  const logoSrc = mounted && theme === "dark" ? logo : logo
+  const logoSrc = mounted && theme === "dark" ? logo.src : logo.src
 
   return (
     <>
@@ -71,7 +79,7 @@ export default function AdminSidebar() {
               <div className="relative h-8 w-32">
                 {mounted && (
                   <Image
-                    src={logoSrc || "/placeholder.svg"}
+                    src={logo.src || logo.src }
                     alt="Green Thicks"
                     fill
                     style={{ objectFit: "contain" }}
@@ -79,11 +87,12 @@ export default function AdminSidebar() {
                   />
                 )}
               </div>
-              <span className="ml-2 text-lg font-semibold hidden md:inline">Admin</span>
+              <span className="ml-0 text-lg font-semibold hidden md:inline">Admin</span>
             </Link>
           </div>
 
           <div className="flex items-center space-x-4">
+          <ThemeToggle />
             <Link
               href="/"
               className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"

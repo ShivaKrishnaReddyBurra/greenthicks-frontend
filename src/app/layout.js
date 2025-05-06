@@ -2,10 +2,10 @@ import React from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import Header from "@/components/header";
-import Footer from "@/components/footer";
+import AdminReturnButton from "@/components/admin-return-button";
 import { Providers } from "./providers";
 import webicon from "@/public/favicon.ico";
+import LayoutWrapper from "@/components/layout-wrapper"; // new wrapper
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,15 +22,12 @@ export default function RootLayout({ children }) {
         <link rel="icon" href={webicon.src} />
       </head>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <Providers>
-            <div className="flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </div>
+            <LayoutWrapper>{children}</LayoutWrapper>
           </Providers>
         </ThemeProvider>
+        <AdminReturnButton href="/admin/dashboard" className="fixed bottom-4 right-4 z-50" />
       </body>
     </html>
   );

@@ -195,6 +195,12 @@ export default function DeliveryDashboardPage() {
     }
   }
 
+  const [isOnline, setIsOnline] = useState(true)
+
+const toggleOnlineStatus = () => {
+  setIsOnline((prev) => !prev)
+}  
+
   return (
     <DeliveryLayout>
       <div className="flex items-center justify-between mb-6">
@@ -202,6 +208,13 @@ export default function DeliveryDashboardPage() {
         <Button variant="outline" onClick={() => router.push("/delivery/profile")}>
           Update Availability
         </Button>
+        <Button
+            variant={isOnline ? "default" : "outline"}
+            onClick={toggleOnlineStatus}
+            className={isOnline ? "bg-green-600 hover:bg-green-700" : "text-red-600 border-red-600 hover:bg-red-800 "}
+          >
+            {isOnline ? "Online" : "Offline"}
+          </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

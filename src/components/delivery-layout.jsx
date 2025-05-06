@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { Badge } from "@/components/ui/badge"
 import {
   BarChart3,
   Package,
@@ -29,11 +30,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "next-themes";
+import  logo  from "@/public/logo.png";
 
 export function DeliveryLayout({ children }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { theme } = useTheme();
+
+  const [notificationCount, setNotificationCount] = useState(3) // example: 3 unread messages
 
   const navItems = [
     {
@@ -43,7 +47,7 @@ export function DeliveryLayout({ children }) {
     },
     {
       title: "My Deliveries",
-      href: "/delivery/orders",
+      href: "/delivery/my_deliveries",
       icon: <Package className="h-5 w-5" />,
     },
     {
@@ -83,7 +87,7 @@ export function DeliveryLayout({ children }) {
               <SheetContent side="left" className="w-72">
                 <div className="flex items-center gap-2 pb-4 pt-2">
                   <Image
-                    src="/logo.png"
+                    src={logo}
                     alt="Green Thicks Logo"
                     width={120}
                     height={60}
@@ -112,7 +116,7 @@ export function DeliveryLayout({ children }) {
             </Sheet>
             <Link href="/delivery/dashboard" className="hidden items-center gap-2 lg:flex">
               <Image
-                src="/logo.png"
+                src={logo}
                 alt="Green Thicks Logo"
                 width={120}
                 height={60}
@@ -126,11 +130,13 @@ export function DeliveryLayout({ children }) {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-              <span className="sr-only">Notifications</span>
-            </Button>
-
+          <Link
+              href="/admin/notifications"
+              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 relative"
+            >
+              <Bell size={20} />
+              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+            </Link>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full">

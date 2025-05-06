@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation"
 import { Upload, X } from "lucide-react"
 import { createProduct } from "@/lib/api"
 
+
 export default function AddProduct() {
   const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
+    description: "",
     price: "",
     stock: "",
-    discount: "",
     category: "",
     description: "",
     unit: "", // Added unit field
@@ -19,7 +20,9 @@ export default function AddProduct() {
     bestseller: false,
     new: false,
     seasonal: false,
+    discount: 0,
   })
+
   const [images, setImages] = useState([])
   const [imagePreviews, setImagePreviews] = useState([])
   const [loading, setLoading] = useState(false)
@@ -61,12 +64,14 @@ export default function AddProduct() {
     setImagePreviews(imagePreviews.filter((_, i) => i !== index))
   }
 
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError("")
 
     try {
+
       // Validate form
       if (
         !formData.name ||
@@ -90,92 +95,136 @@ export default function AddProduct() {
 
       await createProduct(productData, images)
       router.push("/admin/products")
-    } catch (err) {
-      setError(err.message)
-      console.error(err)
+    } catch (error) {
+      console.error("Error adding product:", error)
+      setError("Failed to add product. Please try again.")
     } finally {
       setLoading(false)
     }
   }
 
+
   const categories = ["leafy", "fruit", "root", "herbs"]
+
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Add New Product</h1>
-        <button onClick={() => router.back()} className="px-4 py-2 border rounded-md hover:bg-muted transition-colors">
-          Cancel
-        </button>
+      {/* Breadcrumb */}
+      <div className="flex items-center mb-6">
+        <Link href="/admin/products" className="flex items-center text-muted-foreground hover:text-foreground">
+          <ArrowLeft size={16} className="mr-2" />
+          Back to Products
+        </Link>
       </div>
 
-      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <h1 className="text-3xl font-bold mb-4 md:mb-0">Add New Product</h1>
+      </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          <p>{error}</p>
+        </div>
+      )}
+
+      {/* Form */}
       <form onSubmit={handleSubmit} className="bg-card rounded-lg shadow-md p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left Column */}
-          <div>
-            <div className="mb-4">
-              <label htmlFor="name" className="block text-sm font-medium mb-2">
-                Product Name <span className="text-red-500">*</span>
+          {/* Basic Information */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold mb-4">Basic Information</h2>
+
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-muted-foreground mb-1">
+                Product Name *
               </label>
               <input
                 type="text"
                 id="name"
                 name="name"
-                className="w-full p-2 border rounded-md bg-background"
                 value={formData.name}
                 onChange={handleChange}
                 required
+                className="w-full p-2 border rounded-md"
               />
             </div>
 
-            <div className="mb-4">
-              <label htmlFor="price" className="block text-sm font-medium mb-2">
-                Price (₹) <span className="text-red-500">*</span>
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-muted-foreground mb-1">
+                Description *
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                required
+                rows={4}
+                className="w-full p-2 border rounded-md"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium text-muted-foreground mb-1">
+                Category *
+              </label>
+              <select
+                id="category"
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                required
+                className="w-full p-2 border rounded-md"
+              >
+                <option value="">Select a category</option>
+                <option value="vegetables">Vegetables</option>
+                <option value="fruit">Fruits</option>
+                <option value="dairy">Dairy</option>
+                <option value="leafy">Leafy Greens</option>
+                <option value="root">Root Vegetables</option>
+                <option value="herbs">Herbs</option>
+                <option value="organic">Organic Products</option>
+                <option value="seasonal">Seasonal Items</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Pricing & Inventory */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold mb-4">Pricing & Inventory</h2>
+
+            <div>
+              <label htmlFor="price" className="block text-sm font-medium text-muted-foreground mb-1">
+                Price (₹) *
               </label>
               <input
                 type="number"
                 id="price"
                 name="price"
-                min="0"
-                step="0.01"
-                className="w-full p-2 border rounded-md bg-background"
                 value={formData.price}
                 onChange={handleChange}
                 required
-              />
-            </div>
-
-            <div className="mb-4">
-              <label htmlFor="stock" className="block text-sm font-medium mb-2">
-                Stock Quantity <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                id="stock"
-                name="stock"
                 min="0"
-                className="w-full p-2 border rounded-md bg-background"
-                value={formData.stock}
-                onChange={handleChange}
-                required
+                step="0.01"
+                className="w-full p-2 border rounded-md"
               />
             </div>
 
-            <div className="mb-4">
-              <label htmlFor="discount" className="block text-sm font-medium mb-2">
+            <div>
+              <label htmlFor="discount" className="block text-sm font-medium text-muted-foreground mb-1">
                 Discount (%)
               </label>
               <input
                 type="number"
                 id="discount"
                 name="discount"
-                min="0"
-                max="100"
-                className="w-full p-2 border rounded-md bg-background"
                 value={formData.discount}
                 onChange={handleChange}
+                min="0"
+                max="100"
+                className="w-full p-2 border rounded-md"
               />
             </div>
 
@@ -198,6 +247,7 @@ export default function AddProduct() {
                   </option>
                 ))}
               </select>
+
             </div>
 
             <div className="mb-4">
@@ -215,6 +265,7 @@ export default function AddProduct() {
               />
             </div>
           </div>
+        </div>
 
           {/* Right Column */}
           <div>
@@ -262,81 +313,79 @@ export default function AddProduct() {
                 </label>
               </div>
             </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Product Tags</label>
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="featured"
-                    name="featured"
-                    className="mr-2"
-                    checked={formData.featured}
-                    onChange={handleChange}
-                  />
-                  <label htmlFor="featured">Featured Product</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="bestseller"
-                    name="bestseller"
-                    className="mr-2"
-                    checked={formData.bestseller}
-                    onChange={handleChange}
-                  />
-                  <label htmlFor="bestseller">Bestseller</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="new"
-                    name="new"
-                    className="mr-2"
-                    checked={formData.new}
-                    onChange={handleChange}
-                  />
-                  <label htmlFor="new">New Arrival</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="seasonal"
-                    name="seasonal"
-                    className="mr-2"
-                    checked={formData.seasonal}
-                    onChange={handleChange}
-                  />
-                  <label htmlFor="seasonal">Seasonal</label>
-                </div>
-              </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="bestseller"
+                name="bestseller"
+                checked={formData.bestseller}
+                onChange={handleChange}
+                className="mr-2"
+              />
+              <label htmlFor="bestseller" className="text-sm">
+                Bestseller
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="new"
+                name="new"
+                checked={formData.new}
+                onChange={handleChange}
+                className="mr-2"
+              />
+              <label htmlFor="new" className="text-sm">
+                New Arrival
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="seasonal"
+                name="seasonal"
+                checked={formData.seasonal}
+                onChange={handleChange}
+                className="mr-2"
+              />
+              <label htmlFor="seasonal" className="text-sm">
+                Seasonal
+              </label>
             </div>
           </div>
         </div>
 
-        <div className="mb-4">
-          <label htmlFor="description" className="block text-sm font-medium mb-2">
-            Description <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            rows="4"
-            className="w-full p-2 border rounded-md bg-background"
-            value={formData.description}
-            onChange={handleChange}
-            required
-          ></textarea>
+        {/* Image Upload - Placeholder */}
+        <div className="mt-6 pt-6 border-t">
+          <h2 className="text-lg font-semibold mb-4">Product Image</h2>
+          <div className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center">
+            <p className="text-muted-foreground">Drag and drop an image here, or click to select a file</p>
+            <button
+              type="button"
+              className="mt-2 px-4 py-2 bg-muted hover:bg-muted/80 rounded-md"
+              onClick={() => alert("Image upload functionality would be implemented here")}
+            >
+              Select Image
+            </button>
+          </div>
         </div>
 
-        <div className="flex justify-end">
+        {/* Form Actions */}
+        <div className="mt-6 pt-6 border-t flex justify-end gap-2">
+          <Link
+            href="/admin/products"
+            className="px-4 py-2 border rounded-md hover:bg-muted transition-colors flex items-center"
+          >
+            <X size={18} className="mr-2" />
+            Cancel
+          </Link>
           <button
             type="submit"
-            className="bg-primary text-primary-foreground px-6 py-2 rounded-md hover:bg-primary/90 transition-colors"
             disabled={loading}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center disabled:opacity-50"
           >
-            {loading ? "Saving..." : "Add Product"}
+            <Save size={18} className="mr-2" />
+            {loading ? "Saving..." : "Save Product"}
           </button>
         </div>
       </form>
