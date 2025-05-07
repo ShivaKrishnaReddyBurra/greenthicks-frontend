@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
-import { getCart, addToCart, removeFromCart, clearCart } from "@/lib/api";
+import { getCart, addToCart, removeFromCart, clearCart, getProductById } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { getUserId } from "@/lib/auth-utils";
 
@@ -42,6 +42,12 @@ export function CartProvider({ children }) {
 
   const addToCartHandler = async (product, quantity = 1) => {
     try {
+      // Check product stock
+      const productData = await getProductById(product.globalId);
+      if (productData.stock < quantity) {
+        throw new Error(`Insufficient stock for ${product.name}. Available: ${productData.stock}`);
+      }
+
       const response = await addToCart(product.globalId, quantity);
       setCart(response.cart.items || []);
       toast({
@@ -78,7 +84,12 @@ export function CartProvider({ children }) {
 
   const updateQuantity = async (productId, quantity) => {
     try {
-      // Since the backend doesn't have an update quantity endpoint, we remove and re-add
+      // Check stock for the product
+      const product = await getProductById(productId);
+      if (product.stock < quantity) {
+        throw new Error(`Insufficient stock for ${product.name}. Available: ${product.stock}`);
+      }
+
       await removeFromCart(productId);
       if (quantity > 0) {
         await addToCart(productId, quantity);

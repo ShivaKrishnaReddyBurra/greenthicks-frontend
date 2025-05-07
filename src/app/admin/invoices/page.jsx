@@ -3,90 +3,51 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Search, Filter, FileText, Printer, Download, Mail, ChevronRight, ChevronLeft } from "lucide-react"
+import { fetchWithAuth, fetchWithAuthFile } from "@/lib/api"
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockInvoices = [
-        {
-          id: "INV-1001",
-          orderId: "ORD-9876",
-          customer: "Rahul Sharma",
-          amount: 1250,
-          status: "Paid",
-          date: "2023-05-01",
-        },
-        {
-          id: "INV-1002",
-          orderId: "ORD-9875",
-          customer: "Priya Patel",
-          amount: 890,
-          status: "Pending",
-          date: "2023-05-01",
-        },
-        {
-          id: "INV-1003",
-          orderId: "ORD-9874",
-          customer: "Amit Kumar",
-          amount: 2340,
-          status: "Paid",
-          date: "2023-05-01",
-        },
-        {
-          id: "INV-1004",
-          orderId: "ORD-9873",
-          customer: "Neha Singh",
-          amount: 760,
-          status: "Pending",
-          date: "2023-04-30",
-        },
-        {
-          id: "INV-1005",
-          orderId: "ORD-9872",
-          customer: "Vikram Reddy",
-          amount: 1890,
-          status: "Paid",
-          date: "2023-04-30",
-        },
-        {
-          id: "INV-1006",
-          orderId: "ORD-9871",
-          customer: "Sneha Gupta",
-          amount: 1450,
-          status: "Paid",
-          date: "2023-04-29",
-        },
-        {
-          id: "INV-1007",
-          orderId: "ORD-9870",
-          customer: "Rajesh Kumar",
-          amount: 2100,
-          status: "Cancelled",
-          date: "2023-04-29",
-        },
-        {
-          id: "INV-1008",
-          orderId: "ORD-9869",
-          customer: "Anita Desai",
-          amount: 950,
-          status: "Paid",
-          date: "2023-04-28",
-        },
-      ]
+    const fetchInvoices = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await fetchWithAuth(`/api/invoices?page=${currentPage}&limit=10`)
+        setInvoices(data.invoices || [])
+        setTotalPages(data.totalPages || 1)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-      setInvoices(mockInvoices)
-      setTotalPages(Math.ceil(mockInvoices.length / 10))
-      setLoading(false)
-    }, 1000)
-  }, [])
+    fetchInvoices()
+  }, [currentPage])
+
+  const handleExportInvoices = async () => {
+    try {
+      const response = await fetchWithAuthFile('/api/invoices/export', { method: 'GET' })
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'invoices_export.csv')
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
@@ -127,13 +88,17 @@ export default function InvoicesPage() {
 
   const filteredInvoices = invoices.filter((invoice) => {
     const matchesSearch =
-      invoice.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.id.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.orderId.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.customer.toLowerCase().includes(searchTerm.toLowerCase())
 
     if (filterStatus === "all") return matchesSearch
     return matchesSearch && invoice.status.toLowerCase() === filterStatus.toLowerCase()
   })
+
+  const handleViewInvoice = (orderId) => {
+    window.open(`/admin/invoices/${orderId}`, '_blank');
+  }
 
   if (loading) {
     return (
@@ -143,12 +108,26 @@ export default function InvoicesPage() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="p-4 text-center">
+        <p className="text-red-600 dark:text-red-400">{error}</p>
+        <Link href="/admin/orders" className="text-green-600 hover:text-green-700">
+          Back to Orders
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="p-4 md:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">Invoices</h1>
         <div className="mt-4 md:mt-0 flex space-x-2">
-          <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+          <button
+            onClick={handleExportInvoices}
+            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+          >
             <Download className="h-4 w-4 mr-2" />
             Export All
           </button>
@@ -226,22 +205,22 @@ export default function InvoicesPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     <div className="flex items-center">
                       <FileText className="h-4 w-4 text-gray-400 mr-2" />
-                      {invoice.id}
+                      INV-{invoice.id}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     <Link
-                      href={`/admin/orders/${invoice.orderId.replace("ORD-", "")}`}
+                      href={`/admin/orders/${invoice.orderId}`}
                       className="hover:text-green-600 dark:hover:text-green-400"
                     >
-                      {invoice.orderId}
+                      ORD-{invoice.orderId}
                     </Link>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {invoice.customer}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                    {invoice.date}
+                    {new Date(invoice.date).toLocaleDateString("en-IN")}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {formatCurrency(invoice.amount)}
@@ -249,16 +228,23 @@ export default function InvoicesPage() {
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(invoice.status)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      <Link
-                        href={`/admin/invoices/${invoice.orderId.replace("ORD-", "")}`}
+                      <button
+                        onClick={() => handleViewInvoice(invoice.orderId)}
                         className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
                       >
                         View
-                      </Link>
-                      <button className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
-                        <Printer size={16} />
                       </button>
-                      <button className="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300">
+                      <Link
+                        href={`/admin/invoices/${invoice.orderId}`}
+                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                      >
+                        <Printer size={16} />
+                      </Link>
+                      <button
+                        disabled
+                        className="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300 opacity-50 cursor-not-allowed"
+                        title="Email functionality not implemented"
+                      >
                         <Mail size={16} />
                       </button>
                     </div>
@@ -272,8 +258,9 @@ export default function InvoicesPage() {
         {/* Pagination */}
         <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            Showing <span className="font-medium">1</span> to <span className="font-medium">8</span> of{" "}
-            <span className="font-medium">8</span> results
+            Showing <span className="font-medium">{(currentPage - 1) * 10 + 1}</span> to{" "}
+            <span className="font-medium">{Math.min(currentPage * 10, filteredInvoices.length)}</span> of{" "}
+            <span className="font-medium">{filteredInvoices.length}</span> results
           </div>
           <div className="flex space-x-2">
             <button

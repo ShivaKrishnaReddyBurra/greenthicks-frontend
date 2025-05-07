@@ -3,34 +3,55 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Search, Filter, FileText, Printer, ChevronRight, ChevronLeft, Eye, Download } from "lucide-react"
+import { getUserOrders, getUserProfile, exportOrders } from "@/lib/api"
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockOrders = [
-        { id: "ORD-9876", customer: "Rahul Sharma", amount: 1250, status: "Delivered", date: "2023-05-01" },
-        { id: "ORD-9875", customer: "Priya Patel", amount: 890, status: "Processing", date: "2023-05-01" },
-        { id: "ORD-9874", customer: "Amit Kumar", amount: 2340, status: "Shipped", date: "2023-05-01" },
-        { id: "ORD-9873", customer: "Neha Singh", amount: 760, status: "Pending", date: "2023-04-30" },
-        { id: "ORD-9872", customer: "Vikram Reddy", amount: 1890, status: "Delivered", date: "2023-04-30" },
-        { id: "ORD-9871", customer: "Sneha Gupta", amount: 1450, status: "Delivered", date: "2023-04-29" },
-        { id: "ORD-9870", customer: "Rajesh Kumar", amount: 2100, status: "Cancelled", date: "2023-04-29" },
-        { id: "ORD-9869", customer: "Anita Desai", amount: 950, status: "Delivered", date: "2023-04-28" },
-      ]
+    const fetchOrders = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const userProfile = await getUserProfile()
+        setIsAdmin(userProfile.isAdmin)
 
-      setOrders(mockOrders)
-      setTotalPages(Math.ceil(mockOrders.length / 10))
-      setLoading(false)
-    }, 1000)
-  }, [])
+        const data = await getUserOrders(currentPage, 10)
+        setOrders(data.orders || [])
+        setTotalPages(data.totalPages || 1)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchOrders()
+  }, [currentPage])
+
+  const handleExportOrders = async () => {
+    try {
+      const response = await exportOrders()
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'orders_export.csv')
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
@@ -42,31 +63,31 @@ export default function OrdersPage() {
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case "Delivered":
+      case "delivered":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
             {status}
           </span>
         )
-      case "Processing":
+      case "processing":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
             {status}
           </span>
         )
-      case "Shipped":
+      case "shipped":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
             {status}
           </span>
         )
-      case "Pending":
+      case "pending":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
             {status}
           </span>
         )
-      case "Cancelled":
+      case "cancelled":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
             {status}
@@ -84,7 +105,9 @@ export default function OrdersPage() {
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.toLowerCase().includes(searchTerm.toLowerCase())
+      (order.shippingAddress?.firstName + " " + order.shippingAddress?.lastName)
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
 
     if (filterStatus === "all") return matchesSearch
     return matchesSearch && order.status.toLowerCase() === filterStatus.toLowerCase()
@@ -98,19 +121,34 @@ export default function OrdersPage() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="p-4 text-center">
+        <p className="text-red-600 dark:text-red-400">{error}</p>
+        <Link href="/login" className="text-green-600 hover:text-green-700">
+          Go to Login
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="p-4 md:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">Orders</h1>
         <div className="mt-4 md:mt-0 flex space-x-2">
-          <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export Orders
-          </button>
+          {isAdmin && (
+            <button
+              onClick={handleExportOrders}
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export Orders
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Filters and Search */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-6 border border-gray-100 dark:border-gray-700">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
@@ -148,7 +186,6 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* Orders Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -176,34 +213,36 @@ export default function OrdersPage() {
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <tr key={order.globalId} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     {order.id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                    {order.customer}
+                    {order.shippingAddress.firstName} {order.shippingAddress.lastName}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{order.date}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                    {formatCurrency(order.amount)}
+                    {new Date(order.orderDate).toLocaleDateString("en-IN")}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                    {formatCurrency(order.total)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(order.status)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
                       <Link
-                        href={`/admin/orders/${order.id.replace("ORD-", "")}`}
+                        href={`/admin/orders/${order.globalId}`}
                         className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
                       >
                         <Eye size={16} />
                       </Link>
                       <Link
-                        href={`/admin/invoices/${order.id.replace("ORD-", "")}`}
+                        href={`/admin/invoices/${order.globalId}`}
                         className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         <FileText size={16} />
                       </Link>
                       <Link
-                        href={`/admin/invoices/${order.id.replace("ORD-", "")}?print=true`}
+                        href={`/admin/invoices/${order.globalId}?print=true`}
                         className="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300"
                       >
                         <Printer size={16} />
@@ -216,11 +255,11 @@ export default function OrdersPage() {
           </table>
         </div>
 
-        {/* Pagination */}
         <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            Showing <span className="font-medium">1</span> to <span className="font-medium">8</span> of{" "}
-            <span className="font-medium">8</span> results
+            Showing <span className="font-medium">{(currentPage - 1) * 10 + 1}</span> to{" "}
+            <span className="font-medium">{Math.min(currentPage * 10, filteredOrders.length)}</span> of{" "}
+            <span className="font-medium">{filteredOrders.length}</span> results
           </div>
           <div className="flex space-x-2">
             <button

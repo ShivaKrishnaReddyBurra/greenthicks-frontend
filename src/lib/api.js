@@ -5,14 +5,16 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 // Generic fetch function with error handling
 export const fetchWithAuth = async (url, options = {}) => {
   const token = getAuthToken();
+
+  if (!token) {
+    throw new Error("No token provided");
+  }
+
   const headers = {
     ...options.headers,
     'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
   };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
 
   const response = await fetch(`${API_URL}${url}`, {
     ...options,
@@ -21,20 +23,29 @@ export const fetchWithAuth = async (url, options = {}) => {
 
   if (!response.ok) {
     const error = await response.json();
+    if (response.status === 401) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("authToken");
+      }
+      throw new Error("Token expired or invalid");
+    }
     throw new Error(error.message || 'Something went wrong');
   }
 
   return response.json();
 };
 
-// Generic fetch function for multipart/form-data (for file uploads)
+// Generic fetch function for multipart/form-data
 export const fetchWithAuthFormData = async (url, formData, method = 'POST') => {
   const token = getAuthToken();
-  const headers = {};
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (!token) {
+    throw new Error("No token provided");
   }
+
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+  };
 
   const response = await fetch(`${API_URL}${url}`, {
     method,
@@ -44,10 +55,48 @@ export const fetchWithAuthFormData = async (url, formData, method = 'POST') => {
 
   if (!response.ok) {
     const error = await response.json();
+    if (response.status === 401) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("authToken");
+      }
+      throw new Error("Token expired or invalid");
+    }
     throw new Error(error.message || 'Something went wrong');
   }
 
   return response.json();
+};
+
+// Generic fetch function for file downloads
+export const fetchWithAuthFile = async (url, options = {}) => {
+  const token = getAuthToken();
+
+  if (!token) {
+    throw new Error("No token provided");
+  }
+
+  const headers = {
+    ...options.headers,
+    'Authorization': `Bearer ${token}`,
+  };
+
+  const response = await fetch(`${API_URL}${url}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    if (response.status === 401) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("authToken");
+      }
+      throw new Error("Token expired or invalid");
+    }
+    throw new Error(error.message || 'Something went wrong');
+  }
+
+  return response;
 };
 
 // Product API functions
@@ -101,8 +150,8 @@ export const createOrder = async (orderData) => {
   });
 };
 
-export const getUserOrders = async () => {
-  return fetchWithAuth('/api/orders/my-orders');
+export const getUserOrders = async (page = 1, limit = 10) => {
+  return fetchWithAuth(`/api/orders/my-orders?page=${page}&limit=${limit}`);
 };
 
 export const getOrder = async (globalId) => {
@@ -113,6 +162,12 @@ export const cancelOrder = async (globalId) => {
   return fetchWithAuth(`/api/orders/${globalId}/status`, {
     method: 'PUT',
     body: JSON.stringify({ status: 'cancelled' }),
+  });
+};
+
+export const exportOrders = async () => {
+  return fetchWithAuthFile('/api/orders/export', {
+    method: 'GET',
   });
 };
 
@@ -143,4 +198,46 @@ export const clearCart = async () => {
 // User Profile API function
 export const getUserProfile = async () => {
   return fetchWithAuth('/api/auth/profile');
+};
+
+// User Management API functions
+export const getAllUsers = async () => {
+  return fetchWithAuth('/api/auth/users');
+};
+
+export const updateUser = async (globalId, userData) => {
+  return fetchWithAuth(`/api/auth/user/${globalId}`, {
+    method: 'PUT',
+    body: JSON.stringify(userData),
+  });
+};
+
+export const deleteUser = async (globalId) => {
+  return fetchWithAuth(`/api/auth/user/${globalId}`, {
+    method: 'DELETE',
+  });
+};
+
+export const getUserDetails = async (globalId, page = 1, limit = 10) => {
+  return fetchWithAuth(`/api/auth/user/${globalId}/details?page=${page}&limit=${limit}`);
+};
+
+// Coupon API function
+export const validateCoupon = async (couponCode, subtotal) => {
+  return fetchWithAuth('/api/coupons/validate', {
+    method: 'POST',
+    body: JSON.stringify({ code: couponCode, subtotal }),
+  });
+};
+
+export const getInvoices = async (page = 1, limit = 10) => {
+  return fetchWithAuth(`/api/invoices?page=${page}&limit=${limit}`);
+};
+
+export const exportInvoices = async () => {
+  return fetchWithAuthFile('/api/invoices/export', { method: 'GET' });
+};
+
+export const getInvoiceData = async (globalId) => {
+  return fetchWithAuth(`/api/invoices/${globalId}`);
 };

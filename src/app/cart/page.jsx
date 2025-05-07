@@ -3,6 +3,7 @@ import React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-context";
+import { validateCoupon } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -23,27 +24,29 @@ export default function CartPage() {
   const shipping = subtotal > 50 ? 0 : 5.99;
   const total = subtotal + shipping - discount;
 
-  const handleApplyCoupon = () => {
-    if (couponCode.toLowerCase() === "fresh20") {
-      const discountAmount = subtotal * 0.2;
-      setDiscount(discountAmount);
-      setAppliedCoupon("FRESH20");
+  const handleApplyCoupon = async () => {
+    if (!couponCode) {
+      toast({
+        title: "No coupon code",
+        description: "Please enter a coupon code.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await validateCoupon(couponCode, subtotal);
+      setDiscount(response.discount);
+      setAppliedCoupon(couponCode.toUpperCase());
       toast({
         title: "Coupon applied!",
-        description: "You received 20% off your order.",
+        description: `Coupon ${couponCode.toUpperCase()} applied successfully.`,
       });
-    } else if (couponCode.toLowerCase() === "freeship") {
-      const discountAmount = shipping;
-      setDiscount(discountAmount);
-      setAppliedCoupon("FREESHIP");
-      toast({
-        title: "Coupon applied!",
-        description: "You received free shipping on your order.",
-      });
-    } else {
+    } catch (error) {
+      console.error("Failed to apply coupon:", error);
       toast({
         title: "Invalid coupon",
-        description: "Please enter a valid coupon code.",
+        description: error.message || "Please enter a valid coupon code.",
         variant: "destructive",
       });
     }
@@ -59,7 +62,7 @@ export default function CartPage() {
       return;
     }
 
-    // Store discount information in session storage for checkout
+    // Store order information in session storage for checkout
     sessionStorage.setItem("cartDiscount", discount.toString());
     sessionStorage.setItem("cartSubtotal", subtotal.toString());
     sessionStorage.setItem("cartShipping", shipping.toString());
@@ -227,10 +230,6 @@ export default function CartPage() {
                 <Button className="w-full" size="lg" onClick={handleCheckout}>
                   Checkout <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-
-                <div className="text-center text-sm text-muted-foreground">
-                  <p>Available coupon codes: FRESH20, FREESHIP</p>
-                </div>
               </div>
             </div>
           </div>

@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, MapPin } from "lucide-react";
 import { getOrder } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
+import { Separator } from "@/components/ui/separator";
 
 export default function CheckoutSuccessPage() {
   const router = useRouter();
@@ -15,7 +17,7 @@ export default function CheckoutSuccessPage() {
     orderId: "",
     orderDate: "",
     deliveryDate: "",
-    deliveryTime: "Tomorrow Morning (6 AM - 10 AM)",
+    deliveryTime: "",
     orderTotal: 0,
     orderItems: [],
     paymentMethod: "",
@@ -27,13 +29,20 @@ export default function CheckoutSuccessPage() {
       state: "",
       zipCode: "",
     },
+    appliedCoupon: "",
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
       const orderId = sessionStorage.getItem("orderId");
 
       if (!orderId) {
+        toast({
+          title: "No order found",
+          description: "Please place an order before accessing this page.",
+          variant: "destructive",
+        });
         router.push("/cart");
         return;
       }
@@ -43,24 +52,41 @@ export default function CheckoutSuccessPage() {
         const response = await getOrder(orderId);
         const order = response.order;
 
-        // Format delivery time (assuming backend doesn't provide specific time slot)
+        // Calculate delivery time
         const deliveryDate = new Date(order.deliveryDate);
-        const deliveryTime = deliveryDate.getDate() === new Date().getDate() + 1
-          ? "Tomorrow Morning (6 AM - 10 AM)"
-          : deliveryDate.toLocaleDateString();
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        let deliveryTime = "Morning (6 AM - 10 AM)";
+        if (deliveryDate.toDateString() === today.toDateString()) {
+          deliveryTime = "Today (Evening Delivery)";
+        } else if (deliveryDate.toDateString() === tomorrow.toDateString()) {
+          deliveryTime = "Tomorrow Morning (6 AM - 10 AM)";
+        }
 
         setOrderDetails({
           orderId: order.id,
-          orderDate: new Date(order.orderDate).toLocaleDateString(),
-          deliveryDate: new Date(order.deliveryDate).toLocaleDateString(),
+          orderDate: new Date(order.orderDate).toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+          deliveryDate: deliveryDate.toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
           deliveryTime,
           orderTotal: order.total,
           orderItems: order.items,
           paymentMethod: order.paymentMethod,
           shippingAddress: order.shippingAddress,
+          appliedCoupon: sessionStorage.getItem("appliedCoupon") || "",
         });
 
-        // Clear session storage after successful fetch
+        // Clear session storage
         sessionStorage.removeItem("orderId");
         sessionStorage.removeItem("orderDate");
         sessionStorage.removeItem("deliveryDate");
@@ -89,24 +115,45 @@ export default function CheckoutSuccessPage() {
         const orderItems = JSON.parse(sessionStorage.getItem("orderItems") || "[]");
         const shippingAddress = JSON.parse(sessionStorage.getItem("shippingAddress") || "{}");
         const paymentMethod = sessionStorage.getItem("paymentMethod") || "cash-on-delivery";
+        const appliedCoupon = sessionStorage.getItem("appliedCoupon") || "";
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        let deliveryTime = "Tomorrow Morning (6 AM - 10 AM)";
+        if (deliveryDate.toDateString() === today.toDateString()) {
+          deliveryTime = "Today (Evening Delivery)";
+        }
 
         setOrderDetails({
           orderId,
-          orderDate: orderDate.toLocaleDateString(),
-          deliveryDate: deliveryDate.toLocaleDateString(),
-          deliveryTime: "Tomorrow Morning (6 AM - 10 AM)",
+          orderDate: orderDate.toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+          deliveryDate: deliveryDate.toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+          deliveryTime,
           orderTotal,
           orderItems,
           paymentMethod,
           shippingAddress,
+          appliedCoupon,
         });
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchOrderDetails();
   }, [router, toast]);
 
-  if (!orderDetails.orderId) {
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -114,9 +161,17 @@ export default function CheckoutSuccessPage() {
     );
   }
 
+  if (!orderDetails.orderId) {
+    return null;
+  }
+
+  const subtotal = orderDetails.orderItems.reduce((total, item) => total + item.price * item.quantity, 0);
+  const discount = parseFloat(sessionStorage.getItem("cartDiscount") || "0");
+  const shipping = parseFloat(sessionStorage.getItem("cartShipping") || "0");
+
   return (
     <div className="leaf-pattern-3">
-      <div className="container mx-auto px-4 py-12 max-w-md">
+      <div className="container mx-auto px-4 py-12 max-w-3xl">
         <div className="flex flex-col items-center text-center">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
             <CheckCircle className="h-10 w-10 text-green-600" />
@@ -127,7 +182,8 @@ export default function CheckoutSuccessPage() {
             Thank you for your order. Your vegetables will be delivered {orderDetails.deliveryTime.toLowerCase()}.
           </p>
 
-          <div className="w-full border rounded-lg p-6 mb-6">
+          <div className="w-full bg-card border rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">Order Details</h2>
             <div className="space-y-6">
               <div className="text-center pb-4 border-b">
                 <p className="text-gray-500 text-sm">Order Number</p>
@@ -135,11 +191,16 @@ export default function CheckoutSuccessPage() {
               </div>
 
               <div className="text-center pb-4 border-b">
-                <p className="text-gray-500 text-sm">Delivery Date</p>
+                <p className="text-gray-500 text-sm">Order Date</p>
+                <p className="font-bold">{orderDetails.orderDate}</p>
+              </div>
+
+              <div className="text-center pb-4 border-b">
+                <p className="text-gray-500 text-sm">Estimated Delivery</p>
                 <p className="font-bold">{orderDetails.deliveryTime}</p>
               </div>
 
-              <div className="text-center">
+              <div className="text-center pb-4 border-b">
                 <p className="text-gray-500 text-sm">Payment Method</p>
                 <p className="font-bold">
                   {orderDetails.paymentMethod === "upi"
@@ -149,6 +210,64 @@ export default function CheckoutSuccessPage() {
                     : "Cash on Delivery"}
                 </p>
               </div>
+
+              <div className="text-left">
+                <p className="text-gray-500 text-sm mb-2">Shipping Address</p>
+                <p className="font-medium">
+                  {orderDetails.shippingAddress.firstName} {orderDetails.shippingAddress.lastName}
+                </p>
+                <p>{orderDetails.shippingAddress.address}</p>
+                <p>
+                  {orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.state}{" "}
+                  {orderDetails.shippingAddress.zipCode}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full bg-card border rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+            <div className="space-y-4">
+              {orderDetails.orderItems.map((item) => (
+                <div key={item.productId} className="flex items-center gap-3 py-3 border-b last:border-0">
+                  <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                    <Image
+                      src={item.image || "/placeholder.svg?height=64&width=64"}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs w-5 h-5 flex items-center justify-center rounded-bl-md">
+                      {item.quantity}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-sm">{item.name}</h3>
+                  </div>
+                  <div className="text-sm font-medium">₹{(item.price * item.quantity).toFixed(2)}</div>
+                </div>
+              ))}
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
+                </div>
+                {orderDetails.appliedCoupon && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount ({orderDetails.appliedCoupon})</span>
+                    <span>-₹{discount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Shipping</span>
+                  <span>{shipping === 0 ? "Free" : `₹${shipping.toFixed(2)}`}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between font-medium text-lg">
+                  <span>Total</span>
+                  <span>₹{orderDetails.orderTotal.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -156,11 +275,8 @@ export default function CheckoutSuccessPage() {
             <Link href="/products">
               <Button className="w-full bg-green-600 hover:bg-green-700">Continue Shopping</Button>
             </Link>
-
             <Link href="/my-orders">
-              <Button variant="outline" className="w-full">
-                View Order History
-              </Button>
+              <Button variant="outline" className="w-full">View Order History</Button>
             </Link>
           </div>
         </div>

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
-import { fetchWithAuth } from "@/lib/api";
+import { getUserDetails, updateUser, deleteUser } from "@/lib/api";
 import { checkAdminStatus } from "@/lib/auth-utils";
 import {
   ArrowLeft,
@@ -15,6 +15,8 @@ import {
   Calendar,
   Edit,
   Trash2,
+  Home,
+  ShoppingCart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,8 +35,7 @@ export default function UserDetails() {
   const router = useRouter();
   const { id } = useParams();
   const globalId = parseInt(id);
-  const [user, setUser] = useState(null);
-  const [orders, setOrders] = useState([]);
+  const [userDetails, setUserDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("orders");
@@ -43,26 +44,35 @@ export default function UserDetails() {
   useEffect(() => {
     // Check admin status
     if (!checkAdminStatus()) {
-      router.push("/login");
+      toast({
+        title: "Unauthorized",
+        description: "You must be an admin to view this page. Redirecting to login...",
+        variant: "destructive",
+      });
+      setTimeout(() => router.push("/login"), 2000);
       return;
     }
 
-    // Fetch user details and orders
+    // Fetch user details
     const fetchData = async () => {
       try {
-        const users = await fetchWithAuth("/api/auth/users");
-        const userData = users.find((u) => u.globalId === globalId);
-        if (!userData) {
-          throw new Error("User not found");
-        }
-        const ordersData = await fetchWithAuth(`/api/orders/user/${globalId}`);
-        setUser(userData);
-        setOrders(ordersData);
+        const data = await getUserDetails(globalId);
+        setUserDetails(data);
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error("Error fetching user details:", error);
         setError(error.message || "Failed to load user data. Please try again.");
-        if (error.message.includes("Unauthorized") || error.message.includes("Forbidden")) {
-          router.push("/login");
+        if (
+          error.message === "No token provided" ||
+          error.message === "Token expired or invalid" ||
+          error.message.includes("Unauthorized") ||
+          error.message.includes("Forbidden")
+        ) {
+          toast({
+            title: "Session Expired",
+            description: "Your session has expired. Redirecting to login...",
+            variant: "destructive",
+          });
+          setTimeout(() => router.push("/login"), 2000);
         }
       } finally {
         setLoading(false);
@@ -74,7 +84,7 @@ export default function UserDetails() {
 
   const handleDeleteUser = async () => {
     try {
-      await fetchWithAuth(`/api/auth/user/${globalId}`, { method: "DELETE" });
+      await deleteUser(globalId);
       toast({
         title: "Success",
         description: "User deleted successfully.",
@@ -99,12 +109,9 @@ export default function UserDetails() {
           message = "Email sent to user";
           break;
         case "toggle-status":
-          const newStatus = user.status === "active" ? "inactive" : "active";
-          await fetchWithAuth(`/api/auth/user/${globalId}`, {
-            method: "PUT",
-            body: JSON.stringify({ status: newStatus }),
-          });
-          setUser((prev) => ({ ...prev, status: newStatus }));
+          const newStatus = userDetails.status === "active" ? "inactive" : "active";
+          await updateUser(globalId, { status: newStatus });
+          setUserDetails((prev) => ({ ...prev, status: newStatus }));
           message = "User account status toggled";
           break;
         case "reset-password":
@@ -136,7 +143,7 @@ export default function UserDetails() {
     );
   }
 
-  if (error || !user) {
+  if (error || !userDetails) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -150,7 +157,7 @@ export default function UserDetails() {
   }
 
   // Compute display name
-  const displayName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || "Unknown";
+  const displayName = userDetails.name || `${userDetails.firstName || ''} ${userDetails.lastName || ''}`.trim() || "Unknown";
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -171,18 +178,18 @@ export default function UserDetails() {
           <div className="flex items-center">
             <span
               className={`px-2 py-1 rounded-full text-xs ${
-                user.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                userDetails.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
               }`}
             >
-              {user.status === "active" ? "Active" : "Inactive"}
+              {userDetails.status === "active" ? "Active" : "Inactive"}
             </span>
             <span className="mx-2">•</span>
-            <span className="text-muted-foreground">User ID: {user.globalId || "N/A"}</span>
+            <span className="text-muted-foreground">User ID: {userDetails.globalId || "N/A"}</span>
           </div>
         </div>
         <div className="flex space-x-2 mt-4 md:mt-0">
           <Button asChild>
-            <Link href={`/admin/users/edit/${user.globalId}`} className="flex items-center">
+            <Link href={`/admin/users/edit/${userDetails.globalId}`} className="flex items-center">
               <Edit className="mr-2 h-4 w-4" />
               Edit User
             </Link>
@@ -214,33 +221,60 @@ export default function UserDetails() {
                 <div className="flex items-start">
                   <Mail className="mr-3 text-muted-foreground mt-0.5 h-5 w-5" />
                   <div>
-                    <p className="font-medium">{user.email || "N/A"}</p>
+                    <p className="font-medium">{userDetails.email || "N/A"}</p>
                     <p className="text-sm text-muted-foreground">Email</p>
                   </div>
                 </div>
                 <div className="flex items-start">
-                  <Phone className="mr-3 text-muted- SHARED CONVERSATION
-                    foreground mt-0.5 h-5 w-5" />
+                  <Phone className="mr-3 text-muted-foreground mt-0.5 h-5 w-5" />
                   <div>
-                    <p className="font-medium">{user.phone || "Not set"}</p>
+                    <p className="font-medium">{userDetails.phone || "Not set"}</p>
                     <p className="text-sm text-muted-foreground">Phone</p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <MapPin className="mr-3 text-muted-foreground mt-0.5 h-5 w-5" />
                   <div>
-                    <p className="font-medium">{user.address || "Not set"}</p>
-                    <p className="text-sm text-muted-foreground">Address</p>
+                    <p className="font-medium">{userDetails.location || userDetails.city || "Not set"}</p>
+                    <p className="text-sm text-muted-foreground">Location</p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <Calendar className="mr-3 text-muted-foreground mt-0.5 h-5 w-5" />
                   <div>
-                    <p className="font-medium">{user.joinedDate || "N/A"}</p>
+                    <p className="font-medium">{userDetails.joinedDate || "N/A"}</p>
                     <p className="text-sm text-muted-foreground">Joined Date</p>
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Addresses</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {userDetails.addresses.length === 0 ? (
+                <p className="text-muted-foreground">No addresses found.</p>
+              ) : (
+                <div className="space-y-4">
+                  {userDetails.addresses.map((address) => (
+                    <div key={address.addressId} className="flex items-start">
+                      <Home className="mr-3 text-muted-foreground mt-0.5 h-5 w-5" />
+                      <div>
+                        <p className="font-medium">
+                          {address.firstName} {address.lastName}
+                          {address.isPrimary && " (Primary)"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {address.address}, {address.city}, {address.state} {address.zipCode}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -257,7 +291,7 @@ export default function UserDetails() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Total Orders</p>
-                      <p className="text-xl font-bold">{user.totalOrders || 0}</p>
+                      <p className="text-xl font-bold">{userDetails.totalOrders || 0}</p>
                     </div>
                   </div>
                 </div>
@@ -268,7 +302,7 @@ export default function UserDetails() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Total Spent</p>
-                      <p className="text-xl font-bold">₹{(user.totalSpent || 0)}</p>
+                      <p className="text-xl font-bold">₹{(userDetails.totalSpent || 0).toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
@@ -277,23 +311,22 @@ export default function UserDetails() {
           </Card>
         </div>
 
-        {/* User Orders and Favorites */}
+        {/* User Orders and Cart */}
         <div className="lg:col-span-2">
           <Card>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="orders">Orders</TabsTrigger>
-                <TabsTrigger value="favorites">Favorites</TabsTrigger>
-                <TabsTrigger value="activity">Activity</TabsTrigger>
+                <TabsTrigger value="cart">Cart</TabsTrigger>
               </TabsList>
               <TabsContent value="orders" className="p-4">
                 <h3 className="font-semibold mb-4">Order History</h3>
-                {orders.length === 0 ? (
+                {userDetails.orders.data.length === 0 ? (
                   <p className="text-muted-foreground text-center">No orders found.</p>
                 ) : (
                   <div className="divide-y">
-                    {orders.map((order) => (
-                      <div key={order.id} className="py-4 flex items-center">
+                    {userDetails.orders.data.map((order) => (
+                      <div key={order.globalId} className="py-4 flex items-center">
                         <div className="flex-1">
                           <div className="flex items-center">
                             <h3 className="font-medium">{order.id}</h3>
@@ -306,52 +339,43 @@ export default function UserDetails() {
                                   : "bg-amber-100 text-amber-800"
                               }`}
                             >
-                              {order.status === "delivered"
-                                ? "Delivered"
-                                : order.status === "cancelled"
-                                ? "Cancelled"
-                                : "Processing"}
+                              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                             </span>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {order.date} - {order.items} items - ₹{order.total}
+                            {new Date(order.orderDate).toLocaleDateString()} - {order.items.length} items - ₹
+                            {order.total.toFixed(2)}
                           </p>
                         </div>
                         <Button asChild variant="link">
-                          <Link href={`/admin/delivery/orders/${order.id}`}>View Details</Link>
+                          <Link href={`/admin/orders/${order.globalId}`}>View Details</Link>
                         </Button>
                       </div>
                     ))}
                   </div>
                 )}
               </TabsContent>
-              <TabsContent value="favorites" className="p-4">
-                <p className="text-muted-foreground text-center">User's favorite products will be displayed here.</p>
-                <Button
-                  variant="link"
-                  onClick={() => {
-                    toast({
-                      title: "Info",
-                      description: "Favorites functionality not yet implemented.",
-                    });
-                  }}
-                >
-                  Load Favorites
-                </Button>
-              </TabsContent>
-              <TabsContent value="activity" className="p-4">
-                <p className="text-muted-foreground text-center">User activity log will be displayed here.</p>
-                <Button
-                  variant="link"
-                  onClick={() => {
-                    toast({
-                      title: "Info",
-                      description: "Activity log functionality not yet implemented.",
-                    });
-                  }}
-                >
-                  Load Activity Log
-                </Button>
+              <TabsContent value="cart" className="p-4">
+                <h3 className="font-semibold mb-4">Cart Items</h3>
+                {userDetails.cart.items.length === 0 ? (
+                  <p className="text-muted-foreground text-center">Cart is empty.</p>
+                ) : (
+                  <div className="divide-y">
+                    {userDetails.cart.items.map((item) => (
+                      <div key={item.productId} className="py-4 flex items-center">
+                        <div className="flex-1">
+                          <div className="flex items-center">
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            <h3 className="font-medium">{item.name}</h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Quantity: {item.quantity} - Price: ₹{item.price.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </Card>
@@ -369,7 +393,7 @@ export default function UserDetails() {
                   variant="outline"
                   onClick={() => handleQuickAction("toggle-status")}
                 >
-                  {user.status === "active" ? "Deactivate Account" : "Activate Account"}
+                  {userDetails.status === "active" ? "Deactivate Account" : "Activate Account"}
                 </Button>
                 <Button variant="outline" onClick={() => handleQuickAction("reset-password")}>
                   Reset Password

@@ -3,6 +3,7 @@ import React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-context";
+import { fetchWithAuth, createOrder } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CreditCard, Truck, ShieldCheck, LockIcon, MapPin } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { createOrder, getUserProfile } from "@/lib/api";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -30,6 +30,9 @@ export default function CheckoutPage() {
     total: 0,
     appliedCoupon: "",
   });
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [shouldRedirect, setShouldRedirect] = useState(null); // Control navigation
 
   // Form state
   const [formData, setFormData] = useState({
@@ -50,43 +53,75 @@ export default function CheckoutPage() {
     currentLocation: null,
   });
 
-  // Fetch user profile to pre-fill shipping details
+  // Check for empty cart and redirect
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    if (cart.length === 0 && !isProcessing) {
+      toast({
+        title: "Cart is empty",
+        description: "Your cart is empty. Please add items to proceed with checkout.",
+        variant: "destructive",
+      });
+      setShouldRedirect("/cart");
+    }
+  }, [cart, toast, isProcessing]);
+
+  // Handle navigation based on shouldRedirect
+  useEffect(() => {
+    if (shouldRedirect) {
+      router.push(shouldRedirect);
+    }
+  }, [shouldRedirect, router]);
+
+  // Fetch user profile and addresses to pre-fill primary address
+  useEffect(() => {
+    const fetchData = async () => {
       try {
-        const profile = await getUserProfile();
-        setFormData((prev) => ({
-          ...prev,
-          firstName: profile.firstName || "",
-          lastName: profile.lastName || "",
-          email: profile.email || "",
-          phone: profile.phone || "",
-          address: profile.address?.address || "",
-          city: profile.address?.city || "",
-          state: profile.address?.state || "",
-          zipCode: profile.address?.zipCode || "",
-        }));
+        const [profile, addressData] = await Promise.all([
+          fetchWithAuth('/api/auth/profile'),
+          fetchWithAuth('/api/addresses'),
+        ]);
+        setAddresses(addressData);
+        const primaryAddress = addressData.find((addr) => addr.isPrimary) || addressData[0];
+        if (primaryAddress) {
+          setSelectedAddressId(primaryAddress.addressId);
+          setFormData((prev) => ({
+            ...prev,
+            firstName: primaryAddress.firstName || "",
+            lastName: primaryAddress.lastName || "",
+            email: profile.email || "",
+            phone: profile.phone || "",
+            address: primaryAddress.address || "",
+            city: primaryAddress.city || "",
+            state: primaryAddress.state || "",
+            zipCode: primaryAddress.zipCode || "",
+          }));
+        }
       } catch (error) {
-        console.error("Failed to fetch user profile:", error);
+        console.error("Failed to fetch user data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load user profile or addresses.",
+          variant: "destructive",
+        });
       }
+
+      // Load order summary from session storage
+      const subtotal = parseFloat(sessionStorage.getItem("cartSubtotal") || "0");
+      const shipping = parseFloat(sessionStorage.getItem("cartShipping") || "0");
+      const discount = parseFloat(sessionStorage.getItem("cartDiscount") || "0");
+      const total = parseFloat(sessionStorage.getItem("cartTotal") || "0");
+      const appliedCoupon = sessionStorage.getItem("appliedCoupon") || "";
+
+      setOrderSummary({
+        subtotal,
+        shipping,
+        discount,
+        total,
+        appliedCoupon,
+      });
     };
-    fetchUserProfile();
-
-    // Load order summary from session storage
-    const subtotal = parseFloat(sessionStorage.getItem("cartSubtotal") || "0");
-    const shipping = parseFloat(sessionStorage.getItem("cartShipping") || "0");
-    const discount = parseFloat(sessionStorage.getItem("cartDiscount") || "0");
-    const total = parseFloat(sessionStorage.getItem("cartTotal") || "0");
-    const appliedCoupon = sessionStorage.getItem("appliedCoupon") || "";
-
-    setOrderSummary({
-      subtotal,
-      shipping,
-      discount,
-      total,
-      appliedCoupon,
-    });
-  }, []);
+    fetchData();
+  }, []); // Removed toast from dependencies
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -96,100 +131,97 @@ export default function CheckoutPage() {
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Validate form
-    const requiredFields = ["firstName", "lastName", "email", "phone", "address", "city", "state", "zipCode"];
-    const missingFields = requiredFields.filter((field) => !formData[field]);
-
-    if (missingFields.length > 0) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
+  const handleAddressSelect = (addressId) => {
+    const selectedAddress = addresses.find((addr) => addr.addressId === addressId);
+    if (selectedAddress) {
+      setSelectedAddressId(addressId);
+      setFormData({
+        ...formData,
+        firstName: selectedAddress.firstName,
+        lastName: selectedAddress.lastName,
+        address: selectedAddress.address,
+        city: selectedAddress.city,
+        state: selectedAddress.state,
+        zipCode: selectedAddress.zipCode,
       });
-      return;
     }
+  };
 
+  const validatePaymentFields = () => {
     if (paymentMethod === "credit-card") {
-      const paymentFields = ["cardNumber", "cardName", "expiryDate", "cvv"];
-      const missingPaymentFields = paymentFields.filter((field) => !formData[field]);
+      const cardNumberRegex = /^\d{16}$/;
+      const expiryRegex = /^(0[1-9]|1[0-2])\/[0-9]{2}$/;
+      const cvvRegex = /^\d{3,4}$/;
 
-      if (missingPaymentFields.length > 0) {
+      if (!cardNumberRegex.test(formData.cardNumber.replace(/\s/g, ""))) {
         toast({
-          title: "Missing payment information",
-          description: "Please fill in all payment details.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Validate card number format (simple check)
-      const cardNumber = formData.cardNumber.replace(/\s/g, "");
-      if (!/^\d{16}$/.test(cardNumber)) {
-        toast({
-          title: "Invalid card number",
+          title: "Invalid Card Number",
           description: "Please enter a valid 16-digit card number.",
           variant: "destructive",
         });
-        return;
+        return false;
       }
-
-      // Validate expiry date format (MM/YY)
-      if (!/^\d{2}\/\d{2}$/.test(formData.expiryDate)) {
+      if (!formData.cardName.trim()) {
         toast({
-          title: "Invalid expiry date",
-          description: "Please enter a valid expiry date in MM/YY format.",
+          title: "Invalid Card Name",
+          description: "Please enter the name on the card.",
           variant: "destructive",
         });
-        return;
+        return false;
       }
-
-      // Validate CVV format
-      if (!/^\d{3,4}$/.test(formData.cvv)) {
+      if (!expiryRegex.test(formData.expiryDate)) {
+        toast({
+          title: "Invalid Expiry Date",
+          description: "Please enter a valid expiry date (MM/YY).",
+          variant: "destructive",
+        });
+        return false;
+      }
+      if (!cvvRegex.test(formData.cvv)) {
         toast({
           title: "Invalid CVV",
-          description: "Please enter a valid 3 or 4 digit CVV code.",
+          description: "Please enter a valid CVV (3 or 4 digits).",
           variant: "destructive",
         });
-        return;
+        return false;
       }
     } else if (paymentMethod === "upi") {
-      if (!formData.upiId) {
-        toast({
-          title: "Missing UPI ID",
-          description: "Please enter your UPI ID.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Validate UPI ID format
-      if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/.test(formData.upiId)) {
+      const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
+      if (!upiRegex.test(formData.upiId)) {
         toast({
           title: "Invalid UPI ID",
           description: "Please enter a valid UPI ID (e.g., name@upi).",
           variant: "destructive",
         });
-        return;
+        return false;
       }
     }
+    return true;
+  };
 
-    // Process order
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validate form
+    if (!selectedAddressId) {
+      toast({
+        title: "No address selected",
+        description: "Please select a shipping address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!validatePaymentFields()) {
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
       const orderData = {
         paymentMethod,
-        shippingAddress: {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          zipCode: formData.zipCode,
-        },
+        addressId: selectedAddressId,
         couponCode: orderSummary.appliedCoupon,
       };
 
@@ -204,15 +236,16 @@ export default function CheckoutPage() {
       sessionStorage.setItem("orderTotal", response.order.total.toString());
       sessionStorage.setItem("paymentMethod", response.order.paymentMethod);
       sessionStorage.setItem("shippingAddress", JSON.stringify(response.order.shippingAddress));
+      sessionStorage.setItem("appliedCoupon", orderSummary.appliedCoupon || "");
 
       toast({
         title: "Order placed successfully",
         description: `Your order ${response.order.id} has been placed.`,
       });
 
-      // Clear cart and redirect to success page
-      clearCart();
-      router.push("/success");
+      // Clear cart and trigger redirect
+      await clearCart(); // Ensure clearCart is complete
+      setShouldRedirect("/success");
     } catch (error) {
       console.error("Failed to create order:", error);
       toast({
@@ -220,13 +253,12 @@ export default function CheckoutPage() {
         description: error.message || "Failed to place order. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setIsProcessing(false);
     }
   };
 
-  if (cart.length === 0) {
-    return null; // Will redirect in useEffect
+  if (shouldRedirect) {
+    return null; // Prevent rendering while redirecting
   }
 
   return (
@@ -246,6 +278,31 @@ export default function CheckoutPage() {
             <div className="bg-card rounded-lg border p-6 mb-6">
               <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
 
+              <div className="mb-4">
+                <Label className="text-lg">Select Address</Label>
+                {addresses.length === 0 ? (
+                  <p className="text-muted-foreground">No addresses found. Please add an address in your profile.</p>
+                ) : (
+                  <RadioGroup value={selectedAddressId} onValueChange={handleAddressSelect}>
+                    {addresses.map((addr) => (
+                      <div key={addr.addressId} className="flex items-center space-x-2 p-3 border rounded-md">
+                        <RadioGroupItem value={addr.addressId} id={`address-${addr.addressId}`} />
+                        <Label htmlFor={`address-${addr.addressId}`} className="flex-1">
+                          <p className="font-medium">
+                            {addr.firstName} {addr.lastName}
+                            {addr.isPrimary && <span className="ml-2 text-primary">(Primary)</span>}
+                          </p>
+                          <p>{addr.address}</p>
+                          <p>
+                            {addr.city}, {addr.state} {addr.zipCode}
+                          </p>
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name *</Label>
@@ -255,6 +312,7 @@ export default function CheckoutPage() {
                     value={formData.firstName}
                     onChange={handleInputChange}
                     required
+                    disabled
                   />
                 </div>
 
@@ -266,6 +324,7 @@ export default function CheckoutPage() {
                     value={formData.lastName}
                     onChange={handleInputChange}
                     required
+                    disabled
                   />
                 </div>
 
@@ -301,7 +360,6 @@ export default function CheckoutPage() {
                         checked={formData.useCurrentLocation}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            // Get current location
                             if (navigator.geolocation) {
                               navigator.geolocation.getCurrentPosition(
                                 (position) => {
@@ -348,6 +406,7 @@ export default function CheckoutPage() {
                     value={formData.address}
                     onChange={handleInputChange}
                     required
+                    disabled
                   />
                   {formData.useCurrentLocation && formData.currentLocation && (
                     <div className="bg-primary/10 p-2 rounded-md text-sm flex items-center">
@@ -365,6 +424,7 @@ export default function CheckoutPage() {
                     value={formData.city}
                     onChange={handleInputChange}
                     required
+                    disabled
                   />
                 </div>
 
@@ -377,6 +437,7 @@ export default function CheckoutPage() {
                       value={formData.state}
                       onChange={handleInputChange}
                       required
+                      disabled
                     />
                   </div>
 
@@ -388,6 +449,7 @@ export default function CheckoutPage() {
                       value={formData.zipCode}
                       onChange={handleInputChange}
                       required
+                      disabled
                     />
                   </div>
                 </div>
@@ -405,7 +467,7 @@ export default function CheckoutPage() {
                 <div>
                   <p className="text-sm font-medium">Safe & Secure Payments</p>
                   <p className="text-xs text-muted-foreground">
-                    All payment information is encrypted and securely processed. We do not store your card details.
+                    All payment information is processed securely.
                   </p>
                 </div>
               </div>
@@ -466,6 +528,7 @@ export default function CheckoutPage() {
                       placeholder="1234 5678 9012 3456"
                       value={formData.cardNumber}
                       onChange={handleInputChange}
+                      required
                     />
                   </div>
 
@@ -477,6 +540,7 @@ export default function CheckoutPage() {
                       placeholder="John Doe"
                       value={formData.cardName}
                       onChange={handleInputChange}
+                      required
                     />
                   </div>
 
@@ -489,6 +553,7 @@ export default function CheckoutPage() {
                         placeholder="MM/YY"
                         value={formData.expiryDate}
                         onChange={handleInputChange}
+                        required
                       />
                     </div>
 
@@ -500,6 +565,7 @@ export default function CheckoutPage() {
                         placeholder="123"
                         value={formData.cvv}
                         onChange={handleInputChange}
+                        required
                       />
                     </div>
                   </div>
@@ -521,6 +587,7 @@ export default function CheckoutPage() {
                       placeholder="yourname@upi"
                       value={formData.upiId}
                       onChange={handleInputChange}
+                      required
                     />
                   </div>
                   <div className="flex items-center text-sm text-muted-foreground">
