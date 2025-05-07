@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchWithAuth } from "@/lib/api";
+import { fetchWithoutAuth } from "@/lib/api";
 import { checkAdminStatus, setAuthToken } from "@/lib/auth-utils";
 
 export default function LoginPage() {
@@ -18,7 +18,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const data = await fetchWithAuth("/api/auth/login", {
+      const data = await fetchWithoutAuth("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
@@ -36,7 +36,8 @@ export default function LoginPage() {
         router.push("/");
       }
     } catch (err) {
-      setError(err.message || "Login failed. Please try again.");
+      // Handle specific backend errors
+      setError(err.message === "Invalid credentials" ? "Invalid email or password" : "Login failed. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);

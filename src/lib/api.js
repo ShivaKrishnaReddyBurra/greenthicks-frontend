@@ -3,6 +3,25 @@ import { getAuthToken } from "@/lib/auth-utils";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 // Generic fetch function with error handling
+export const fetchWithoutAuth = async (url, options = {}) => {
+  const headers = {
+    ...options.headers,
+    'Content-Type': 'application/json',
+  };
+
+  const response = await fetch(`${API_URL}${url}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Something went wrong');
+  }
+
+  return response.json();
+};
+
 export const fetchWithAuth = async (url, options = {}) => {
   const token = getAuthToken();
 
