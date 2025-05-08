@@ -1,6 +1,5 @@
 "use client";
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Package, Truck, CheckCircle, Clock, Search, ShoppingBag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { getUserOrders, getProductById } from "@/lib/api";
+import { getUserOrders } from "@/lib/api"; // Ensure this returns the correct response
 import { getAuthToken } from "@/lib/auth-utils";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -20,6 +19,8 @@ export default function MyOrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -32,39 +33,28 @@ export default function MyOrdersPage() {
 
     async function fetchOrders() {
       try {
-        const fetchedOrders = await getUserOrders();
-        // Fetch product details for each order item
-        const enrichedOrders = await Promise.all(
-          fetchedOrders.map(async (order) => {
-            const itemsWithDetails = await Promise.all(
-              order.items.map(async (item) => {
-                try {
-                  const product = await getProductById(item.productId);
-                  return {
-                    ...item,
-                    name: product.name,
-                    image: product.images[0]?.url || "/placeholder.svg",
-                  };
-                } catch (error) {
-                  return {
-                    ...item,
-                    name: "Unknown Product",
-                    image: "/placeholder.svg",
-                  };
-                }
-              })
-            );
-            return {
-              id: order.id,
-              date: new Date(order.orderDate).toLocaleDateString(),
-              status: order.status,
-              items: itemsWithDetails,
-              total: order.total,
-              estimatedDelivery: new Date(order.deliveryDate).toLocaleDateString(),
-            };
-          })
-        );
+        setLoading(true);
+        const response = await getUserOrders(currentPage); // Pass currentPage if API supports pagination
+        const fetchedOrders = response.orders || [];
+
+        // Transform orders to match frontend expectations
+        const enrichedOrders = fetchedOrders.map((order) => ({
+          id: order.globalId, // Use the order ID (e.g., ORD-023)
+          date: new Date(order.orderDate).toLocaleDateString(),
+          status: order.status,
+          items: order.items.map((item) => ({
+            productId: item.productId,
+            name: item.name,
+            image: item.image || "/placeholder.svg",
+            price: item.price,
+            quantity: item.quantity,
+          })),
+          total: order.total,
+          estimatedDelivery: new Date(order.deliveryDate).toLocaleDateString(),
+        }));
+
         setOrders(enrichedOrders);
+        setTotalPages(response.totalPages || 1); // Update total pages
         setLoading(false);
       } catch (error) {
         toast({
@@ -76,7 +66,7 @@ export default function MyOrdersPage() {
       }
     }
     fetchOrders();
-  }, [toast, router]);
+  }, [toast, router, currentPage]); // Re-fetch when currentPage changes
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -157,7 +147,7 @@ export default function MyOrdersPage() {
     );
   }
 
-  if (orders.length === 0) {
+  if (orders.length === 0 && !loading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <div className="max-w-md mx-auto">
@@ -289,6 +279,28 @@ export default function MyOrdersPage() {
           </div>
         )}
       </div>
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-4 mt-6">
+          <Button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => prev - 1)}
+            variant="outline"
+          >
+            Previous
+          </Button>
+          <span className="flex items-center">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+            variant="outline"
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

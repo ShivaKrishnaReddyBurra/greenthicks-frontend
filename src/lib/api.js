@@ -173,6 +173,10 @@ export const getUserOrders = async (page = 1, limit = 10) => {
   return fetchWithAuth(`/api/orders/my-orders?page=${page}&limit=${limit}`);
 };
 
+export const getAllOrders = async (page = 1, limit = 10) => {
+  return fetchWithAuth(`/api/orders?page=${page}&limit=${limit}`);
+};
+
 export const getOrder = async (globalId) => {
   return fetchWithAuth(`/api/orders/${globalId}`);
 };

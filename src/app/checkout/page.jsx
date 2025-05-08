@@ -229,6 +229,7 @@ export default function CheckoutPage() {
 
       // Store order information in session storage
       sessionStorage.setItem("orderId", response.order.id);
+      sessionStorage.setItem("id", response.order.globalId);
       sessionStorage.setItem("orderDate", response.order.orderDate);
       sessionStorage.setItem("deliveryDate", response.order.deliveryDate);
       sessionStorage.setItem("orderStatus", response.order.status);

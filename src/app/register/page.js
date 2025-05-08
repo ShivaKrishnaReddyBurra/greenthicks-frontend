@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchWithAuth } from "@/lib/api";
+import { fetchWithoutAuth } from "@/lib/api";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -18,7 +18,7 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      await fetchWithAuth("/api/auth/signup", {
+      await fetchWithoutAuth("/api/auth/signup", {
         method: "POST",
         body: JSON.stringify({ email, password, isAdmin }),
       });
@@ -69,7 +69,7 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div className="mb-6">
+          {/* <div className="mb-6">
             <label className="flex items-center">
               <input
                 type="checkbox"
@@ -79,7 +79,7 @@ export default function RegisterPage() {
               />
               <span className="text-sm font-medium">Register as Admin (for testing)</span>
             </label>
-          </div>
+          </div> */}
 
           <button
             type="submit"

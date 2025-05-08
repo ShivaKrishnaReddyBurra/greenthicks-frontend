@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Search, Filter, FileText, Printer, ChevronRight, ChevronLeft, Eye, Download } from "lucide-react"
-import { getUserOrders, getUserProfile, exportOrders } from "@/lib/api"
+import { getAllOrders, getUserProfile, exportOrders } from "@/lib/api"
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([])
@@ -23,7 +23,7 @@ export default function OrdersPage() {
         const userProfile = await getUserProfile()
         setIsAdmin(userProfile.isAdmin)
 
-        const data = await getUserOrders(currentPage, 10)
+        const data = await getAllOrders(currentPage, 10)
         setOrders(data.orders || [])
         setTotalPages(data.totalPages || 1)
       } catch (err) {

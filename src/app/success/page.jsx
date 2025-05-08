@@ -35,7 +35,8 @@ export default function CheckoutSuccessPage() {
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
-      const orderId = sessionStorage.getItem("orderId");
+      const orderId = sessionStorage.getItem("id");
+      const displayOrderId = sessionStorage.getItem("orderId");
 
       if (!orderId) {
         toast({
@@ -50,8 +51,7 @@ export default function CheckoutSuccessPage() {
       try {
         // Fetch order details from backend
         const response = await getOrder(orderId);
-        const order = response.order;
-
+        const order = response;
         // Calculate delivery time
         const deliveryDate = new Date(order.deliveryDate);
         const today = new Date();
@@ -83,6 +83,8 @@ export default function CheckoutSuccessPage() {
           orderItems: order.items,
           paymentMethod: order.paymentMethod,
           shippingAddress: order.shippingAddress,
+          shipping: order.shipping,
+          discount: order.discount,
           appliedCoupon: sessionStorage.getItem("appliedCoupon") || "",
         });
 
@@ -100,6 +102,7 @@ export default function CheckoutSuccessPage() {
         sessionStorage.removeItem("cartDiscount");
         sessionStorage.removeItem("cartTotal");
         sessionStorage.removeItem("appliedCoupon");
+        sessionStorage.removeItem("id");
       } catch (error) {
         console.error("Failed to fetch order details:", error);
         toast({
@@ -109,42 +112,42 @@ export default function CheckoutSuccessPage() {
         });
 
         // Fallback to session storage
-        const orderDate = new Date(sessionStorage.getItem("orderDate") || "");
-        const deliveryDate = new Date(sessionStorage.getItem("deliveryDate") || "");
-        const orderTotal = parseFloat(sessionStorage.getItem("orderTotal") || "0");
-        const orderItems = JSON.parse(sessionStorage.getItem("orderItems") || "[]");
-        const shippingAddress = JSON.parse(sessionStorage.getItem("shippingAddress") || "{}");
-        const paymentMethod = sessionStorage.getItem("paymentMethod") || "cash-on-delivery";
-        const appliedCoupon = sessionStorage.getItem("appliedCoupon") || "";
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
-        let deliveryTime = "Tomorrow Morning (6 AM - 10 AM)";
-        if (deliveryDate.toDateString() === today.toDateString()) {
-          deliveryTime = "Today (Evening Delivery)";
-        }
+        // const orderDate = new Date(sessionStorage.getItem("orderDate") || "");
+        // const deliveryDate = new Date(sessionStorage.getItem("deliveryDate") || "");
+        // const orderTotal = parseFloat(sessionStorage.getItem("orderTotal") || "0");
+        // const orderItems = JSON.parse(sessionStorage.getItem("orderItems") || "[]");
+        // const shippingAddress = JSON.parse(sessionStorage.getItem("shippingAddress") || "{}");
+        // const paymentMethod = sessionStorage.getItem("paymentMethod") || "cash-on-delivery";
+        // const appliedCoupon = sessionStorage.getItem("appliedCoupon") || "";
+        // const today = new Date();
+        // const tomorrow = new Date(today);
+        // tomorrow.setDate(today.getDate() + 1);
+        // let deliveryTime = "Tomorrow Morning (6 AM - 10 AM)";
+        // if (deliveryDate.toDateString() === today.toDateString()) {
+        //   deliveryTime = "Today (Evening Delivery)";
+        // }
 
-        setOrderDetails({
-          orderId,
-          orderDate: orderDate.toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }),
-          deliveryDate: deliveryDate.toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }),
-          deliveryTime,
-          orderTotal,
-          orderItems,
-          paymentMethod,
-          shippingAddress,
-          appliedCoupon,
-        });
+        // setOrderDetails({
+        //   orderId,
+        //   orderDate: orderDate.toLocaleDateString("en-US", {
+        //     weekday: "long",
+        //     year: "numeric",
+        //     month: "long",
+        //     day: "numeric",
+        //   }),
+        //   deliveryDate: deliveryDate.toLocaleDateString("en-US", {
+        //     weekday: "long",
+        //     year: "numeric",
+        //     month: "long",
+        //     day: "numeric",
+        //   }),
+        //   deliveryTime,
+        //   orderTotal,
+        //   orderItems,
+        //   paymentMethod,
+        //   shippingAddress,
+        //   appliedCoupon,
+        // });
       } finally {
         setIsLoading(false);
       }
@@ -166,8 +169,7 @@ export default function CheckoutSuccessPage() {
   }
 
   const subtotal = orderDetails.orderItems.reduce((total, item) => total + item.price * item.quantity, 0);
-  const discount = parseFloat(sessionStorage.getItem("cartDiscount") || "0");
-  const shipping = parseFloat(sessionStorage.getItem("cartShipping") || "0");
+
 
   return (
     <div className="leaf-pattern-3">
@@ -260,7 +262,7 @@ export default function CheckoutSuccessPage() {
                 )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Shipping</span>
-                  <span>{shipping === 0 ? "Free" : `₹${shipping.toFixed(2)}`}</span>
+                  <span>{orderDetails.shipping}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-medium text-lg">

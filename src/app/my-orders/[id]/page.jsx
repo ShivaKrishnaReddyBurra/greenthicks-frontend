@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Package, Truck, CheckCircle, Clock, MapPin, RotateCcw } from "lucide-react";
 import Image from "next/image";
-import { getOrder, cancelOrder, getProductById } from "@/lib/api";
+import { getOrder, cancelOrder } from "@/lib/api";
 import { getAuthToken } from "@/lib/auth-utils";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,9 @@ export default function OrderDetailPage({ params }) {
   const { toast } = useToast();
   const router = useRouter();
 
+  // Unwrap params using React.use()
+  const { id } = React.use(params);
+
   useEffect(() => {
     // Check if user is authenticated
     if (!getAuthToken()) {
@@ -28,31 +31,18 @@ export default function OrderDetailPage({ params }) {
 
     async function fetchOrder() {
       try {
-        const fetchedOrder = await getOrder(params.id);
-        // Fetch product details for each item
-        const itemsWithDetails = await Promise.all(
-          fetchedOrder.items.map(async (item) => {
-            try {
-              const product = await getProductById(item.productId);
-              return {
-                ...item,
-                name: product.name,
-                image: product.images[0]?.url || "/placeholder.svg",
-              };
-            } catch (error) {
-              return {
-                ...item,
-                name: "Unknown Product",
-                image: "/placeholder.svg",
-              };
-            }
-          })
-        );
+        const fetchedOrder = await getOrder(id); // Use unwrapped id
         setOrder({
-          id: fetchedOrder.id,
+          id: fetchedOrder.id, // Use 'id' (e.g., ORD-023) for display
           date: new Date(fetchedOrder.orderDate).toLocaleDateString(),
           status: fetchedOrder.status,
-          items: itemsWithDetails,
+          items: fetchedOrder.items.map((item) => ({
+            productId: item.productId,
+            name: item.name,
+            image: item.image || "/placeholder.svg",
+            quantity: item.quantity,
+            price: item.price,
+          })),
           total: fetchedOrder.total,
           estimatedDelivery: new Date(fetchedOrder.deliveryDate).toLocaleDateString(),
           shippingAddress: fetchedOrder.shippingAddress,
@@ -72,11 +62,11 @@ export default function OrderDetailPage({ params }) {
       }
     }
     fetchOrder();
-  }, [params.id, toast, router]);
+  }, [id, toast, router]); // Update dependency array to use unwrapped id
 
   const handleCancelOrder = async () => {
     try {
-      await cancelOrder(params.id);
+      await cancelOrder(id); // Use unwrapped id
       setOrder((prev) => ({ ...prev, status: "cancelled" }));
       toast({
         title: "Order cancelled",

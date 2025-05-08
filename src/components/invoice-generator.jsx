@@ -206,7 +206,7 @@ export default function InvoiceGenerator({ order }) {
               )}
               <div className="flex justify-between py-2">
                 <span className="font-medium">Delivery Charge:</span>
-                <span>{formatCurrency(order.deliveryCharge)}</span>
+                <span>{formatCurrency(order.shipping)}</span>
               </div>
               <div className="flex justify-between py-2 border-t border-gray-300 font-bold">
                 <span>Total:</span>
