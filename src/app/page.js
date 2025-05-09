@@ -16,7 +16,7 @@ export const metadata = {
     siteName: 'GreenThicks',
     images: [
       {
-        url: 'https://github.com/ShivaKrishnaReddyBurra/greenthicks-frontend/blob/main/src/public/About.png', // Optional: If you have a nice image for sharing.
+        url: 'https://github.com/ShivaKrishnaReddyBurra/greenthicks-frontend/blob/main/src/public/About.png',
         width: 1200,
         height: 630,
       },
@@ -26,8 +26,6 @@ export const metadata = {
   },
   robots: 'index, follow',
 };
-
-
 
 export default function Home() {
   return (

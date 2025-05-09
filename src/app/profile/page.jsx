@@ -1,24 +1,58 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { fetchWithAuth } from "@/lib/api";
 import { getAuthToken, clearAuth } from "@/lib/auth-utils";
+import {
+  Bell,
+  Edit,
+  MapPin,
+  Plus,
+  Save,
+  Trash,
+  User,
+  X,
+} from "lucide-react";
+import coverPhoto from "@/public/coverpage.png";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save, Edit, X, Plus, Check } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
+import { Loader2 } from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [addresses, setAddresses] = useState([]);
-  const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState("profile");
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    email: "",
     address: "",
     city: "",
     state: "",
@@ -41,20 +75,37 @@ export default function ProfilePage() {
           fetchWithAuth("/api/auth/profile"),
           fetchWithAuth("/api/addresses"),
         ]);
-        setUser(profileData);
+        setUser({
+          ...profileData,
+          name: profileData.name || `${profileData.firstName || ""} ${profileData.lastName || ""}`.trim(),
+          avatar: profileData.avatar || "/placeholder.svg",
+          joinedDate: profileData.joinedDate || "Unknown",
+          location: profileData.location || "Not set",
+        });
         setAddresses(addressesData);
-        // Set form data to primary address or first address
         const primaryAddress = addressesData.find((addr) => addr.isPrimary) || addressesData[0];
         if (primaryAddress) {
           setSelectedAddressId(primaryAddress.addressId);
           setFormData({
-            firstName: primaryAddress.firstName,
-            lastName: primaryAddress.lastName,
-            address: primaryAddress.address,
-            city: primaryAddress.city,
-            state: primaryAddress.state,
-            zipCode: primaryAddress.zipCode,
-            isPrimary: primaryAddress.isPrimary,
+            firstName: primaryAddress.firstName || "",
+            lastName: primaryAddress.lastName || "",
+            email: profileData.email || "",
+            address: primaryAddress.address || "",
+            city: primaryAddress.city || "",
+            state: primaryAddress.state || "",
+            zipCode: primaryAddress.zipCode || "",
+            isPrimary: primaryAddress.isPrimary || false,
+          });
+        } else {
+          setFormData({
+            firstName: profileData.firstName || "",
+            lastName: profileData.lastName || "",
+            email: profileData.email || "",
+            address: "",
+            city: "",
+            state: "",
+            zipCode: "",
+            isPrimary: false,
           });
         }
       } catch (error) {
@@ -81,7 +132,54 @@ export default function ProfilePage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleProfileSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const token = getAuthToken();
+    if (!token || !user) {
+      router.push("/login");
+      return;
+    }
+
+    try {
+      const updatedProfile = await fetchWithAuth("/api/auth/profile", {
+        method: "PUT",
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          location: formData.city,
+        }),
+      });
+      setUser({
+        ...user,
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
+        email: formData.email,
+        location: formData.city,
+      });
+      setIsEditingProfile(false);
+      toast({
+        title: "Success",
+        description: "Profile updated successfully.",
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+      if (error.message.includes("Unauthorized")) {
+        clearAuth();
+        router.push("/login");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAddressSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
@@ -93,7 +191,6 @@ export default function ProfilePage() {
 
     try {
       if (selectedAddressId) {
-        // Update existing address
         const updatedAddress = await fetchWithAuth(`/api/addresses/${selectedAddressId}`, {
           method: "PUT",
           body: JSON.stringify({ ...formData, isPrimary: true }),
@@ -111,7 +208,6 @@ export default function ProfilePage() {
           location: formData.city,
         }));
       } else {
-        // Add new address
         const newAddress = await fetchWithAuth("/api/addresses", {
           method: "POST",
           body: JSON.stringify({ ...formData, isPrimary: true }),
@@ -127,7 +223,7 @@ export default function ProfilePage() {
           location: formData.city,
         }));
       }
-      setIsEditing(false);
+      setIsEditingAddress(false);
       toast({
         title: "Success",
         description: selectedAddressId ? "Address updated successfully." : "Address added successfully.",
@@ -148,12 +244,24 @@ export default function ProfilePage() {
     }
   };
 
-  const handleCancel = () => {
-    setIsEditing(false);
+  const handleCancelProfile = () => {
+    setIsEditingProfile(false);
+    setFormData((prev) => ({
+      ...prev,
+      firstName: user?.name?.split(" ")[0] || "",
+      lastName: user?.name?.split(" ")[1] || "",
+      email: user?.email || "",
+      city: user?.location || "",
+    }));
+  };
+
+  const handleCancelAddress = () => {
+    setIsEditingAddress(false);
     const primaryAddress = addresses.find((addr) => addr.isPrimary) || addresses[0];
     if (primaryAddress) {
       setSelectedAddressId(primaryAddress.addressId);
-      setFormData({
+      setFormData((prev) => ({
+        ...prev,
         firstName: primaryAddress.firstName,
         lastName: primaryAddress.lastName,
         address: primaryAddress.address,
@@ -161,33 +269,35 @@ export default function ProfilePage() {
         state: primaryAddress.state,
         zipCode: primaryAddress.zipCode,
         isPrimary: primaryAddress.isPrimary,
-      });
+      }));
     } else {
       setSelectedAddressId(null);
-      setFormData({
-        firstName: "",
-        lastName: "",
+      setFormData((prev) => ({
+        ...prev,
+        firstName: user?.name?.split(" ")[0] || "",
+        lastName: user?.name?.split(" ")[1] || "",
         address: "",
         city: "",
         state: "",
         zipCode: "",
         isPrimary: false,
-      });
+      }));
     }
   };
 
   const handleAddNewAddress = () => {
-    setIsEditing(true);
+    setIsEditingAddress(true);
     setSelectedAddressId(null);
-    setFormData({
-      firstName: "",
-      lastName: "",
+    setFormData((prev) => ({
+      ...prev,
+      firstName: user?.name?.split(" ")[0] || "",
+      lastName: user?.name?.split(" ")[1] || "",
       address: "",
       city: "",
       state: "",
       zipCode: "",
       isPrimary: true,
-    });
+    }));
   };
 
   const handleSetPrimary = async (addressId) => {
@@ -249,6 +359,64 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDeleteAddress = async (addressId) => {
+    setIsSubmitting(true);
+    const token = getAuthToken();
+    if (!token || !user) {
+      router.push("/login");
+      return;
+    }
+
+    try {
+      await fetchWithAuth(`/api/addresses/${addressId}`, {
+        method: "DELETE",
+      });
+      setAddresses((prev) => prev.filter((addr) => addr.addressId !== addressId));
+      if (selectedAddressId === addressId) {
+        const primaryAddress = addresses.find((addr) => addr.isPrimary && addr.addressId !== addressId) || addresses[0];
+        if (primaryAddress) {
+          setSelectedAddressId(primaryAddress.addressId);
+          setFormData({
+            firstName: primaryAddress.firstName,
+            lastName: primaryAddress.lastName,
+            address: primaryAddress.address,
+            city: primaryAddress.city,
+            state: primaryAddress.state,
+            zipCode: primaryAddress.zipCode,
+            isPrimary: primaryAddress.isPrimary,
+          });
+        } else {
+          setSelectedAddressId(null);
+          setFormData((prev) => ({
+            ...prev,
+            address: "",
+            city: "",
+            state: "",
+            zipCode: "",
+            isPrimary: false,
+          }));
+        }
+      }
+      toast({
+        title: "Success",
+        description: "Address deleted successfully.",
+      });
+    } catch (error) {
+      console.error("Error deleting address:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete address. Please try again.",
+        variant: "destructive",
+      });
+      if (error.message.includes("Unauthorized")) {
+        clearAuth();
+        router.push("/login");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-screen">
@@ -262,187 +430,432 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="flex justify-between items-center">
-            <span>User Profile</span>
-            {!isEditing && (
-              <div className="space-x-2">
-                <Button variant="outline" onClick={() => setIsEditing(true)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Primary Address
-                </Button>
-                <Button variant="outline" onClick={handleAddNewAddress}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add New Address
-                </Button>
-              </div>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isEditing ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    placeholder="Enter first name"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    placeholder="Enter last name"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  placeholder="Enter address"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    placeholder="Enter city"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleInputChange}
-                    placeholder="Enter state"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="zipCode">Zip Code</Label>
-                  <Input
-                    id="zipCode"
-                    name="zipCode"
-                    value={formData.zipCode}
-                    onChange={handleInputChange}
-                    placeholder="Enter zip code"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
-                  <X className="h-4 w-4 mr-2" />
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4 mr-2" />
-                  )}
-                  {selectedAddressId ? "Save Changes" : "Add Address"}
+    <div className="bg-background min-h-screen">
+      {/* Cover Photo and Profile Header */}
+      <div className="relative">
+        <div className="h-48 md:h-64 w-full bg-muted overflow-hidden">
+          <img
+            src={coverPhoto.src}
+            alt="Cover"
+            className="w-full h-full object-cover"
+          />
+        </div>
+
+        <div className="container mx-auto px-4">
+          <div className="relative -mt-16 md:-mt-20 mb-6 flex flex-col md:flex-row md:items-end md:justify-between">
+            <div className="flex flex-col md:flex-row md:items-end gap-4">
+              <div className="relative">
+                <Avatar className="h-32 w-32 border-4 border-background">
+                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarFallback className="text-4xl">
+                    {user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <Button
+                  size="icon"
+                  className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary text-primary-foreground"
+                >
+                  <Edit className="h-4 w-4" />
                 </Button>
               </div>
-            </form>
-          ) : (
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-muted-foreground">Full Name</Label>
-                  <p>{user.name || "Not set"}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Email</Label>
-                  <p>{user.email}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Joined Date</Label>
-                  <p>{user.joinedDate}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Total Orders</Label>
-                  <p>{user.totalOrders}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Total Spent</Label>
-                  <p>₹{user.totalSpent}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Status</Label>
-                  <p className="capitalize">{user.status}</p>
-                </div>
-              </div>
-              <div>
-                <Label className="text-muted-foreground text-lg">Addresses</Label>
-                {addresses.length === 0 ? (
-                  <p className="text-muted-foreground">No addresses added.</p>
-                ) : (
-                  <div className="space-y-4 mt-2">
-                    {addresses.map((addr) => (
-                      <div
-                        key={addr.addressId}
-                        className={`p-4 border rounded-md ${
-                          addr.isPrimary ? "border-primary bg-primary/5" : "border-gray-200"
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium">
-                              {addr.firstName} {addr.lastName}
-                              {addr.isPrimary && (
-                                <Check className="h-4 w-4 inline ml-2 text-primary" />
-                              )}
-                            </p>
-                            <p>{addr.address}</p>
-                            <p>
-                              {addr.city}, {addr.state} {addr.zipCode}
-                            </p>
-                          </div>
-                          {!addr.isPrimary && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleSetPrimary(addr.addressId)}
-                              disabled={isSubmitting}
-                            >
-                              Set as Primary
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <div className="mt-4 md:mt-0 md:mb-2">
+                <h1 className="text-2xl font-bold">{user.name}</h1>
+                <p className="text-muted-foreground">{user.email}</p>
+                <p className="text-sm text-muted-foreground mt-1">Member since {user.joinedDate}</p>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div className="mt-4 md:mt-0 flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditingProfile(true)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Profile
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 pb-12">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+          <div className="flex overflow-x-auto pb-2 md:pb-0">
+            <TabsList className="h-auto p-0 bg-transparent">
+              <TabsTrigger
+                value="profile"
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-4 py-2"
+              >
+                <User className="h-4 w-4 mr-2" />
+                Profile
+              </TabsTrigger>
+              <TabsTrigger
+                value="addresses"
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-4 py-2"
+              >
+                <MapPin className="h-4 w-4 mr-2" />
+                Addresses
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Personal Information */}
+              <Card className="md:col-span-2">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Personal Information</CardTitle>
+                    <CardDescription>Manage your personal details</CardDescription>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsEditingProfile(!isEditingProfile)}
+                    className="h-8 w-8 text-muted-foreground"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {isEditingProfile ? (
+                    <form onSubmit={handleProfileSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="firstName">First Name</Label>
+                          <Input
+                            id="firstName"
+                            name="firstName"
+                            value={formData.firstName}
+                            onChange={handleInputChange}
+                            placeholder="Your first name"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="lastName">Last Name</Label>
+                          <Input
+                            id="lastName"
+                            name="lastName"
+                            value={formData.lastName}
+                            onChange={handleInputChange}
+                            placeholder="Your last name"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email Address</Label>
+                          <Input
+                            id="email"
+                            name="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={handleInputChange}
+                            placeholder="Your email address"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="city">Location</Label>
+                          <Input
+                            id="city"
+                            name="city"
+                            value={formData.city}
+                            onChange={handleInputChange}
+                            placeholder="City"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          type="button"
+                          onClick={handleCancelProfile}
+                          disabled={isSubmitting}
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                          {isSubmitting ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          Save Changes
+                        </Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h3 className="text-sm font-medium text-muted-foreground">Full Name</h3>
+                          <p>{user.name}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium text-muted-foreground">Email Address</h3>
+                          <p>{user.email}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h3 className="text-sm font-medium text-muted-foreground">Location</h3>
+                          <p>{user.location}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium text-muted-foreground">Joined Date</h3>
+                          <p>{user.joinedDate}</p>
+                        </div>
+                      </div>
+                      {user.totalOrders !== undefined && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <h3 className="text-sm font-medium text-muted-foreground">Total Orders</h3>
+                            <p>{user.totalOrders}</p>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-medium text-muted-foreground">Total Spent</h3>
+                            <p>₹{user.totalSpent}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Account Overview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Overview</CardTitle>
+                  <CardDescription>Quick stats about your account</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
+                    <p className="capitalize">{user.status || "Active"}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground">Addresses Saved</h3>
+                    <p>{addresses.length}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      clearAuth();
+                      router.push("/login");
+                    }}
+                  >
+                    <Bell className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Addresses Tab */}
+          <TabsContent value="addresses" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Your Addresses</h2>
+              <Dialog open={isEditingAddress} onOpenChange={setIsEditingAddress}>
+                <DialogTrigger asChild>
+                  <Button onClick={handleAddNewAddress}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add New Address
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{selectedAddressId ? "Edit Address" : "Add New Address"}</DialogTitle>
+                    <DialogDescription>Enter the details for your address.</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleAddressSubmit} className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input
+                          id="firstName"
+                          name="firstName"
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          placeholder="First name"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input
+                          id="lastName"
+                          name="lastName"
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                          placeholder="Last name"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        placeholder="Street address"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          name="city"
+                          value={formData.city}
+                          onChange={handleInputChange}
+                          placeholder="City"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="state">State</Label>
+                        <Input
+                          id="state"
+                          name="state"
+                          value={formData.state}
+                          onChange={handleInputChange}
+                          placeholder="State"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="zipCode">Zip Code</Label>
+                      <Input
+                        id="zipCode"
+                        name="zipCode"
+                        value={formData.zipCode}
+                        onChange={handleInputChange}
+                        placeholder="Zip code"
+                        required
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleCancelAddress}
+                        disabled={isSubmitting}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        {selectedAddressId ? "Save Changes" : "Add Address"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {addresses.map((address) => (
+                <Card key={address.addressId} className={address.isPrimary ? "border-primary" : ""}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {address.isPrimary && <Badge>Primary</Badge>}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setIsEditingAddress(true);
+                            setSelectedAddressId(address.addressId);
+                            setFormData({
+                              firstName: address.firstName,
+                              lastName: address.lastName,
+                              address: address.address,
+                              city: address.city,
+                              state: address.state,
+                              zipCode: address.zipCode,
+                              isPrimary: address.isPrimary,
+                            });
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => handleDeleteAddress(address.addressId)}
+                          disabled={isSubmitting}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-2">
+                    <div className="space-y-1">
+                      <p className="font-medium">{`${address.firstName} ${address.lastName}`}</p>
+                      <p className="text-sm">{address.address}</p>
+                      <p className="text-sm">
+                        {address.city}, {address.state} - {address.zipCode}
+                      </p>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    {!address.isPrimary && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleSetPrimary(address.addressId)}
+                        disabled={isSubmitting}
+                      >
+                        Set as Primary
+                      </Button>
+                    )}
+                  </CardFooter>
+                </Card>
+              ))}
+              {addresses.length === 0 && (
+                <Card className="col-span-full">
+                  <CardContent className="text-center py-12">
+                    <MapPin className="h-12 w-12 mx-auto text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-medium">No addresses added</h3>
+                    <p className="mt-1 text-muted-foreground">Add an address to get started</p>
+                    <Button className="mt-4" onClick={handleAddNewAddress}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Address
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

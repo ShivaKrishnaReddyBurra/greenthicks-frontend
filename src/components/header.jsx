@@ -86,7 +86,7 @@ export default function Header() {
   const handleLogout = () => {
     clearAuth();
     setIsAuthenticated(false);
-    router.push("/login");
+    router.push("/LoginOrRegister");
   };
 
   const navLinks = [
@@ -222,7 +222,7 @@ export default function Header() {
                         if (!isAuthenticated) {
                           e.preventDefault();
                           alert("To see your orders, please login first.");
-                          router.push("/login");
+                          router.push("/LoginOrRegister");
                         }
                       }}
                     >
@@ -254,7 +254,7 @@ export default function Header() {
                       </button>
                     ) : (
                       <Link
-                        href="/login"
+                        href="LoginOrRegister"
                         className="px-2 py-2 text-base flex items-center rounded-md text-foreground hover:bg-muted"
                       >
                         <LogIn className="h-5 w-5 mr-3" />
@@ -340,24 +340,18 @@ export default function Header() {
             </div>
 
             <div className="hidden lg:block">
-
-              <Button variant="ghost" size="icon" className="relative">
-                <Link
-                  href="/my-orders"
-                  className="w-full flex items-center"
-                  onClick={(e) => {
+              <Link href="/my-orders"onClick={(e) => {
                     if (!isAuthenticated) {
                       e.preventDefault();
                       alert("To see your orders, please login first.");
-                      router.push("/login");
+                      router.push("/LoginOrRegister");
                     }
-                  }}
-                >
-                  <Package className="h-4 w-4" />
-                  <span className="sr-only">My Orders</span>
-                </Link>
+                  }} className="relative inline-flex items-center justify-center p-2">
+              <Button variant="ghost" size="icon" className="relative">
+              <Package className="h-6 w-6" />
+              <span className="sr-only">My Orders</span>
               </Button>
-
+              </Link>
             </div>
 
             <DropdownMenu>
@@ -379,10 +373,10 @@ export default function Header() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Link href="/my-orders" className="w-full flex items-center">
-                    <Package className="mr-2 h-4 w-4" />
-                    My Orders
-                  </Link>
+                    <Link href="/my-orders" className="w-full flex items-center">
+                      <Package className="mr-2 h-4 w-4" />
+                      My Orders
+                    </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Link href="/favorites" className="w-full flex items-center">
@@ -400,7 +394,7 @@ export default function Header() {
                   </DropdownMenuItem>
                 ) : (
                   <DropdownMenuItem>
-                    <Link href="/login" className="w-full flex">
+                    <Link href="/LoginOrRegister" className="w-full flex">
                       Login / Register
                     </Link>
                   </DropdownMenuItem>
