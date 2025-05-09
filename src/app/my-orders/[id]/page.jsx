@@ -1,29 +1,27 @@
 "use client";
-import React from "react";
-import { useState, useEffect } from "react";
+
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Package, Truck, CheckCircle, Clock, MapPin, RotateCcw } from "lucide-react";
+import { ArrowLeft, Package, Truck, CheckCircle, Clock, MapPin, RotateCcw, XCircle } from "lucide-react";
 import Image from "next/image";
 import { getOrder, cancelOrder } from "@/lib/api";
 import { getAuthToken } from "@/lib/auth-utils";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
-export default function OrderDetailPage({ params }) {
+export default function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
-
-  // Unwrap params using React.use()
-  const { id } = React.use(params);
+  const params = useParams();
+  const id = params.id;
 
   useEffect(() => {
-    // Check if user is authenticated
     if (!getAuthToken()) {
       router.push("/login");
       return;
@@ -31,25 +29,27 @@ export default function OrderDetailPage({ params }) {
 
     async function fetchOrder() {
       try {
-        const fetchedOrder = await getOrder(id); // Use unwrapped id
+        const fetchedOrder = await getOrder(id);
         setOrder({
-          id: fetchedOrder.id, // Use 'id' (e.g., ORD-023) for display
-          date: new Date(fetchedOrder.orderDate).toLocaleDateString(),
-          status: fetchedOrder.status,
+          id: fetchedOrder.globalId || fetchedOrder.id,
+          date: new Date(fetchedOrder.orderDate).toLocaleDateString("en-IN"),
+          status: fetchedOrder.deliveryStatus,
           items: fetchedOrder.items.map((item) => ({
-            productId: item.productId,
+            productId: item.productId || item._id,
             name: item.name,
-            image: item.image || "/placeholder.svg",
+            image: item.image || "/placeholder.svg?height=64&width=64",
             quantity: item.quantity,
             price: item.price,
           })),
           total: fetchedOrder.total,
-          estimatedDelivery: new Date(fetchedOrder.deliveryDate).toLocaleDateString(),
+          estimatedDelivery: fetchedOrder.deliveryDate
+            ? new Date(fetchedOrder.deliveryDate).toLocaleDateString("en-IN")
+            : new Date(new Date(fetchedOrder.orderDate).getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN"),
           shippingAddress: fetchedOrder.shippingAddress,
-          paymentMethod: fetchedOrder.paymentMethod,
-          subtotal: fetchedOrder.subtotal,
-          shipping: fetchedOrder.shipping,
-          discount: fetchedOrder.discount,
+          paymentMethod: fetchedOrder.paymentMethod || "Unknown",
+          subtotal: fetchedOrder.subtotal || fetchedOrder.total,
+          shipping: fetchedOrder.shipping || 0,
+          discount: fetchedOrder.discount || 0,
         });
         setLoading(false);
       } catch (error) {
@@ -58,15 +58,18 @@ export default function OrderDetailPage({ params }) {
           description: error.message || "An error occurred while fetching the order.",
           variant: "destructive",
         });
+        if (error.message.includes("Token expired") || error.message.includes("Order not found")) {
+          router.push("/my-orders");
+        }
         setLoading(false);
       }
     }
     fetchOrder();
-  }, [id, toast, router]); // Update dependency array to use unwrapped id
+  }, [id, toast, router]);
 
   const handleCancelOrder = async () => {
     try {
-      await cancelOrder(id); // Use unwrapped id
+      await cancelOrder(id);
       setOrder((prev) => ({ ...prev, status: "cancelled" }));
       toast({
         title: "Order cancelled",
@@ -81,16 +84,42 @@ export default function OrderDetailPage({ params }) {
     }
   };
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
-      case "processing":
-        return <Badge variant="outline" className="border-blue-500 text-blue-500">Processing</Badge>;
-      case "shipped":
-        return <Badge variant="outline" className="border-orange-500 text-orange-500">Shipped</Badge>;
+      case "pending":
+        return (
+          <Badge variant="outline" className="border-blue-500 text-blue-500">
+            Order Placed
+          </Badge>
+        );
+      case "assigned":
+        return (
+          <Badge variant="outline" className="border-blue-500 text-blue-500">
+            Processing
+          </Badge>
+        );
+      case "out-for-delivery":
+        return (
+          <Badge variant="outline" className="border-orange-500 text-orange-500">
+            Out for Delivery
+          </Badge>
+        );
       case "delivered":
         return <Badge className="bg-green-500">Delivered</Badge>;
       case "cancelled":
-        return <Badge variant="outline" className="border-red-500 text-red-500">Cancelled</Badge>;
+        return (
+          <Badge variant="outline" className="border-red-500 text-red-500">
+            Cancelled
+          </Badge>
+        );
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
@@ -134,7 +163,7 @@ export default function OrderDetailPage({ params }) {
           </div>
         </div>
         <div className="mt-4 md:mt-0">
-          <Link href={`/orders/tracking/${order.id}`}>
+          <Link href={`/tracking/${order.id}`}>
             <Button>
               <Truck className="mr-2 h-4 w-4" />
               Track Order
@@ -161,10 +190,12 @@ export default function OrderDetailPage({ params }) {
                       <Link href={`/products/${item.productId}`} className="font-medium hover:text-primary">
                         {item.name}
                       </Link>
-                      <p className="text-sm text-muted-foreground">{item.quantity} x ₹{item.price.toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.quantity} x {formatCurrency(item.price)}
+                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">₹{(item.quantity * item.price).toFixed(2)}</p>
+                      <p className="font-medium">{formatCurrency(item.quantity * item.price)}</p>
                       {order.status === "delivered" && (
                         <Button variant="ghost" size="sm" className="text-xs">Write Review</Button>
                       )}
@@ -176,22 +207,22 @@ export default function OrderDetailPage({ params }) {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>₹{order.subtotal.toFixed(2)}</span>
+                  <span>{formatCurrency(order.subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Shipping</span>
-                  <span>₹{order.shipping.toFixed(2)}</span>
+                  <span>{formatCurrency(order.shipping)}</span>
                 </div>
                 {order.discount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount</span>
-                    <span>-₹{order.discount.toFixed(2)}</span>
+                    <span>-{formatCurrency(order.discount)}</span>
                   </div>
                 )}
                 <Separator />
                 <div className="flex justify-between font-medium text-lg pt-2">
                   <span>Total</span>
-                  <span>₹{order.total.toFixed(2)}</span>
+                  <span>{formatCurrency(order.total)}</span>
                 </div>
               </div>
             </CardContent>
@@ -215,14 +246,16 @@ export default function OrderDetailPage({ params }) {
                 <div className="relative pl-8 pb-8">
                   <div
                     className={`absolute left-0 w-6 h-6 rounded-full ${
-                      order.status !== "cancelled" &&
-                      (order.status === "processing" || order.status === "shipped" || order.status === "delivered")
+                      order.status === "assigned" ||
+                      order.status === "out-for-delivery" ||
+                      order.status === "delivered"
                         ? "bg-primary flex items-center justify-center"
                         : "bg-muted flex items-center justify-center"
                     }`}
                   >
-                    {order.status !== "cancelled" &&
-                    (order.status === "processing" || order.status === "shipped" || order.status === "delivered") ? (
+                    {order.status === "assigned" ||
+                    order.status === "out-for-delivery" ||
+                    order.status === "delivered" ? (
                       <CheckCircle className="h-4 w-4 text-white" />
                     ) : (
                       <Package className="h-4 w-4 text-muted-foreground" />
@@ -236,44 +269,46 @@ export default function OrderDetailPage({ params }) {
                 <div className="relative pl-8 pb-8">
                   <div
                     className={`absolute left-0 w-6 h-6 rounded-full ${
-                      order.status !== "cancelled" && (order.status === "shipped" || order.status === "delivered")
+                      order.status === "out-for-delivery" || order.status === "delivered"
                         ? "bg-primary flex items-center justify-center"
                         : "bg-muted flex items-center justify-center"
                     }`}
                   >
-                    {order.status !== "cancelled" && (order.status === "shipped" || order.status === "delivered") ? (
+                    {order.status === "out-for-delivery" || order.status === "delivered" ? (
                       <CheckCircle className="h-4 w-4 text-white" />
                     ) : (
                       <Truck className="h-4 w-4 text-muted-foreground" />
                     )}
                   </div>
                   <div>
-                    <p className="font-medium">Shipped</p>
+                    <p className="font-medium">Out for Delivery</p>
                     <p className="text-sm text-muted-foreground">Your order is on the way</p>
                   </div>
                 </div>
                 <div className="relative pl-8">
                   <div
                     className={`absolute left-0 w-6 h-6 rounded-full ${
-                      order.status === "delivered"
+                      order.status === "delivered" || order.status === "cancelled"
                         ? "bg-primary flex items-center justify-center"
                         : "bg-muted flex items-center justify-center"
                     }`}
                   >
                     {order.status === "delivered" ? (
                       <CheckCircle className="h-4 w-4 text-white" />
+                    ) : order.status === "cancelled" ? (
+                      <XCircle className="h-4 w-4 text-white" />
                     ) : (
                       <CheckCircle className="h-4 w-4 text-muted-foreground" />
                     )}
                   </div>
                   <div>
-                    <p className="font-medium">Delivered</p>
+                    <p className="font-medium">{order.status === "cancelled" ? "Cancelled" : "Delivered"}</p>
                     <p className="text-sm text-muted-foreground">
                       {order.status === "delivered"
                         ? "Your order has been delivered"
                         : order.status === "cancelled"
-                          ? "Order was cancelled"
-                          : `Estimated delivery: ${order.estimatedDelivery}`}
+                        ? "Order was cancelled"
+                        : `Estimated delivery: ${order.estimatedDelivery}`}
                     </p>
                   </div>
                 </div>
@@ -356,20 +391,7 @@ export default function OrderDetailPage({ params }) {
                     className="w-full justify-start text-red-500"
                     onClick={handleCancelOrder}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="mr-2 h-4 w-4"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="15" y1="9" x2="9" y2="15" />
-                      <line x1="9" y1="9" x2="15" y2="15" />
-                    </svg>
+                    <XCircle className="mr-2 h-4 w-4" />
                     Cancel Order
                   </Button>
                 )}

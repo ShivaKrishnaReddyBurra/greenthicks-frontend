@@ -1,202 +1,238 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { MapPin, Truck, CheckCircle, Clock, AlertTriangle } from "lucide-react"
+import { useState, useEffect } from "react";
+import { MapPin, Truck, CheckCircle, Clock, AlertTriangle, Package, XCircle } from "lucide-react";
+import { getDeliveryOrders, assignDeliveryBoy, getDeliveryBoys, getDeliveryBoyById } from "@/lib/api";
+import { getAuthToken } from "@/lib/auth-utils";
+import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export default function DeliveryManagement() {
-  const [orders, setOrders] = useState([])
-  const [partners, setPartners] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [selectedOrder, setSelectedOrder] = useState(null)
-  const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [orders, setOrders] = useState([]);
+  const [partners, setPartners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
-    // Simulate fetching orders and delivery partners
-    const fetchData = async () => {
-      try {
-        // In a real app, this would be API calls
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        // Sample orders data
-        const ordersData = [
-          {
-            id: "ORD-1234",
-            customer: "John Doe",
-            address: "123 Main St, Hyderabad, 500001",
-            items: 5,
-            total: 1250,
-            status: "pending",
-            date: "2023-05-01",
-            assignedTo: null,
-          },
-          {
-            id: "ORD-1235",
-            customer: "Jane Smith",
-            address: "456 Oak St, Hyderabad, 500002",
-            items: 3,
-            total: 850,
-            status: "assigned",
-            date: "2023-05-01",
-            assignedTo: "DEL-001",
-          },
-          {
-            id: "ORD-1236",
-            customer: "Robert Johnson",
-            address: "789 Pine St, Warangal, 506001",
-            items: 7,
-            total: 2100,
-            status: "in_transit",
-            date: "2023-05-01",
-            assignedTo: "DEL-004",
-          },
-          {
-            id: "ORD-1237",
-            customer: "Emily Davis",
-            address: "101 Elm St, Hyderabad, 500003",
-            items: 2,
-            total: 750,
-            status: "delivered",
-            date: "2023-05-01",
-            assignedTo: "DEL-002",
-          },
-          {
-            id: "ORD-1238",
-            customer: "Michael Brown",
-            address: "202 Cedar St, Warangal, 506002",
-            items: 4,
-            total: 1500,
-            status: "pending",
-            date: "2023-05-01",
-            assignedTo: null,
-          },
-        ]
-
-        // Sample delivery partners data
-        const partnersData = [
-          { id: "DEL-001", name: "Raj Kumar", location: "Hyderabad", status: "active", ordersDelivered: 152 },
-          { id: "DEL-002", name: "Priya Singh", location: "Hyderabad", status: "active", ordersDelivered: 98 },
-          { id: "DEL-003", name: "Amit Patel", location: "Hyderabad", status: "inactive", ordersDelivered: 67 },
-          { id: "DEL-004", name: "Sneha Reddy", location: "Warangal", status: "active", ordersDelivered: 124 },
-          { id: "DEL-005", name: "Vikram Sharma", location: "Warangal", status: "active", ordersDelivered: 89 },
-          { id: "DEL-006", name: "Deepa Nair", location: "Hyderabad", status: "active", ordersDelivered: 45 },
-          { id: "DEL-007", name: "Karthik Rao", location: "Hyderabad", status: "active", ordersDelivered: 76 },
-          { id: "DEL-008", name: "Meena Gupta", location: "Warangal", status: "active", ordersDelivered: 112 },
-          { id: "DEL-009", name: "Suresh Menon", location: "Hyderabad", status: "active", ordersDelivered: 34 },
-        ]
-
-        setOrders(ordersData)
-        setPartners(partnersData)
-      } catch (error) {
-        console.error("Error fetching data:", error)
-      } finally {
-        setLoading(false)
-      }
+    if (!getAuthToken()) {
+      router.push("/login");
+      return;
     }
 
-    fetchData()
-  }, [])
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Fetch delivery orders
+        const ordersData = await getDeliveryOrders(currentPage, 10);
+        const mappedOrders = await Promise.all(
+          ordersData.orders.map(async (order) => {
+            let assignedTo = null;
+            if (order.deliveryBoyId) {
+              try {
+                const deliveryBoy = await getDeliveryBoyById(order.deliveryBoyId);
+                assignedTo = `DEL-${deliveryBoy.globalId}`;
+              } catch (error) {
+                console.warn(`Failed to fetch delivery boy ${order.deliveryBoyId}:`, error);
+              }
+            }
+            return {
+              id: order.globalId || order.id,
+              customer: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
+              address: `${order.shippingAddress.address}, ${order.shippingAddress.city}, ${order.shippingAddress.zipCode}`,
+              items: order.items.reduce((sum, item) => sum + item.quantity, 0),
+              total: order.total,
+              status: order.deliveryStatus || "pending",
+              date: new Date(order.orderDate).toLocaleDateString("en-IN"),
+              assignedTo,
+            };
+          })
+        );
+        setOrders(mappedOrders);
+        setTotalPages(ordersData.totalPages || 1);
+
+        // Fetch delivery boys
+        const deliveryBoys = await getDeliveryBoys();
+        const mappedPartners = deliveryBoys.map((user) => ({
+          id: `DEL-${user.globalId}`,
+          name: user.name,
+          location: user.address?.city || "Unknown",
+          status: "active",
+          ordersDelivered: user.ordersDelivered || 0,
+        }));
+        setPartners(mappedPartners);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load delivery data.",
+          variant: "destructive",
+        });
+        if (error.message.includes("Token expired")) {
+          router.push("/login");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [currentPage, toast, router]);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
 
   const openAssignModal = (order) => {
-    setSelectedOrder(order)
-    setAssignModalOpen(true)
-  }
+    setSelectedOrder(order);
+    setAssignModalOpen(true);
+  };
 
   const closeAssignModal = () => {
-    setAssignModalOpen(false)
-    setSelectedOrder(null)
-  }
+    setAssignModalOpen(false);
+    setSelectedOrder(null);
+  };
 
-  const assignDeliveryPartner = (partnerId) => {
-    if (selectedOrder) {
+  const assignDeliveryPartner = async (partnerId) => {
+    if (!selectedOrder) return;
+
+    try {
+      const globalId = selectedOrder.id;
+      const deliveryBoyId = parseInt(partnerId.replace("DEL-", ""));
+      await assignDeliveryBoy(globalId, deliveryBoyId);
+
       setOrders(
         orders.map((order) =>
-          order.id === selectedOrder.id ? { ...order, assignedTo: partnerId, status: "assigned" } : order,
-        ),
-      )
-      closeAssignModal()
+          order.id === selectedOrder.id
+            ? { ...order, assignedTo: partnerId, status: "assigned" }
+            : order
+        )
+      );
+      toast({
+        title: "Success",
+        description: `Order ${selectedOrder.id} assigned to delivery partner.`,
+      });
+      closeAssignModal();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign delivery partner.",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
       case "pending":
         return (
-          <span className="flex items-center px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-800">
-            <Clock size={14} className="mr-1" />
-            Pending
+          <span className="flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+            <Package size={14} className="mr-1" />
+            Order Placed
           </span>
-        )
+        );
       case "assigned":
         return (
           <span className="flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-            <Truck size={14} className="mr-1" />
-            Assigned
+            <Package size={14} className="mr-1" />
+            Processing
           </span>
-        )
-      case "in_transit":
+        );
+      case "out-for-delivery":
         return (
-          <span className="flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+          <span className="flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
             <Truck size={14} className="mr-1" />
-            In Transit
+            Out for Delivery
           </span>
-        )
+        );
       case "delivered":
         return (
           <span className="flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
             <CheckCircle size={14} className="mr-1" />
             Delivered
           </span>
-        )
+        );
+      case "cancelled":
+        return (
+          <span className="flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">
+            <XCircle size={14} className="mr-1" />
+            Cancelled
+          </span>
+        );
       default:
         return (
           <span className="flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
             <AlertTriangle size={14} className="mr-1" />
             Unknown
           </span>
-        )
+        );
     }
-  }
+  };
 
-  const getPartnerById = (id) => {
-    return partners.find((partner) => partner.id === id) || null
-  }
-
-  const getPartnersCountByLocation = () => {
-    const counts = {}
-    partners.forEach((partner) => {
-      if (partner.status === "active") {
-        counts[partner.location] = (counts[partner.location] || 0) + 1
-      }
-    })
-    return counts
-  }
-
-  const locationCounts = getPartnersCountByLocation()
+  const getPartnerById = async (id) => {
+    if (!id) return null;
+    const globalId = parseInt(id.replace("DEL-", ""));
+    try {
+      const deliveryBoy = await getDeliveryBoyById(globalId);
+      return {
+        id: `DEL-${deliveryBoy.globalId}`,
+        name: deliveryBoy.name,
+        location: deliveryBoy.address?.city || "Unknown",
+        status: "active",
+        ordersDelivered: deliveryBoy.ordersDelivered || 0,
+      };
+    } catch (error) {
+      console.warn(`Failed to fetch partner ${id}:`, error);
+      return null;
+    }
+  };
 
   return (
-    <div>
+    <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Delivery Management</h1>
 
       {/* Delivery Partners Summary */}
-      <div className="bg-card rounded-lg shadow-md p-6 mb-6">
+      <div className="bg-card rounded-lg border p-6 mb-6">
         <h2 className="text-xl font-bold mb-4">Delivery Partners</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.entries(locationCounts).map(([location, count]) => (
-            <div key={location} className="bg-muted/50 rounded-lg p-4 flex items-center">
-              <div className="bg-primary/10 p-3 rounded-full mr-4">
-                <MapPin size={24} className="text-primary" />
+        {loading ? (
+          <div className="animate-pulse">
+            <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded w-full mb-4"></div>
+          </div>
+        ) : partners.length === 0 ? (
+          <p className="text-muted-foreground">No delivery partners available.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.entries(
+              partners.reduce((acc, partner) => {
+                acc[partner.location] = (acc[partner.location] || 0) + 1;
+                return acc;
+              }, {})
+            ).map(([location, count]) => (
+              <div key={location} className="bg-muted/30 rounded-lg p-4 flex items-center">
+                <div className="bg-primary/10 p-3 rounded-full mr-4">
+                  <MapPin size={24} className="text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{location}</p>
+                  <p className="text-2xl font-bold">{count} Partners</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{location}</p>
-                <p className="text-2xl font-bold">{count} Partners</p>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Orders Table */}
-      <div className="bg-card rounded-lg shadow-md overflow-hidden mb-6">
+      <div className="bg-card rounded-lg border overflow-hidden mb-6">
         <div className="p-6 border-b">
           <h2 className="text-xl font-bold">Delivery Orders</h2>
         </div>
@@ -204,17 +240,17 @@ export default function DeliveryManagement() {
         {loading ? (
           <div className="p-8 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4">Loading orders...</p>
+            <p className="mt-4 text-muted-foreground">Loading orders...</p>
           </div>
         ) : orders.length === 0 ? (
           <div className="p-8 text-center">
-            <p>No orders found.</p>
+            <p className="text-muted-foreground">No orders found.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-muted/50">
+                <tr className="bg-muted/30">
                   <th className="text-left py-3 px-4">Order ID</th>
                   <th className="text-left py-3 px-4">Customer</th>
                   <th className="text-left py-3 px-4">Address</th>
@@ -226,49 +262,73 @@ export default function DeliveryManagement() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => {
-                  const partner = order.assignedTo ? getPartnerById(order.assignedTo) : null
-
-                  return (
-                    <tr key={order.id} className="border-t hover:bg-muted/50">
-                      <td className="py-3 px-4">{order.id}</td>
-                      <td className="py-3 px-4">{order.customer}</td>
-                      <td className="py-3 px-4">{order.address}</td>
-                      <td className="py-3 px-4">{order.items}</td>
-                      <td className="py-3 px-4">₹{order.total}</td>
-                      <td className="py-3 px-4">{getStatusBadge(order.status)}</td>
-                      <td className="py-3 px-4">
-                        {partner ? (
-                          <div>
-                            <p>{partner.name}</p>
-                            <p className="text-xs text-muted-foreground">{partner.id}</p>
-                          </div>
-                        ) : (
-                          <span className="text-amber-500">Not assigned</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        {order.status === "pending" || order.status === "assigned" ? (
-                          <button onClick={() => openAssignModal(order)} className="text-primary hover:underline">
-                            {order.assignedTo ? "Reassign" : "Assign"}
-                          </button>
-                        ) : (
-                          <a href={`/admin/delivery/orders/${order.id}`} className="text-primary hover:underline">
-                            View
-                          </a>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
+                {orders.map((order) => (
+                  <tr key={order.id} className="border-t hover:bg-muted/30">
+                    <td className="py-3 px-4">{order.id}</td>
+                    <td className="py-3 px-4">{order.customer}</td>
+                    <td className="py-3 px-4">{order.address}</td>
+                    <td className="py-3 px-4">{order.items}</td>
+                    <td className="py-3 px-4">{formatCurrency(order.total)}</td>
+                    <td className="py-3 px-4">{getStatusBadge(order.status)}</td>
+                    <td className="py-3 px-4">
+                      {order.assignedTo ? (
+                        <div>
+                          <p>{partners.find((p) => p.id === order.assignedTo)?.name || "Loading..."}</p>
+                          <p className="text-xs text-muted-foreground">{order.assignedTo}</p>
+                        </div>
+                      ) : (
+                        <span className="text-blue-500">Not assigned</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      {order.status === "pending" || order.status === "assigned" ? (
+                        <Button
+                          variant="link"
+                          onClick={() => openAssignModal(order)}
+                          className="text-primary p-0 h-auto"
+                        >
+                          {order.assignedTo ? "Reassign" : "Assign"}
+                        </Button>
+                      ) : (
+                        <Link
+                          href={`/admin/delivery/orders/${order.id}`}
+                          className="text-primary hover:underline"
+                        >
+                          View
+                        </Link>
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {!loading && totalPages > 1 && (
+          <div className="p-4 flex justify-between items-center border-t">
+            <Button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              variant="outline"
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              variant="outline"
+            >
+              Next
+            </Button>
           </div>
         )}
       </div>
 
       {/* Delivery Partners Table */}
-      <div className="bg-card rounded-lg shadow-md overflow-hidden">
+      <div className="bg-card rounded-lg border overflow-hidden">
         <div className="p-6 border-b">
           <h2 className="text-xl font-bold">Delivery Partners</h2>
         </div>
@@ -276,17 +336,17 @@ export default function DeliveryManagement() {
         {loading ? (
           <div className="p-8 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4">Loading partners...</p>
+            <p className="mt-4 text-muted-foreground">Loading partners...</p>
           </div>
         ) : partners.length === 0 ? (
           <div className="p-8 text-center">
-            <p>No delivery partners found.</p>
+            <p className="text-muted-foreground">No delivery partners found.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-muted/50">
+                <tr className="bg-muted/30">
                   <th className="text-left py-3 px-4">ID</th>
                   <th className="text-left py-3 px-4">Name</th>
                   <th className="text-left py-3 px-4">Location</th>
@@ -297,24 +357,23 @@ export default function DeliveryManagement() {
               </thead>
               <tbody>
                 {partners.map((partner) => (
-                  <tr key={partner.id} className="border-t hover:bg-muted/50">
+                  <tr key={partner.id} className="border-t hover:bg-muted/30">
                     <td className="py-3 px-4">{partner.id}</td>
                     <td className="py-3 px-4">{partner.name}</td>
                     <td className="py-3 px-4">{partner.location}</td>
                     <td className="py-3 px-4">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          partner.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {partner.status === "active" ? "Active" : "Inactive"}
+                      <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                        Active
                       </span>
                     </td>
                     <td className="py-3 px-4">{partner.ordersDelivered}</td>
                     <td className="py-3 px-4">
-                      <a href={`/admin/delivery/partners/${partner.id}`} className="text-primary hover:underline">
+                      <Link
+                        href={`/admin/delivery/partners/${partner.id}`}
+                        className="text-primary hover:underline"
+                      >
                         View Details
-                      </a>
+                      </Link>
                     </td>
                   </tr>
                 ))}
@@ -327,10 +386,13 @@ export default function DeliveryManagement() {
       {/* Assign Delivery Partner Modal */}
       {assignModalOpen && selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card rounded-lg shadow-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+          <div className="bg-card rounded-lg border p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
             <h3 className="text-xl font-bold mb-4">Assign Delivery Partner</h3>
+            <p className="mb-2">
+              <span className="font-semibold">Order:</span> {selectedOrder.id}
+            </p>
             <p className="mb-4">
-              <span className="font-semibold">Order:</span> {selectedOrder.id} - {selectedOrder.customer}
+              <span className="font-semibold">Customer:</span> {selectedOrder.customer}
             </p>
             <p className="mb-4">
               <span className="font-semibold">Delivery Address:</span> {selectedOrder.address}
@@ -338,14 +400,16 @@ export default function DeliveryManagement() {
 
             <div className="mb-4">
               <h4 className="font-semibold mb-2">Select a delivery partner:</h4>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {partners
-                  .filter((partner) => partner.status === "active")
-                  .map((partner) => (
-                    <button
+              {partners.length === 0 ? (
+                <p className="text-muted-foreground">No delivery partners available.</p>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {partners.map((partner) => (
+                    <Button
                       key={partner.id}
                       onClick={() => assignDeliveryPartner(partner.id)}
-                      className="w-full text-left p-3 border rounded-md hover:bg-muted/50 transition-colors flex justify-between items-center"
+                      variant="outline"
+                      className="w-full text-left p-3 flex justify-between items-center h-auto"
                     >
                       <div>
                         <p className="font-medium">{partner.name}</p>
@@ -356,22 +420,23 @@ export default function DeliveryManagement() {
                       <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
                         {partner.ordersDelivered} orders
                       </span>
-                    </button>
+                    </Button>
                   ))}
-              </div>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2">
-              <button
+              <Button
                 onClick={closeAssignModal}
-                className="px-4 py-2 border rounded-md hover:bg-muted transition-colors"
+                variant="outline"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

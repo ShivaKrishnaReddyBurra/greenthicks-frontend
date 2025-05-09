@@ -1,14 +1,15 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Truck, CheckCircle, Clock, Search, ShoppingBag } from "lucide-react";
+import { Package, Truck, CheckCircle, Clock, Search, ShoppingBag, XCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { getUserOrders } from "@/lib/api"; // Ensure this returns the correct response
+import { getUserOrders } from "@/lib/api";
 import { getAuthToken } from "@/lib/auth-utils";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -25,7 +26,6 @@ export default function MyOrdersPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is authenticated
     if (!getAuthToken()) {
       router.push("/login");
       return;
@@ -34,27 +34,28 @@ export default function MyOrdersPage() {
     async function fetchOrders() {
       try {
         setLoading(true);
-        const response = await getUserOrders(currentPage); // Pass currentPage if API supports pagination
+        const response = await getUserOrders(currentPage);
         const fetchedOrders = response.orders || [];
 
-        // Transform orders to match frontend expectations
         const enrichedOrders = fetchedOrders.map((order) => ({
-          id: order.globalId, // Use the order ID (e.g., ORD-023)
-          date: new Date(order.orderDate).toLocaleDateString(),
-          status: order.status,
+          id: order.globalId || order.id,
+          date: new Date(order.orderDate).toLocaleDateString("en-IN"),
+          status: order.deliveryStatus,
           items: order.items.map((item) => ({
-            productId: item.productId,
+            productId: item.productId || item._id,
             name: item.name,
-            image: item.image || "/placeholder.svg",
+            image: item.image || "/placeholder.svg?height=64&width=64",
             price: item.price,
             quantity: item.quantity,
           })),
           total: order.total,
-          estimatedDelivery: new Date(order.deliveryDate).toLocaleDateString(),
+          estimatedDelivery: order.deliveryDate
+            ? new Date(order.deliveryDate).toLocaleDateString("en-IN")
+            : new Date(new Date(order.orderDate).getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN"),
         }));
 
         setOrders(enrichedOrders);
-        setTotalPages(response.totalPages || 1); // Update total pages
+        setTotalPages(response.totalPages || 1);
         setLoading(false);
       } catch (error) {
         toast({
@@ -62,24 +63,41 @@ export default function MyOrdersPage() {
           description: error.message || "An error occurred while fetching your orders.",
           variant: "destructive",
         });
+        if (error.message.includes("Token expired")) {
+          router.push("/login");
+        }
         setLoading(false);
       }
     }
     fetchOrders();
-  }, [toast, router, currentPage]); // Re-fetch when currentPage changes
+  }, [toast, router, currentPage]);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case "processing":
+      case "pending":
+        return (
+          <Badge variant="outline" className="border-blue-500 text-blue-500">
+            Order Placed
+          </Badge>
+        );
+      case "assigned":
         return (
           <Badge variant="outline" className="border-blue-500 text-blue-500">
             Processing
           </Badge>
         );
-      case "shipped":
+      case "out-for-delivery":
         return (
           <Badge variant="outline" className="border-orange-500 text-orange-500">
-            Shipped
+            Out for Delivery
           </Badge>
         );
       case "delivered":
@@ -97,29 +115,15 @@ export default function MyOrdersPage() {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "processing":
+      case "pending":
+      case "assigned":
         return <Package className="h-5 w-5 text-blue-500" />;
-      case "shipped":
+      case "out-for-delivery":
         return <Truck className="h-5 w-5 text-orange-500" />;
       case "delivered":
         return <CheckCircle className="h-5 w-5 text-green-500" />;
       case "cancelled":
-        return (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-5 w-5 text-red-500"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="15" y1="9" x2="9" y2="15" />
-            <line x1="9" y1="9" x2="15" y2="15" />
-          </svg>
-        );
+        return <XCircle className="h-5 w-5 text-red-500" />;
       default:
         return <Package className="h-5 w-5" />;
     }
@@ -171,9 +175,11 @@ export default function MyOrdersPage() {
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
           <TabsList>
             <TabsTrigger value="all">All Orders</TabsTrigger>
-            <TabsTrigger value="processing">Processing</TabsTrigger>
-            <TabsTrigger value="shipped">Shipped</TabsTrigger>
+            <TabsTrigger value="pending">Order Placed</TabsTrigger>
+            <TabsTrigger value="assigned">Processing</TabsTrigger>
+            <TabsTrigger value="out-for-delivery">Out for Delivery</TabsTrigger>
             <TabsTrigger value="delivered">Delivered</TabsTrigger>
+            <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="relative w-full md:w-64">
@@ -201,7 +207,7 @@ export default function MyOrdersPage() {
                   </div>
                   <div className="flex items-center gap-4">
                     {getStatusBadge(order.status)}
-                    <Link href={`/orders/tracking/${order.id}`}>
+                    <Link href={`/tracking/${order.id}`}>
                       <Button variant="outline" size="sm">
                         Track Order
                       </Button>
@@ -234,7 +240,7 @@ export default function MyOrdersPage() {
                               {item.name}
                             </Link>
                             <p className="text-sm text-muted-foreground">
-                              {item.quantity} x ₹{item.price.toFixed(2)}
+                              {item.quantity} x {formatCurrency(item.price)}
                             </p>
                           </div>
                         </div>
@@ -250,13 +256,21 @@ export default function MyOrdersPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Total</span>
-                        <span className="font-medium">₹{order.total.toFixed(2)}</span>
+                        <span className="font-medium">{formatCurrency(order.total)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Status</span>
                         <span className="flex items-center gap-1">
                           {getStatusIcon(order.status)}
-                          <span className="text-sm capitalize">{order.status}</span>
+                          <span className="text-sm capitalize">
+                            {status === "pending"
+                              ? "Order Placed"
+                              : status === "assigned"
+                              ? "Processing"
+                              : status === "out-for-delivery"
+                              ? "Out for Delivery"
+                              : status}
+                          </span>
                         </span>
                       </div>
                       {order.status !== "delivered" && order.status !== "cancelled" && (
@@ -279,7 +293,6 @@ export default function MyOrdersPage() {
           </div>
         )}
       </div>
-      {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="flex justify-center gap-4 mt-6">
           <Button

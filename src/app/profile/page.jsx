@@ -1,3 +1,7 @@
+// To use this component, ensure the following environment variable is set in .env.local:
+// NEXT_PUBLIC_API_URL=https://greenthicks-backend.azurewebsites.net (or http://localhost:5000 for development)
+// The backend must have CORS configured to allow the frontend's origin (e.g., http://localhost:3000).
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -57,10 +61,72 @@ export default function ProfilePage() {
     city: "",
     state: "",
     zipCode: "",
+    phone: "",
     isPrimary: false,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchUserData = async () => {
+    try {
+      const [profileData, addressesData] = await Promise.all([
+        fetchWithAuth("/api/auth/profile"),
+        fetchWithAuth("/api/addresses"),
+      ]);
+      const userData = {
+        ...profileData,
+        globalId: profileData.globalId,
+        name: profileData.name || `${profileData.firstName || ""} ${profileData.lastName || ""}`.trim(),
+        avatar: profileData.avatar || "/placeholder.svg",
+        joinedDate: profileData.joinedDate || "Unknown",
+        location: profileData.location || "Not set",
+        totalSpent: profileData.totalSpent || 0,
+        totalOrders: profileData.totalOrders || 0,
+      };
+      setUser(userData);
+      setAddresses(addressesData);
+      const primaryAddress = addressesData.find((addr) => addr.isPrimary) || addressesData[0];
+      if (primaryAddress) {
+        setSelectedAddressId(primaryAddress.addressId);
+        setFormData({
+          firstName: primaryAddress.firstName || "",
+          lastName: primaryAddress.lastName || "",
+          email: primaryAddress.email || profileData.email || "",
+          address: primaryAddress.address || "",
+          city: primaryAddress.city || "",
+          state: primaryAddress.state || "",
+          zipCode: primaryAddress.zipCode || "",
+          phone: primaryAddress.phone || "",
+          isPrimary: primaryAddress.isPrimary || false,
+        });
+      } else {
+        setFormData({
+          firstName: profileData.firstName || "",
+          lastName: profileData.lastName || "",
+          email: profileData.email || "",
+          address: "",
+          city: "",
+          state: "",
+          zipCode: "",
+          phone: "",
+          isPrimary: false,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load profile or addresses. Please try again.",
+        variant: "destructive",
+      });
+      if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
+        clearAuth();
+        router.push("/login");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const token = getAuthToken();
@@ -68,63 +134,7 @@ export default function ProfilePage() {
       router.push("/login");
       return;
     }
-
-    const fetchData = async () => {
-      try {
-        const [profileData, addressesData] = await Promise.all([
-          fetchWithAuth("/api/auth/profile"),
-          fetchWithAuth("/api/addresses"),
-        ]);
-        setUser({
-          ...profileData,
-          name: profileData.name || `${profileData.firstName || ""} ${profileData.lastName || ""}`.trim(),
-          avatar: profileData.avatar || "/placeholder.svg",
-          joinedDate: profileData.joinedDate || "Unknown",
-          location: profileData.location || "Not set",
-        });
-        setAddresses(addressesData);
-        const primaryAddress = addressesData.find((addr) => addr.isPrimary) || addressesData[0];
-        if (primaryAddress) {
-          setSelectedAddressId(primaryAddress.addressId);
-          setFormData({
-            firstName: primaryAddress.firstName || "",
-            lastName: primaryAddress.lastName || "",
-            email: profileData.email || "",
-            address: primaryAddress.address || "",
-            city: primaryAddress.city || "",
-            state: primaryAddress.state || "",
-            zipCode: primaryAddress.zipCode || "",
-            isPrimary: primaryAddress.isPrimary || false,
-          });
-        } else {
-          setFormData({
-            firstName: profileData.firstName || "",
-            lastName: profileData.lastName || "",
-            email: profileData.email || "",
-            address: "",
-            city: "",
-            state: "",
-            zipCode: "",
-            isPrimary: false,
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load profile or addresses. Please try again.",
-          variant: "destructive",
-        });
-        if (error.message.includes("Unauthorized")) {
-          clearAuth();
-          router.push("/login");
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
+    fetchUserData();
   }, [router]);
 
   const handleInputChange = (e) => {
@@ -136,28 +146,22 @@ export default function ProfilePage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const token = getAuthToken();
-    if (!token || !user) {
-      router.push("/login");
-      return;
-    }
-
     try {
-      const updatedProfile = await fetchWithAuth("/api/auth/profile", {
+      await fetchWithAuth(`/api/auth/user/${user.globalId}`, {
         method: "PUT",
         body: JSON.stringify({
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
-          location: formData.city,
         }),
       });
-      setUser({
-        ...user,
+      setUser((prev) => ({
+        ...prev,
         name: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
-        location: formData.city,
-      });
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+      }));
       setIsEditingProfile(false);
       toast({
         title: "Success",
@@ -167,10 +171,10 @@ export default function ProfilePage() {
       console.error("Error updating profile:", error);
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: error.message || "Failed to update profile. Please try again.",
         variant: "destructive",
       });
-      if (error.message.includes("Unauthorized")) {
+      if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
         clearAuth();
         router.push("/login");
       }
@@ -183,46 +187,51 @@ export default function ProfilePage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const token = getAuthToken();
-    if (!token || !user) {
-      router.push("/login");
-      return;
-    }
-
     try {
       if (selectedAddressId) {
         const updatedAddress = await fetchWithAuth(`/api/addresses/${selectedAddressId}`, {
           method: "PUT",
-          body: JSON.stringify({ ...formData, isPrimary: true }),
+          body: JSON.stringify({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            zipCode: formData.zipCode,
+            isPrimary: formData.isPrimary,
+          }),
         });
         setAddresses((prev) =>
           prev.map((addr) =>
             addr.addressId === selectedAddressId
-              ? { ...updatedAddress.address, isPrimary: true }
-              : { ...addr, isPrimary: false }
+              ? { ...updatedAddress.address, isPrimary: formData.isPrimary }
+              : { ...addr, isPrimary: formData.isPrimary ? false : addr.isPrimary }
           )
         );
-        setUser((prev) => ({
-          ...prev,
-          name: `${formData.firstName} ${formData.lastName}`.trim(),
-          location: formData.city,
-        }));
       } else {
         const newAddress = await fetchWithAuth("/api/addresses", {
           method: "POST",
-          body: JSON.stringify({ ...formData, isPrimary: true }),
+          body: JSON.stringify({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            zipCode: formData.zipCode,
+            isPrimary: formData.isPrimary,
+          }),
         });
         setAddresses((prev) => [
-          ...prev.map((addr) => ({ ...addr, isPrimary: false })),
-          { ...newAddress.address, isPrimary: true },
+          ...prev.map((addr) => ({ ...addr, isPrimary: formData.isPrimary ? false : addr.isPrimary })),
+          { ...newAddress.address, isPrimary: formData.isPrimary },
         ]);
         setSelectedAddressId(newAddress.address.addressId);
-        setUser((prev) => ({
-          ...prev,
-          name: `${formData.firstName} ${formData.lastName}`.trim(),
-          location: formData.city,
-        }));
       }
+      await fetchUserData(); // Sync computed fields (name, location)
       setIsEditingAddress(false);
       toast({
         title: "Success",
@@ -232,10 +241,10 @@ export default function ProfilePage() {
       console.error("Error saving address:", error);
       toast({
         title: "Error",
-        description: "Failed to save address. Please try again.",
+        description: error.message || "Failed to save address. Please try again.",
         variant: "destructive",
       });
-      if (error.message.includes("Unauthorized")) {
+      if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
         clearAuth();
         router.push("/login");
       }
@@ -248,10 +257,9 @@ export default function ProfilePage() {
     setIsEditingProfile(false);
     setFormData((prev) => ({
       ...prev,
-      firstName: user?.name?.split(" ")[0] || "",
-      lastName: user?.name?.split(" ")[1] || "",
+      firstName: user?.firstName || user?.name?.split(" ")[0] || "",
+      lastName: user?.lastName || user?.name?.split(" ")[1] || "",
       email: user?.email || "",
-      city: user?.location || "",
     }));
   };
 
@@ -262,24 +270,28 @@ export default function ProfilePage() {
       setSelectedAddressId(primaryAddress.addressId);
       setFormData((prev) => ({
         ...prev,
-        firstName: primaryAddress.firstName,
-        lastName: primaryAddress.lastName,
-        address: primaryAddress.address,
-        city: primaryAddress.city,
-        state: primaryAddress.state,
-        zipCode: primaryAddress.zipCode,
-        isPrimary: primaryAddress.isPrimary,
+        firstName: primaryAddress.firstName || "",
+        lastName: primaryAddress.lastName || "",
+        email: primaryAddress.email || user?.email || "",
+        address: primaryAddress.address || "",
+        city: primaryAddress.city || "",
+        state: primaryAddress.state || "",
+        zipCode: primaryAddress.zipCode || "",
+        phone: primaryAddress.phone || "",
+        isPrimary: primaryAddress.isPrimary || false,
       }));
     } else {
       setSelectedAddressId(null);
       setFormData((prev) => ({
         ...prev,
-        firstName: user?.name?.split(" ")[0] || "",
-        lastName: user?.name?.split(" ")[1] || "",
+        firstName: user?.firstName || user?.name?.split(" ")[0] || "",
+        lastName: user?.lastName || user?.name?.split(" ")[1] || "",
+        email: user?.email || "",
         address: "",
         city: "",
         state: "",
         zipCode: "",
+        phone: "",
         isPrimary: false,
       }));
     }
@@ -290,24 +302,20 @@ export default function ProfilePage() {
     setSelectedAddressId(null);
     setFormData((prev) => ({
       ...prev,
-      firstName: user?.name?.split(" ")[0] || "",
-      lastName: user?.name?.split(" ")[1] || "",
+      firstName: user?.firstName || user?.name?.split(" ")[0] || "",
+      lastName: user?.lastName || user?.name?.split(" ")[1] || "",
+      email: user?.email || "",
       address: "",
       city: "",
       state: "",
       zipCode: "",
+      phone: "",
       isPrimary: true,
     }));
   };
 
   const handleSetPrimary = async (addressId) => {
     setIsSubmitting(true);
-    const token = getAuthToken();
-    if (!token || !user) {
-      router.push("/login");
-      return;
-    }
-
     try {
       const addressToUpdate = addresses.find((addr) => addr.addressId === addressId);
       if (!addressToUpdate) {
@@ -324,21 +332,19 @@ export default function ProfilePage() {
             : { ...addr, isPrimary: false }
         )
       );
-      setUser((prev) => ({
-        ...prev,
-        name: `${updatedAddress.address.firstName} ${updatedAddress.address.lastName}`.trim(),
-        location: updatedAddress.address.city,
-      }));
       setSelectedAddressId(addressId);
       setFormData({
         firstName: updatedAddress.address.firstName,
         lastName: updatedAddress.address.lastName,
+        email: updatedAddress.address.email,
         address: updatedAddress.address.address,
         city: updatedAddress.address.city,
         state: updatedAddress.address.state,
         zipCode: updatedAddress.address.zipCode,
+        phone: updatedAddress.address.phone,
         isPrimary: true,
       });
+      await fetchUserData(); // Sync computed fields
       toast({
         title: "Success",
         description: "Primary address updated successfully.",
@@ -347,10 +353,10 @@ export default function ProfilePage() {
       console.error("Error setting primary address:", error);
       toast({
         title: "Error",
-        description: "Failed to set primary address. Please try again.",
+        description: error.message || "Failed to set primary address. Please try again.",
         variant: "destructive",
       });
-      if (error.message.includes("Unauthorized")) {
+      if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
         clearAuth();
         router.push("/login");
       }
@@ -361,12 +367,6 @@ export default function ProfilePage() {
 
   const handleDeleteAddress = async (addressId) => {
     setIsSubmitting(true);
-    const token = getAuthToken();
-    if (!token || !user) {
-      router.push("/login");
-      return;
-    }
-
     try {
       await fetchWithAuth(`/api/addresses/${addressId}`, {
         method: "DELETE",
@@ -379,24 +379,31 @@ export default function ProfilePage() {
           setFormData({
             firstName: primaryAddress.firstName,
             lastName: primaryAddress.lastName,
+            email: primaryAddress.email,
             address: primaryAddress.address,
             city: primaryAddress.city,
             state: primaryAddress.state,
             zipCode: primaryAddress.zipCode,
+            phone: primaryAddress.phone,
             isPrimary: primaryAddress.isPrimary,
           });
         } else {
           setSelectedAddressId(null);
           setFormData((prev) => ({
             ...prev,
+            firstName: user?.firstName || user?.name?.split(" ")[0] || "",
+            lastName: user?.lastName || user?.name?.split(" ")[1] || "",
+            email: user?.email || "",
             address: "",
             city: "",
             state: "",
             zipCode: "",
+            phone: "",
             isPrimary: false,
           }));
         }
       }
+      await fetchUserData(); // Sync computed fields
       toast({
         title: "Success",
         description: "Address deleted successfully.",
@@ -405,10 +412,10 @@ export default function ProfilePage() {
       console.error("Error deleting address:", error);
       toast({
         title: "Error",
-        description: "Failed to delete address. Please try again.",
+        description: error.message || "Failed to delete address. Please try again.",
         variant: "destructive",
       });
-      if (error.message.includes("Unauthorized")) {
+      if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
         clearAuth();
         router.push("/login");
       }
@@ -454,12 +461,13 @@ export default function ProfilePage() {
                       .join("")}
                   </AvatarFallback>
                 </Avatar>
-                <Button
+                {/* Avatar upload disabled until backend support is added */}
+                {/* <Button
                   size="icon"
                   className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary text-primary-foreground"
                 >
                   <Edit className="h-4 w-4" />
-                </Button>
+                </Button> */}
               </div>
               <div className="mt-4 md:mt-0 md:mb-2">
                 <h1 className="text-2xl font-bold">{user.name}</h1>
@@ -549,29 +557,17 @@ export default function ProfilePage() {
                           />
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email Address</Label>
-                          <Input
-                            id="email"
-                            name="email"
-                            type="email"
-                            value={formData.email}
-                            onChange={handleInputChange}
-                            placeholder="Your email address"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="city">Location</Label>
-                          <Input
-                            id="city"
-                            name="city"
-                            value={formData.city}
-                            onChange={handleInputChange}
-                            placeholder="City"
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          placeholder="Your email address"
+                          required
+                        />
                       </div>
                       <div className="flex justify-end gap-2">
                         <Button
@@ -615,18 +611,16 @@ export default function ProfilePage() {
                           <p>{user.joinedDate}</p>
                         </div>
                       </div>
-                      {user.totalOrders !== undefined && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <h3 className="text-sm font-medium text-muted-foreground">Total Orders</h3>
-                            <p>{user.totalOrders}</p>
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-medium text-muted-foreground">Total Spent</h3>
-                            <p>₹{user.totalSpent}</p>
-                          </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h3 className="text-sm font-medium text-muted-foreground">Total Orders</h3>
+                          <p>{user.totalOrders}</p>
                         </div>
-                      )}
+                        <div>
+                          <h3 className="text-sm font-medium text-muted-foreground">Total Spent</h3>
+                          <p>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(user.totalSpent)}</p>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -705,6 +699,34 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        placeholder="Email address"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        placeholder="+12345678901"
+                        pattern="^\+\d{10,12}$"
+                        title="Phone number must be in international format (e.g., +12345678901)"
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Use international format (e.g., +12345678901)
+                      </p>
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="address">Address</Label>
                       <Input
                         id="address"
@@ -747,6 +769,8 @@ export default function ProfilePage() {
                         value={formData.zipCode}
                         onChange={handleInputChange}
                         placeholder="Zip code"
+                        pattern="^\d{5,6}$"
+                        title="Zip code must be 5 or 6 digits"
                         required
                       />
                     </div>
@@ -793,10 +817,12 @@ export default function ProfilePage() {
                             setFormData({
                               firstName: address.firstName,
                               lastName: address.lastName,
+                              email: address.email,
                               address: address.address,
                               city: address.city,
                               state: address.state,
                               zipCode: address.zipCode,
+                              phone: address.phone,
                               isPrimary: address.isPrimary,
                             });
                           }}
@@ -822,6 +848,8 @@ export default function ProfilePage() {
                       <p className="text-sm">
                         {address.city}, {address.state} - {address.zipCode}
                       </p>
+                      <p className="text-sm">{address.email}</p>
+                      <p className="text-sm">{address.phone}</p>
                     </div>
                   </CardContent>
                   <CardFooter>

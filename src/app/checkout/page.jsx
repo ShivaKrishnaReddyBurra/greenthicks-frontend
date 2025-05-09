@@ -1,6 +1,5 @@
 "use client";
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-context";
 import { fetchWithAuth, createOrder } from "@/lib/api";
@@ -12,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, CreditCard, Truck, ShieldCheck, LockIcon, MapPin } from "lucide-react";
+import { ArrowLeft, Truck, ShieldCheck, LockIcon, MapPin } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -21,7 +20,7 @@ export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
   const { toast } = useToast();
 
-  const [paymentMethod, setPaymentMethod] = useState("credit-card");
+  const [paymentMethod] = useState("cash-on-delivery"); // Fixed to cash on delivery
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderSummary, setOrderSummary] = useState({
     subtotal: 0,
@@ -32,9 +31,11 @@ export default function CheckoutPage() {
   });
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
-  const [shouldRedirect, setShouldRedirect] = useState(null); // Control navigation
+  const [shouldRedirect, setShouldRedirect] = useState(null);
+  const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [isServiceAvailable, setIsServiceAvailable] = useState(null);
 
-  // Form state
+  // Form state for address
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -44,11 +45,6 @@ export default function CheckoutPage() {
     city: "",
     state: "",
     zipCode: "",
-    cardNumber: "",
-    cardName: "",
-    expiryDate: "",
-    cvv: "",
-    upiId: "",
     useCurrentLocation: false,
     currentLocation: null,
   });
@@ -65,14 +61,14 @@ export default function CheckoutPage() {
     }
   }, [cart, toast, isProcessing]);
 
-  // Handle navigation based on shouldRedirect
+  // Handle navigation
   useEffect(() => {
     if (shouldRedirect) {
       router.push(shouldRedirect);
     }
   }, [shouldRedirect, router]);
 
-  // Fetch user profile and addresses to pre-fill primary address
+  // Fetch user profile and addresses
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -84,8 +80,7 @@ export default function CheckoutPage() {
         const primaryAddress = addressData.find((addr) => addr.isPrimary) || addressData[0];
         if (primaryAddress) {
           setSelectedAddressId(primaryAddress.addressId);
-          setFormData((prev) => ({
-            ...prev,
+          setFormData({
             firstName: primaryAddress.firstName || "",
             lastName: primaryAddress.lastName || "",
             email: profile.email || "",
@@ -94,8 +89,29 @@ export default function CheckoutPage() {
             city: primaryAddress.city || "",
             state: primaryAddress.state || "",
             zipCode: primaryAddress.zipCode || "",
-          }));
+            useCurrentLocation: false,
+            currentLocation: primaryAddress.location || null,
+          });
+          // Check service availability for primary address
+          checkServiceAvailability(primaryAddress.zipCode);
+        } else {
+          setIsAddingAddress(true); // Show address form if no addresses
         }
+
+        // Load order summary from session storage
+        const subtotal = parseFloat(sessionStorage.getItem("cartSubtotal") || "0");
+        const shipping = parseFloat(sessionStorage.getItem("cartShipping") || "0");
+        const discount = parseFloat(sessionStorage.getItem("cartDiscount") || "0");
+        const total = parseFloat(sessionStorage.getItem("cartTotal") || "0");
+        const appliedCoupon = sessionStorage.getItem("appliedCoupon") || "";
+
+        setOrderSummary({
+          subtotal,
+          shipping,
+          discount,
+          total,
+          appliedCoupon,
+        });
       } catch (error) {
         console.error("Failed to fetch user data:", error);
         toast({
@@ -104,115 +120,161 @@ export default function CheckoutPage() {
           variant: "destructive",
         });
       }
-
-      // Load order summary from session storage
-      const subtotal = parseFloat(sessionStorage.getItem("cartSubtotal") || "0");
-      const shipping = parseFloat(sessionStorage.getItem("cartShipping") || "0");
-      const discount = parseFloat(sessionStorage.getItem("cartDiscount") || "0");
-      const total = parseFloat(sessionStorage.getItem("cartTotal") || "0");
-      const appliedCoupon = sessionStorage.getItem("appliedCoupon") || "";
-
-      setOrderSummary({
-        subtotal,
-        shipping,
-        discount,
-        total,
-        appliedCoupon,
-      });
     };
     fetchData();
-  }, []); // Removed toast from dependencies
+  }, []);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+  // Check service availability
+  const checkServiceAvailability = async (pincode) => {
+    try {
+      const response = await fetchWithAuth(`/api/service-areas/check?pincode=${pincode}`);
+      setIsServiceAvailable(true);
+      toast({
+        title: "Service Available",
+        description: `Delivery is available in ${response.serviceArea.city}, ${response.serviceArea.state}.`,
+      });
+    } catch (error) {
+      setIsServiceAvailable(false);
+      toast({
+        title: "Service Unavailable",
+        description: error.message || "Delivery is not available in this area.",
+        variant: "destructive",
+      });
+    }
   };
 
+  // Handle input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    // Check service availability when zipCode changes
+    if (name === "zipCode" && value.match(/^\d{5,6}$/)) {
+      checkServiceAvailability(value);
+    }
+  };
+
+  // Handle address selection
   const handleAddressSelect = (addressId) => {
     const selectedAddress = addresses.find((addr) => addr.addressId === addressId);
     if (selectedAddress) {
       setSelectedAddressId(addressId);
       setFormData({
-        ...formData,
         firstName: selectedAddress.firstName,
         lastName: selectedAddress.lastName,
+        email: selectedAddress.email,
+        phone: selectedAddress.phone,
         address: selectedAddress.address,
         city: selectedAddress.city,
         state: selectedAddress.state,
         zipCode: selectedAddress.zipCode,
+        useCurrentLocation: false,
+        currentLocation: selectedAddress.location || null,
       });
+      checkServiceAvailability(selectedAddress.zipCode);
+      setIsAddingAddress(false);
     }
   };
 
-  const validatePaymentFields = () => {
-    if (paymentMethod === "credit-card") {
-      const cardNumberRegex = /^\d{16}$/;
-      const expiryRegex = /^(0[1-9]|1[0-2])\/[0-9]{2}$/;
-      const cvvRegex = /^\d{3,4}$/;
-
-      if (!cardNumberRegex.test(formData.cardNumber.replace(/\s/g, ""))) {
-        toast({
-          title: "Invalid Card Number",
-          description: "Please enter a valid 16-digit card number.",
-          variant: "destructive",
-        });
-        return false;
-      }
-      if (!formData.cardName.trim()) {
-        toast({
-          title: "Invalid Card Name",
-          description: "Please enter the name on the card.",
-          variant: "destructive",
-        });
-        return false;
-      }
-      if (!expiryRegex.test(formData.expiryDate)) {
-        toast({
-          title: "Invalid Expiry Date",
-          description: "Please enter a valid expiry date (MM/YY).",
-          variant: "destructive",
-        });
-        return false;
-      }
-      if (!cvvRegex.test(formData.cvv)) {
-        toast({
-          title: "Invalid CVV",
-          description: "Please enter a valid CVV (3 or 4 digits).",
-          variant: "destructive",
-        });
-        return false;
-      }
-    } else if (paymentMethod === "upi") {
-      const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
-      if (!upiRegex.test(formData.upiId)) {
-        toast({
-          title: "Invalid UPI ID",
-          description: "Please enter a valid UPI ID (e.g., name@upi).",
-          variant: "destructive",
-        });
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Save new address
+  const handleSaveAddress = async () => {
+    const { firstName, lastName, email, phone, address, city, state, zipCode, useCurrentLocation, currentLocation } = formData;
 
     // Validate form
-    if (!selectedAddressId) {
+    if (!firstName || !lastName || !email || !phone || !address || !city || !state || !zipCode) {
       toast({
-        title: "No address selected",
-        description: "Please select a shipping address.",
+        title: "Invalid Input",
+        description: "Please fill in all required address fields.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!validatePaymentFields()) {
+    if (!/^\+\d{10,12}$/.test(phone)) {
+      toast({
+        title: "Invalid Phone",
+        description: "Phone number must be in international format (e.g., +12345678901).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!/^\d{5,6}$/.test(zipCode)) {
+      toast({
+        title: "Invalid ZIP Code",
+        description: "ZIP code must be 5 or 6 digits.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isServiceAvailable) {
+      toast({
+        title: "Service Unavailable",
+        description: "Please select a valid pincode where service is available.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const addressData = {
+        firstName,
+        lastName,
+        email,
+        phone,
+        address,
+        city,
+        state,
+        zipCode,
+        isPrimary: true, // Set as primary since it's the first address
+        location: useCurrentLocation && currentLocation ? currentLocation : undefined,
+      };
+
+      const response = await fetchWithAuth('/api/addresses', {
+        method: 'POST',
+        body: JSON.stringify(addressData),
+      });
+
+      setAddresses([...addresses, response.address]);
+      setSelectedAddressId(response.address.addressId);
+      setIsAddingAddress(false);
+      toast({
+        title: "Address Added",
+        description: "Your address has been saved successfully.",
+      });
+    } catch (error) {
+      console.error("Failed to save address:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save address.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!selectedAddressId) {
+      toast({
+        title: "No address selected",
+        description: "Please select or add a shipping address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isServiceAvailable) {
+      toast({
+        title: "Service Unavailable",
+        description: "Delivery is not available for the selected address.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -227,7 +289,7 @@ export default function CheckoutPage() {
 
       const response = await createOrder(orderData);
 
-      // Store order information in session storage
+      // Store order information
       sessionStorage.setItem("orderId", response.order.id);
       sessionStorage.setItem("id", response.order.globalId);
       sessionStorage.setItem("orderDate", response.order.orderDate);
@@ -244,8 +306,7 @@ export default function CheckoutPage() {
         description: `Your order ${response.order.id} has been placed.`,
       });
 
-      // Clear cart and trigger redirect
-      await clearCart(); // Ensure clearCart is complete
+      await clearCart();
       setShouldRedirect("/success");
     } catch (error) {
       console.error("Failed to create order:", error);
@@ -259,7 +320,7 @@ export default function CheckoutPage() {
   };
 
   if (shouldRedirect) {
-    return null; // Prevent rendering while redirecting
+    return null;
   }
 
   return (
@@ -281,8 +342,8 @@ export default function CheckoutPage() {
 
               <div className="mb-4">
                 <Label className="text-lg">Select Address</Label>
-                {addresses.length === 0 ? (
-                  <p className="text-muted-foreground">No addresses found. Please add an address in your profile.</p>
+                {addresses.length === 0 && !isAddingAddress ? (
+                  <p className="text-muted-foreground">No addresses found. Please add an address below.</p>
                 ) : (
                   <RadioGroup value={selectedAddressId} onValueChange={handleAddressSelect}>
                     {addresses.map((addr) => (
@@ -304,299 +365,184 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    required
-                    disabled
-                  />
-                </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="mb-4"
+                onClick={() => setIsAddingAddress(!isAddingAddress)}
+              >
+                {isAddingAddress ? "Cancel" : "Add New Address"}
+              </Button>
 
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    required
-                    disabled
-                  />
-                </div>
+              {isAddingAddress && (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-2">
+      <Label htmlFor="firstName">First Name *</Label>
+      <Input
+        id="firstName"
+        name="firstName"
+        value={formData.firstName}
+        onChange={handleInputChange}
+        required
+      />
+    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
+    <div className="space-y-2">
+      <Label htmlFor="lastName">Last Name *</Label>
+      <Input
+        id="lastName"
+        name="lastName"
+        value={formData.lastName}
+        onChange={handleInputChange}
+        required
+      />
+    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone *</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
+    <div className="space-y-2">
+      <Label htmlFor="email">Email *</Label>
+      <Input
+        id="email"
+        name="email"
+        type="email"
+        value={formData.email}
+        onChange={handleInputChange}
+        required
+      />
+    </div>
 
-                <div className="space-y-2 md:col-span-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="address">Address *</Label>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="useCurrentLocation"
-                        checked={formData.useCurrentLocation}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            if (navigator.geolocation) {
-                              navigator.geolocation.getCurrentPosition(
-                                (position) => {
-                                  setFormData({
-                                    ...formData,
-                                    useCurrentLocation: true,
-                                    currentLocation: {
-                                      latitude: position.coords.latitude,
-                                      longitude: position.coords.longitude,
-                                    },
-                                  });
-                                  toast({
-                                    title: "Location shared",
-                                    description: "Your current location has been added to help with delivery.",
-                                  });
-                                },
-                                (error) => {
-                                  toast({
-                                    title: "Location error",
-                                    description: "Could not get your current location. Please check permissions.",
-                                    variant: "destructive",
-                                  });
-                                }
-                              );
-                            }
-                          } else {
-                            setFormData({
-                              ...formData,
-                              useCurrentLocation: false,
-                              currentLocation: null,
-                            });
-                          }
-                        }}
-                      />
-                      <Label htmlFor="useCurrentLocation" className="text-sm flex items-center">
-                        <MapPin className="h-3.5 w-3.5 text-primary mr-1" />
-                        Share location for precise delivery
-                      </Label>
-                    </div>
-                  </div>
-                  <Textarea
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    required
-                    disabled
-                  />
-                  {formData.useCurrentLocation && formData.currentLocation && (
-                    <div className="bg-primary/10 p-2 rounded-md text-sm flex items-center">
-                      <MapPin className="h-4 w-4 text-primary inline mr-2 flex-shrink-0" />
-                      <span>Location shared for precise delivery</span>
-                    </div>
-                  )}
-                </div>
+    <div className="space-y-2">
+      <Label htmlFor="phone">Phone *</Label>
+      <Input
+        id="phone"
+        name="phone"
+        value={formData.phone}
+        onChange={handleInputChange}
+        placeholder="+12345678901"
+        required
+      />
+    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="city">City *</Label>
-                  <Input
-                    id="city"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    required
-                    disabled
-                  />
-                </div>
+    <div className="space-y-2 md:col-span-2">
+      <div className="flex items-center justify-between">
+        <Label htmlFor="address">Address *</Label>
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="useCurrentLocation"
+            checked={formData.useCurrentLocation}
+            onCheckedChange={(checked) => {
+              if (checked) {
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                      setFormData({
+                        ...formData,
+                        useCurrentLocation: true,
+                        currentLocation: {
+                          latitude: position.coords.latitude,
+                          longitude: position.coords.longitude,
+                        },
+                      });
+                      toast({
+                        title: "Location shared",
+                        description: "Your current location has been added to help with delivery.",
+                      });
+                    },
+                    (error) => {
+                      toast({
+                        title: "Location error",
+                        description: "Could not get your current location. Please check permissions.",
+                        variant: "destructive",
+                      });
+                    }
+                  );
+                }
+              } else {
+                setFormData({
+                  ...formData,
+                  useCurrentLocation: false,
+                  currentLocation: null,
+                });
+              }
+            }}
+          />
+          <Label htmlFor="useCurrentLocation" className="text-sm flex items-center">
+            <MapPin className="h-3.5 w-3.5 text-primary mr-1" />
+            Share location for precise delivery
+          </Label>
+        </div>
+      </div>
+      <Textarea
+        id="address"
+        name="address"
+        value={formData.address}
+        onChange={handleInputChange}
+        required
+      />
+      {formData.useCurrentLocation && formData.currentLocation && (
+        <div className="bg-primary/10 p-2 rounded-md text-sm flex items-center">
+          <MapPin className="h-4 w-4 text-primary inline mr-2 flex-shrink-0" />
+          <span>Location shared for precise delivery</span>
+        </div>
+      )}
+    </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="state">State *</Label>
-                    <Input
-                      id="state"
-                      name="state"
-                      value={formData.state}
-                      onChange={handleInputChange}
-                      required
-                      disabled
-                    />
-                  </div>
+    <div className="space-y-2">
+      <Label htmlFor="city">City *</Label>
+      <Input
+        id="city"
+        name="city"
+        value={formData.city}
+        onChange={handleInputChange}
+        required
+      />
+    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="zipCode">ZIP Code *</Label>
-                    <Input
-                      id="zipCode"
-                      name="zipCode"
-                      value={formData.zipCode}
-                      onChange={handleInputChange}
-                      required
-                      disabled
-                    />
-                  </div>
-                </div>
-              </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label htmlFor="state">State *</Label>
+        <Input
+          id="state"
+          name="state"
+          value={formData.state}
+          onChange={handleInputChange}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="zipCode">ZIP Code *</Label>
+        <Input
+          id="zipCode"
+          name="zipCode"
+          value={formData.zipCode}
+          onChange={handleInputChange}
+          required
+        />
+      </div>
+    </div>
+
+    <Button type="button" onClick={handleSaveAddress} className="md:col-span-2">
+      Save Address
+    </Button>
+  </div>
+)}
             </div>
 
             <div className="bg-card rounded-lg border p-6 mb-6">
               <div className="flex items-center gap-2 mb-4">
                 <LockIcon className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">Secure Payment</h2>
+                <h2 className="text-xl font-semibold">Payment Method</h2>
               </div>
 
               <div className="bg-primary/5 p-4 rounded-md mb-6 flex items-start gap-3">
                 <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium">Safe & Secure Payments</p>
+                  <p className="text-sm font-medium">Cash on Delivery</p>
                   <p className="text-xs text-muted-foreground">
-                    All payment information is processed securely.
+                    Pay when your order is delivered.
                   </p>
                 </div>
               </div>
-
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mb-4">
-                <div className="flex items-center space-x-2 mb-2 p-3 border rounded-md bg-background/50">
-                  <RadioGroupItem value="credit-card" id="credit-card" />
-                  <Label htmlFor="credit-card" className="flex items-center flex-1">
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Credit/Debit Card
-                  </Label>
-                  <div className="flex gap-2">
-                    <div className="w-10 h-6 bg-muted rounded flex items-center justify-center text-xs font-medium">
-                      VISA
-                    </div>
-                    <div className="w-10 h-6 bg-muted rounded flex items-center justify-center text-xs font-medium">
-                      MC
-                    </div>
-                    <div className="w-10 h-6 bg-muted rounded flex items-center justify-center text-xs font-medium">
-                      AMEX
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2 mb-2 p-3 border rounded-md bg-background/50">
-                  <RadioGroupItem value="upi" id="upi" />
-                  <Label htmlFor="upi" className="flex items-center flex-1">
-                    <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 0L1 6V18L12 24L23 18V6L12 0Z" fill="#3A3A3A" />
-                      <path d="M12 0L1 6V18L12 24V0Z" fill="#3A3A3A" />
-                      <path d="M12 0V24L23 18V6L12 0Z" fill="#7B7B7B" />
-                      <path d="M5.5 9.5L12 13.5L18.5 9.5" stroke="white" strokeWidth="1.5" />
-                    </svg>
-                    UPI Payment
-                  </Label>
-                  <div className="flex gap-2">
-                    <div className="w-10 h-6 bg-muted rounded flex items-center justify-center text-xs font-medium">
-                      UPI
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2 p-3 border rounded-md bg-background/50">
-                  <RadioGroupItem value="cash-on-delivery" id="cash-on-delivery" />
-                  <Label htmlFor="cash-on-delivery" className="flex-1">
-                    Cash on Delivery
-                  </Label>
-                </div>
-              </RadioGroup>
-
-              {paymentMethod === "credit-card" && (
-                <div className="space-y-4 border-t pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cardNumber">Card Number *</Label>
-                    <Input
-                      id="cardNumber"
-                      name="cardNumber"
-                      placeholder="1234 5678 9012 3456"
-                      value={formData.cardNumber}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="cardName">Name on Card *</Label>
-                    <Input
-                      id="cardName"
-                      name="cardName"
-                      placeholder="John Doe"
-                      value={formData.cardName}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="expiryDate">Expiry Date *</Label>
-                      <Input
-                        id="expiryDate"
-                        name="expiryDate"
-                        placeholder="MM/YY"
-                        value={formData.expiryDate}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="cvv">CVV *</Label>
-                      <Input
-                        id="cvv"
-                        name="cvv"
-                        placeholder="123"
-                        value={formData.cvv}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <ShieldCheck className="mr-2 h-4 w-4 text-primary" />
-                    Your payment information is secure and encrypted
-                  </div>
-                </div>
-              )}
-
-              {paymentMethod === "upi" && (
-                <div className="space-y-4 border-t pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="upiId">UPI ID *</Label>
-                    <Input
-                      id="upiId"
-                      name="upiId"
-                      placeholder="yourname@upi"
-                      value={formData.upiId}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <ShieldCheck className="mr-2 h-4 w-4 text-primary" />
-                    Your payment information is secure and encrypted
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="md:hidden">
@@ -611,7 +557,7 @@ export default function CheckoutPage() {
                 </Button>
               </Link>
 
-              <Button type="submit" size="lg" disabled={isProcessing}>
+              <Button type="submit" size="lg" disabled={isProcessing || !selectedAddressId || !isServiceAvailable}>
                 {isProcessing ? "Processing..." : "Complete Order"}
               </Button>
             </div>

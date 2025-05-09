@@ -7,21 +7,40 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { fetchWithoutAuth } from "@/lib/api";
 
 export default function DeliveryLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { toast } = useToast();
+  const router = useRouter();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // In a real app, you would authenticate with a backend
-    toast({
-      title: "Delivery partner login successful",
-      description: "Welcome back to your delivery dashboard!",
-    });
-    // Redirect to delivery dashboard
-    window.location.href = "/delivery/dashboard";
+    try {
+      const data = await fetchWithoutAuth("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+
+      // Store token and user data in localStorage
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      toast({
+        title: "Delivery partner login successful",
+        description: "Welcome back to your delivery dashboard!",
+      });
+
+      router.push("/delivery/dashboard");
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid credentials or access restricted",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

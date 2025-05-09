@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   ArrowLeft,
   Package,
@@ -14,134 +14,167 @@ import {
   Phone,
   Calendar,
   DollarSign,
-} from "lucide-react"
+} from "lucide-react";
+import { getOrder, assignDeliveryBoy, updateDeliveryStatus, getAllUsers } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
+import { useParams } from "next/navigation"; // Import useParams
 
-export default function OrderDetails({ params }) {
-  const { id } = params
-  const [order, setOrder] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [assignModal, setAssignModal] = useState(false)
-  const [partners, setPartners] = useState([])
+export default function OrderDetails() {
+  const params = useParams(); // Get params using useParams hook
+  const { id } = params; // Directly destructure params (plain object)
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [assignModal, setAssignModal] = useState(false);
+  const [partners, setPartners] = useState([]);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Simulate fetching order details
     const fetchOrder = async () => {
+      setLoading(true);
       try {
-        // In a real app, this would be an API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        // Sample order data
-        const orderData = {
-          id: id,
+        // Fetch order details
+        const orderData = await getOrder(id);
+        const mappedOrder = {
+          id: orderData.globalId,
           customer: {
-            name: "John Doe",
-            email: "john@example.com",
-            phone: "+91 9876543210",
-            address: "123 Main St, Hyderabad, 500001",
+            name: `${orderData.shippingAddress.firstName} ${orderData.shippingAddress.lastName}`,
+            email: orderData.shippingAddress.email,
+            phone: orderData.shippingAddress.phone,
+            address: `${orderData.shippingAddress.address}, ${orderData.shippingAddress.city}, ${orderData.shippingAddress.zipCode}`,
           },
-          items: [
-            {
-              id: 1,
-              name: "Organic Tomatoes",
-              price: 60,
-              quantity: 2,
-              total: 120,
-              image: "/placeholder.svg?height=200&width=200",
-            },
-            {
-              id: 2,
-              name: "Fresh Spinach Bundle",
-              price: 40,
-              quantity: 1,
-              total: 40,
-              image: "/placeholder.svg?height=200&width=200",
-            },
-            {
-              id: 3,
-              name: "Organic Apples",
-              price: 120,
-              quantity: 3,
-              total: 360,
-              image: "/placeholder.svg?height=200&width=200",
-            },
-          ],
-          subtotal: 520,
-          discount: 50,
-          deliveryCharge: 50,
-          total: 520,
-          status: "pending",
-          paymentMethod: "Cash on Delivery",
-          paymentStatus: "pending",
-          date: "2023-05-01",
-          deliveryPartner: null,
-          trackingInfo: [],
+          items: orderData.items.map((item) => ({
+            id: item.productId,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            total: item.price * item.quantity,
+            image: item.image || "/placeholder.svg?height=200&width=200",
+          })),
+          subtotal: orderData.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+          discount: orderData.discount || 0,
+          deliveryCharge: orderData.shippingFee || 0,
+          total: orderData.total,
+          status: orderData.deliveryStatus || "pending",
+          paymentMethod: orderData.paymentMethod,
+          paymentStatus: orderData.paymentStatus || "pending",
+          date: new Date(orderData.orderDate).toISOString().split("T")[0],
+          deliveryPartner: orderData.deliveryBoyId
+            ? {
+                id: `DEL-${orderData.deliveryBoyId}`,
+                name: "Unknown",
+                location: "Unknown",
+              }
+            : null,
+          trackingInfo: orderData.deliveryUpdates.map((update) => ({
+            status: update.status,
+            timestamp: update.updatedAt,
+            message: `Order ${update.status} by ${update.updatedBy}`,
+          })),
+        };
+
+        // Fetch delivery partners
+        const usersData = await getAllUsers();
+        const deliveryPartners = usersData.filter((user) => user.isDeliveryBoy).map((user) => ({
+          id: `DEL-${user.globalId}`,
+          name: user.name,
+          location: user.address?.city || "Unknown",
+          status: user.isActive ? "active" : "inactive",
+          ordersDelivered: user.ordersDelivered || 0,
+        }));
+        setPartners(deliveryPartners);
+
+        // Update delivery partner info if assigned
+        if (mappedOrder.deliveryPartner) {
+          const partner = deliveryPartners.find((p) => p.id === mappedOrder.deliveryPartner.id);
+          if (partner) {
+            mappedOrder.deliveryPartner = {
+              ...mappedOrder.deliveryPartner,
+              name: partner.name,
+              location: partner.location,
+            };
+          }
         }
 
-        // Sample delivery partners
-        const partnersData = [
-          { id: "DEL-001", name: "Raj Kumar", location: "Hyderabad", status: "active", ordersDelivered: 152 },
-          { id: "DEL-002", name: "Priya Singh", location: "Hyderabad", status: "active", ordersDelivered: 98 },
-          { id: "DEL-003", name: "Amit Patel", location: "Hyderabad", status: "inactive", ordersDelivered: 67 },
-          { id: "DEL-004", name: "Sneha Reddy", location: "Warangal", status: "active", ordersDelivered: 124 },
-          { id: "DEL-005", name: "Vikram Sharma", location: "Warangal", status: "active", ordersDelivered: 89 },
-        ]
-
-        setOrder(orderData)
-        setPartners(partnersData)
+        setOrder(mappedOrder);
       } catch (error) {
-        console.error("Error fetching order:", error)
-        setError("Failed to load order. Please try again.")
+        console.error("Error fetching order:", error);
+        setError(error.message || "Failed to load order. Please try again.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
+    };
+
+    fetchOrder();
+  }, [id, toast]);
+
+  const assignDeliveryPartner = async (partnerId) => {
+    try {
+      const deliveryBoyId = parseInt(partnerId.replace("DEL-", ""));
+      await assignDeliveryBoy(id, deliveryBoyId);
+      const partner = partners.find((p) => p.id === partnerId);
+      setOrder({
+        ...order,
+        deliveryPartner: partner,
+        status: "assigned",
+        trackingInfo: [
+          ...order.trackingInfo,
+          {
+            status: "assigned",
+            timestamp: new Date().toISOString(),
+            message: `Order assigned to delivery partner ${partner.name}`,
+          },
+        ],
+      });
+      toast({
+        title: "Success",
+        description: `Delivery partner assigned to order #${id}.`,
+      });
+      setAssignModal(false);
+    } catch (error) {
+      console.error("Error assigning delivery partner:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign delivery partner.",
+        variant: "destructive",
+      });
     }
+  };
 
-    fetchOrder()
-  }, [id])
-
-  const assignDeliveryPartner = (partnerId) => {
-    // In a real app, this would be an API call
-    setOrder({
-      ...order,
-      deliveryPartner: partners.find((p) => p.id === partnerId),
-      status: "assigned",
-      trackingInfo: [
-        ...order.trackingInfo,
-        {
-          status: "assigned",
-          timestamp: new Date().toISOString(),
-          message: `Order assigned to delivery partner ${partnerId}`,
-        },
-      ],
-    })
-    setAssignModal(false)
-  }
-
-  const updateOrderStatus = (status) => {
-    // In a real app, this would be an API call
-    const statusMessages = {
-      processing: "Order is being processed",
-      packed: "Order has been packed",
-      shipped: "Order has been shipped",
-      out_for_delivery: "Order is out for delivery",
-      delivered: "Order has been delivered",
-      cancelled: "Order has been cancelled",
+  const updateOrderStatus = async (status) => {
+    try {
+      await updateDeliveryStatus(id, status);
+      const statusMessages = {
+        assigned: "Order has been assigned",
+        "out-for-delivery": "Order is out for delivery", // Fixed to use hyphens
+        delivered: "Order has been delivered",
+      };
+      setOrder({
+        ...order,
+        status,
+        trackingInfo: [
+          ...order.trackingInfo,
+          {
+            status,
+            timestamp: new Date().toISOString(),
+            message: statusMessages[status] || `Order status updated to ${status}`,
+          },
+        ],
+      });
+      toast({
+        title: "Success",
+        description: `Order status updated to ${status}.`,
+      });
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update order status.",
+        variant: "destructive",
+      });
     }
-
-    setOrder({
-      ...order,
-      status: status,
-      trackingInfo: [
-        ...order.trackingInfo,
-        {
-          status: status,
-          timestamp: new Date().toISOString(),
-          message: statusMessages[status] || `Order status updated to ${status}`,
-        },
-      ],
-    })
-  }
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -151,72 +184,44 @@ export default function OrderDetails({ params }) {
             <Clock size={14} className="mr-1" />
             Pending
           </span>
-        )
+        );
       case "assigned":
         return (
           <span className="flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
             <Truck size={14} className="mr-1" />
             Assigned
           </span>
-        )
-      case "processing":
-        return (
-          <span className="flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-            <Package size={14} className="mr-1" />
-            Processing
-          </span>
-        )
-      case "packed":
-        return (
-          <span className="flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-            <Package size={14} className="mr-1" />
-            Packed
-          </span>
-        )
-      case "shipped":
-        return (
-          <span className="flex items-center px-2 py-1 rounded-full text-xs bg-indigo-100 text-indigo-800">
-            <Truck size={14} className="mr-1" />
-            Shipped
-          </span>
-        )
-      case "out_for_delivery":
+        );
+      case "out-for-delivery":
         return (
           <span className="flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
             <Truck size={14} className="mr-1" />
             Out for Delivery
           </span>
-        )
+        );
       case "delivered":
         return (
           <span className="flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
             <CheckCircle size={14} className="mr-1" />
             Delivered
           </span>
-        )
-      case "cancelled":
-        return (
-          <span className="flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">
-            <AlertTriangle size={14} className="mr-1" />
-            Cancelled
-          </span>
-        )
+        );
       default:
         return (
           <span className="flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
             <AlertTriangle size={14} className="mr-1" />
             Unknown
           </span>
-        )
+        );
     }
-  }
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
-    )
+    );
   }
 
   if (error || !order) {
@@ -227,7 +232,7 @@ export default function OrderDetails({ params }) {
           Back to Delivery Management
         </Link>
       </div>
-    )
+    );
   }
 
   return (
@@ -282,9 +287,11 @@ export default function OrderDetails({ params }) {
               {order.items.map((item) => (
                 <div key={item.id} className="p-4 flex items-center">
                   <div className="w-16 h-16 rounded-md overflow-hidden mr-4">
-                    <img
-                      src={item.image || "/placeholder.svg"}
+                    <Image
+                      src={item.image}
                       alt={item.name}
+                      width={64}
+                      height={64}
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -337,7 +344,9 @@ export default function OrderDetails({ params }) {
                     </div>
                     <div>
                       <p className="font-medium">{info.message}</p>
-                      <p className="text-sm text-muted-foreground">{new Date(info.timestamp).toLocaleString()}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(info.timestamp).toLocaleString()}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -346,33 +355,19 @@ export default function OrderDetails({ params }) {
 
             {/* Status Update Buttons */}
             <div className="mt-6 pt-6 border-t">
-              <h3 className="font-medium mb-3">Update Order Status</h3>
+              <h3 className="font-medium mb-3">Update Delivery Status</h3>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => updateOrderStatus("processing")}
+                  onClick={() => updateOrderStatus("assigned")}
                   className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm hover:bg-blue-200"
-                  disabled={order.status === "processing"}
+                  disabled={order.status === "assigned"}
                 >
-                  Processing
+                  Assigned
                 </button>
                 <button
-                  onClick={() => updateOrderStatus("packed")}
-                  className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm hover:bg-blue-200"
-                  disabled={order.status === "packed"}
-                >
-                  Packed
-                </button>
-                <button
-                  onClick={() => updateOrderStatus("shipped")}
-                  className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-md text-sm hover:bg-indigo-200"
-                  disabled={order.status === "shipped"}
-                >
-                  Shipped
-                </button>
-                <button
-                  onClick={() => updateOrderStatus("out_for_delivery")}
+                  onClick={() => updateOrderStatus("out-for-delivery")}
                   className="px-3 py-1 bg-purple-100 text-purple-800 rounded-md text-sm hover:bg-purple-200"
-                  disabled={order.status === "out_for_delivery"}
+                  disabled={order.status === "out-for-delivery"}
                 >
                   Out for Delivery
                 </button>
@@ -382,13 +377,6 @@ export default function OrderDetails({ params }) {
                   disabled={order.status === "delivered"}
                 >
                   Delivered
-                </button>
-                <button
-                  onClick={() => updateOrderStatus("cancelled")}
-                  className="px-3 py-1 bg-red-100 text-red-800 rounded-md text-sm hover:bg-red-200"
-                  disabled={order.status === "cancelled"}
-                >
-                  Cancelled
                 </button>
               </div>
             </div>
@@ -525,5 +513,5 @@ export default function OrderDetails({ params }) {
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -2,7 +2,6 @@ import { getAuthToken } from "@/lib/auth-utils";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-// Generic fetch function with error handling
 export const fetchWithoutAuth = async (url, options = {}) => {
   const headers = {
     ...options.headers,
@@ -16,6 +15,10 @@ export const fetchWithoutAuth = async (url, options = {}) => {
 
   if (!response.ok) {
     const error = await response.json();
+    if (error.errors) {
+      const errorMessages = error.errors.map((err) => err.msg).join("; ");
+      throw new Error(errorMessages || 'Something went wrong');
+    }
     throw new Error(error.message || 'Something went wrong');
   }
 
@@ -48,13 +51,16 @@ export const fetchWithAuth = async (url, options = {}) => {
       }
       throw new Error("Token expired or invalid");
     }
+    if (error.errors) {
+      const errorMessages = error.errors.map((err) => err.msg).join("; ");
+      throw new Error(errorMessages || 'Something went wrong');
+    }
     throw new Error(error.message || 'Something went wrong');
   }
 
   return response.json();
 };
 
-// Generic fetch function for multipart/form-data
 export const fetchWithAuthFormData = async (url, formData, method = 'POST') => {
   const token = getAuthToken();
 
@@ -80,13 +86,16 @@ export const fetchWithAuthFormData = async (url, formData, method = 'POST') => {
       }
       throw new Error("Token expired or invalid");
     }
+    if (error.errors) {
+      const errorMessages = error.errors.map((err) => err.msg).join("; ");
+      throw new Error(errorMessages || 'Something went wrong');
+    }
     throw new Error(error.message || 'Something went wrong');
   }
 
   return response.json();
 };
 
-// Generic fetch function for file downloads
 export const fetchWithAuthFile = async (url, options = {}) => {
   const token = getAuthToken();
 
@@ -112,10 +121,49 @@ export const fetchWithAuthFile = async (url, options = {}) => {
       }
       throw new Error("Token expired or invalid");
     }
+    if (error.errors) {
+      const errorMessages = error.errors.map((err) => err.msg).join("; ");
+      throw new Error(errorMessages || 'Something went wrong');
+    }
     throw new Error(error.message || 'Something went wrong');
   }
 
   return response;
+};
+
+// Delivery API functions
+export const getDeliveryOrders = async (page = 1, limit = 10) => {
+  return fetchWithAuth(`/api/delivery?page=${page}&limit=${limit}`);
+};
+
+export const assignDeliveryBoy = async (globalId, deliveryBoyId) => {
+  return fetchWithAuth(`/api/delivery/${globalId}/assign`, {
+    method: 'POST',
+    body: JSON.stringify({ deliveryBoyId }),
+  });
+};
+
+export const updateDeliveryStatus = async (globalId, status) => {
+  return fetchWithAuth(`/api/delivery/${globalId}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  });
+};
+
+export const setDeliveryBoyRole = async (globalId, isDeliveryBoy) => {
+  return fetchWithAuth(`/api/delivery/user/${globalId}/delivery-role`, {
+    method: 'PUT',
+    body: JSON.stringify({ isDeliveryBoy }),
+  });
+};
+
+export const getDeliveryBoyById = async (globalId) => {
+  return fetchWithAuth(`/api/delivery/user/${globalId}`);
+};
+
+export const getDeliveryBoys = async () => {
+  const users = await fetchWithAuth('/api/auth/users');
+  return users.filter((user) => user.isDeliveryBoy);
 };
 
 // Product API functions

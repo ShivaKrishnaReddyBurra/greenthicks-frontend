@@ -1,146 +1,150 @@
-"use client"
-import React from "react"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DeliveryLayout } from "@/components/delivery-layout"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Package, MapPin, CheckCircle } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DeliveryLayout } from "@/components/delivery-layout";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Package, MapPin, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
+import { getDeliveryOrders, updateDeliveryStatus, getUserProfile, fetchWithAuth } from "@/lib/api";
 
 export default function DeliveryDashboardPage() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState("overview")
-  const [pendingDeliveries, setPendingDeliveries] = useState([])
-  const [completedDeliveries, setCompletedDeliveries] = useState([])
+  const router = useRouter();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("overview");
+  const [pendingDeliveries, setPendingDeliveries] = useState([]);
+  const [completedDeliveries, setCompletedDeliveries] = useState([]);
   const [earnings, setEarnings] = useState({
     today: 0,
     week: 0,
     month: 0,
     pending: 0,
-  })
+  });
+  const [isOnline, setIsOnline] = useState(true);
 
-  // Mock data for deliveries
+  const fetchDeliveries = async () => {
+    try {
+      const data = await getDeliveryOrders(1, 10);
+      const pending = data.orders.filter((order) => order.deliveryStatus !== "delivered");
+      const completed = data.orders.filter((order) => order.deliveryStatus === "delivered");
+
+      setPendingDeliveries(pending);
+      setCompletedDeliveries(completed);
+
+      // Calculate earnings (assuming 10% commission)
+      const todayEarnings = completed
+        .filter((order) => new Date(order.updatedAt).toDateString() === new Date().toDateString())
+        .reduce((sum, order) => sum + order.total * 0.1, 0);
+      const weekEarnings = completed
+        .filter((order) => new Date(order.updatedAt) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+        .reduce((sum, order) => sum + order.total * 0.1, 0);
+      const monthEarnings = completed.reduce((sum, order) => sum + order.total * 0.1, 0);
+      const pendingPayout = pending.reduce((sum, order) => sum + order.total * 0.1, 0);
+
+      setEarnings({
+        today: todayEarnings.toFixed(2),
+        week: weekEarnings.toFixed(2),
+        month: monthEarnings.toFixed(2),
+        pending: pendingPayout.toFixed(2),
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch deliveries",
+        variant: "destructive",
+      });
+      if (error.message.includes("Token expired")) {
+        router.push("/delivery/login");
+      }
+    }
+  };
+
+  const fetchUserStatus = async () => {
+    try {
+      const data = await getUserProfile();
+      setIsOnline(data.activeStatus);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch user profile",
+        variant: "destructive",
+      });
+      if (error.message.includes("Token expired")) {
+        router.push("/delivery/login");
+      }
+    }
+  };
+
   useEffect(() => {
-    // Generate random pending deliveries
-    const generatePendingDeliveries = () => {
-      const deliveries = []
-      const statuses = ["assigned", "picked_up", "in_transit"]
+    fetchDeliveries();
+    fetchUserStatus();
+  }, []);
 
-      for (let i = 0; i < 5; i++) {
-        const orderId = `ORD-${Math.floor(10000 + Math.random() * 90000)}`
-        const status = statuses[Math.floor(Math.random() * statuses.length)]
-        const customerName = ["Rahul Sharma", "Priya Patel", "Amit Kumar", "Neha Singh", "Vikram Reddy"][i]
-        const address = [
-          "123 Main St, Green Park, Delhi",
-          "45 Park Avenue, Bandra, Mumbai",
-          "78 Lake View, Koramangala, Bangalore",
-          "22 Hill Road, Jubilee Hills, Hyderabad",
-          "56 Garden Lane, Salt Lake, Kolkata",
-        ][i]
-        const items = Math.floor(2 + Math.random() * 5)
-        const amount = Math.floor(200 + Math.random() * 800)
+  const handleStatusUpdate = async (orderId, newStatus) => {
+    try {
+      await updateDeliveryStatus(orderId, newStatus);
+      toast({
+        title: "Status updated",
+        description: `Order ${orderId} has been updated to ${newStatus.replace("-", " ")}.`,
+      });
 
-        deliveries.push({
-          id: orderId,
-          status,
-          customerName,
-          address,
-          items,
-          amount,
-          assignedAt: new Date(Date.now() - Math.floor(Math.random() * 3600000)).toLocaleTimeString(),
-        })
-      }
-
-      return deliveries
-    }
-
-    // Generate random completed deliveries
-    const generateCompletedDeliveries = () => {
-      const deliveries = []
-
-      for (let i = 0; i < 10; i++) {
-        const orderId = `ORD-${Math.floor(10000 + Math.random() * 90000)}`
-        const customerName = ["Rahul Sharma", "Priya Patel", "Amit Kumar", "Neha Singh", "Vikram Reddy"][i % 5]
-        const address = [
-          "123 Main St, Green Park, Delhi",
-          "45 Park Avenue, Bandra, Mumbai",
-          "78 Lake View, Koramangala, Bangalore",
-          "22 Hill Road, Jubilee Hills, Hyderabad",
-          "56 Garden Lane, Salt Lake, Kolkata",
-        ][i % 5]
-        const items = Math.floor(2 + Math.random() * 5)
-        const amount = Math.floor(200 + Math.random() * 800)
-        const earnings = Math.floor(50 + Math.random() * 100)
-
-        deliveries.push({
-          id: orderId,
-          customerName,
-          address,
-          items,
-          amount,
-          earnings,
-          completedAt: new Date(Date.now() - Math.floor(Math.random() * 86400000 * 7)).toLocaleDateString(),
-        })
-      }
-
-      return deliveries
-    }
-
-    // Generate random earnings
-    const generateEarnings = () => {
-      return {
-        today: Math.floor(300 + Math.random() * 500),
-        week: Math.floor(1500 + Math.random() * 1000),
-        month: Math.floor(6000 + Math.random() * 4000),
-        pending: Math.floor(200 + Math.random() * 300),
-      }
-    }
-
-    setPendingDeliveries(generatePendingDeliveries())
-    setCompletedDeliveries(generateCompletedDeliveries())
-    setEarnings(generateEarnings())
-  }, [])
-
-  const handleStatusUpdate = (orderId, newStatus) => {
-    setPendingDeliveries((prevDeliveries) =>
-      prevDeliveries.map((delivery) => (delivery.id === orderId ? { ...delivery, status: newStatus } : delivery)),
-    )
-
-    toast({
-      title: "Status updated",
-      description: `Order ${orderId} has been updated to ${newStatus.replace("_", " ")}.`,
-    })
-
-    // If delivery is completed, move it to completed deliveries
-    if (newStatus === "delivered") {
-      const delivery = pendingDeliveries.find((d) => d.id === orderId)
-      if (delivery) {
-        const completedDelivery = {
-          ...delivery,
-          completedAt: new Date().toLocaleDateString(),
-          earnings: Math.floor(50 + Math.random() * 100),
+      if (newStatus === "delivered") {
+        const delivery = pendingDeliveries.find((d) => d.globalId === orderId);
+        if (delivery) {
+          setCompletedDeliveries((prev) => [
+            { ...delivery, deliveryStatus: "delivered", updatedAt: new Date() },
+            ...prev,
+          ]);
+          setPendingDeliveries((prev) => prev.filter((d) => d.globalId !== orderId));
+          setEarnings((prev) => ({
+            ...prev,
+            today: (parseFloat(prev.today) + delivery.total * 0.1).toFixed(2),
+            week: (parseFloat(prev.week) + delivery.total * 0.1).toFixed(2),
+            month: (parseFloat(prev.month) + delivery.total * 0.1).toFixed(2),
+          }));
         }
+      } else {
+        setPendingDeliveries((prevDeliveries) =>
+          prevDeliveries.map((delivery) =>
+            delivery.globalId === orderId ? { ...delivery, deliveryStatus: newStatus } : delivery
+          )
+        );
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update status",
+        variant: "destructive",
+      });
+    }
+  };
 
-        setCompletedDeliveries((prev) => [completedDelivery, ...prev])
-        setPendingDeliveries((prev) => prev.filter((d) => d.id !== orderId))
-
-        // Update earnings
-        setEarnings((prev) => ({
-          ...prev,
-          today: prev.today + completedDelivery.earnings,
-          week: prev.week + completedDelivery.earnings,
-          month: prev.month + completedDelivery.earnings,
-        }))
+  const toggleOnlineStatus = async () => {
+    try {
+      const data = await fetchWithAuth("/api/delivery/active-status", {
+        method: "PUT",
+      });
+      setIsOnline(data.activeStatus);
+      toast({
+        title: "Status updated",
+        description: `You are now ${data.activeStatus ? "online" : "offline"}.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update active status",
+        variant: "destructive",
+      });
+      if (error.message.includes("Token expired")) {
+        router.push("/delivery/login");
       }
     }
-  }
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -149,72 +153,53 @@ export default function DeliveryDashboardPage() {
           <Badge variant="outline" className="border-blue-500 text-blue-500">
             Assigned
           </Badge>
-        )
-      case "picked_up":
+        );
+      case "out-for-delivery":
         return (
           <Badge variant="outline" className="border-orange-500 text-orange-500">
-            Picked Up
+            Out for Delivery
           </Badge>
-        )
-      case "in_transit":
-        return (
-          <Badge variant="outline" className="border-purple-500 text-purple-500">
-            In Transit
-          </Badge>
-        )
+        );
       case "delivered":
-        return <Badge className="bg-green-500">Delivered</Badge>
+        return <Badge className="bg-green-500">Delivered</Badge>;
       default:
-        return <Badge variant="outline">Unknown</Badge>
+        return <Badge variant="outline">Unknown</Badge>;
     }
-  }
+  };
 
   const getNextStatus = (currentStatus) => {
     switch (currentStatus) {
       case "assigned":
-        return "picked_up"
-      case "picked_up":
-        return "in_transit"
-      case "in_transit":
-        return "delivered"
+        return "out-for-delivery";
+      case "out-for-delivery":
+        return "delivered";
       default:
-        return currentStatus
+        return currentStatus;
     }
-  }
+  };
 
   const getStatusActionText = (currentStatus) => {
     switch (currentStatus) {
       case "assigned":
-        return "Mark as Picked Up"
-      case "picked_up":
-        return "Start Delivery"
-      case "in_transit":
-        return "Mark as Delivered"
+        return "Start Delivery";
+      case "out-for-delivery":
+        return "Mark as Delivered";
       default:
-        return "Update Status"
+        return "Update Status";
     }
-  }
-
-  const [isOnline, setIsOnline] = useState(true)
-
-const toggleOnlineStatus = () => {
-  setIsOnline((prev) => !prev)
-}  
+  };
 
   return (
     <DeliveryLayout>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Delivery Dashboard</h1>
-        <Button variant="outline" onClick={() => router.push("/delivery/profile")}>
-          Update Availability
-        </Button>
         <Button
-            variant={isOnline ? "default" : "outline"}
-            onClick={toggleOnlineStatus}
-            className={isOnline ? "bg-green-600 hover:bg-green-700" : "text-red-600 border-red-600 hover:bg-red-800 "}
-          >
-            {isOnline ? "Online" : "Offline"}
-          </Button>
+          variant={isOnline ? "default" : "outline"}
+          onClick={toggleOnlineStatus}
+          className={isOnline ? "bg-green-600 hover:bg-green-700" : "text-red-600 border-red-600 hover:bg-red-50"}
+        >
+          {isOnline ? "Online" : "Offline"}
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -237,8 +222,10 @@ const toggleOnlineStatus = () => {
           <CardContent>
             <div className="text-2xl font-bold">₹{earnings.today}</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-500 inline-flex items-center">+₹{Math.floor(Math.random() * 100)} </span> from
-              yesterday
+              <span className="text-green-500 inline-flex items-center">
+                +₹{(earnings.today * 0.1).toFixed(2)}
+              </span>{" "}
+              from yesterday
             </p>
           </CardContent>
         </Card>
@@ -262,8 +249,10 @@ const toggleOnlineStatus = () => {
           <CardContent>
             <div className="text-2xl font-bold">₹{earnings.week}</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-500 inline-flex items-center">+₹{Math.floor(Math.random() * 300)} </span> from
-              last week
+              <span className="text-green-500 inline-flex items-center">
+                +₹{(earnings.week * 0.1).toFixed(2)}
+              </span>{" "}
+              from last week
             </p>
           </CardContent>
         </Card>
@@ -276,7 +265,7 @@ const toggleOnlineStatus = () => {
           <CardContent>
             <div className="text-2xl font-bold">{pendingDeliveries.length}</div>
             <p className="text-xs text-muted-foreground">
-              {pendingDeliveries.filter((d) => d.status === "assigned").length} new assignments
+              {pendingDeliveries.filter((d) => d.deliveryStatus === "assigned").length} new assignments
             </p>
           </CardContent>
         </Card>
@@ -288,7 +277,11 @@ const toggleOnlineStatus = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {completedDeliveries.filter((d) => d.completedAt === new Date().toLocaleDateString()).length}
+              {
+                completedDeliveries.filter(
+                  (d) => new Date(d.updatedAt).toDateString() === new Date().toDateString()
+                ).length
+              }
             </div>
             <p className="text-xs text-muted-foreground">
               <span className="text-green-500 inline-flex items-center">
@@ -307,24 +300,23 @@ const toggleOnlineStatus = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Today's Delivery Route</CardTitle>
-              <CardDescription>Optimize your route for maximum efficiency</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[400px] relative">
-              {/* Google Maps would be integrated here in a real application */}
-              <div className="absolute inset-0 bg-muted flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
-                  <p className="font-medium">Delivery Map</p>
-                  <p className="text-sm text-muted-foreground">
-                    Google Maps integration would show your delivery route here
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <Card>
+  <CardHeader>
+    <CardTitle>Today's Delivery Route</CardTitle>
+    <CardDescription>Optimize your route for maximum efficiency</CardDescription>
+  </CardHeader>
+  <CardContent className="h-[400px] relative">
+    <div className="absolute inset-0 bg-muted flex items-center justify-center">
+      <div className="text-center">
+        <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
+        <p className="font-medium">Delivery Map</p>
+        <p className="text-sm text-muted-foreground">
+          Google Maps integration would show your delivery route here
+        </p>
+      </div>
+    </div>
+  </CardContent>
+</Card>
 
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
@@ -335,19 +327,21 @@ const toggleOnlineStatus = () => {
               <CardContent>
                 <div className="space-y-4">
                   {pendingDeliveries.slice(0, 3).map((delivery) => (
-                    <div key={delivery.id} className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0">
+                    <div key={delivery.globalId} className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0">
                       <div className="bg-primary/10 p-2 rounded-full">
                         <Package className="h-5 w-5 text-primary" />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <p className="font-medium">{delivery.customerName}</p>
-                          {getStatusBadge(delivery.status)}
+                          <p className="font-medium">{delivery.shippingAddress.firstName} {delivery.shippingAddress.lastName}</p>
+                          {getStatusBadge(delivery.deliveryStatus)}
                         </div>
-                        <p className="text-sm text-muted-foreground line-clamp-1">{delivery.address}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-1">
+                          {delivery.shippingAddress.address}, {delivery.shippingAddress.city}, {delivery.shippingAddress.state}
+                        </p>
                         <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                          <span>{delivery.items} items</span>
-                          <span>₹{delivery.amount}</span>
+                          <span>{delivery.items.length} items</span>
+                          <span>₹{delivery.total}</span>
                         </div>
                       </div>
                     </div>
@@ -380,7 +374,7 @@ const toggleOnlineStatus = () => {
                       <p className="text-sm font-medium">Base Earnings</p>
                       <p className="text-xs text-muted-foreground">For {completedDeliveries.length} deliveries</p>
                     </div>
-                    <p className="font-medium">₹{earnings.month - earnings.pending}</p>
+                    <p className="font-medium">₹{(earnings.month - earnings.pending).toFixed(2)}</p>
                   </div>
 
                   <div className="flex justify-between">
@@ -388,7 +382,7 @@ const toggleOnlineStatus = () => {
                       <p className="text-sm font-medium">Bonuses</p>
                       <p className="text-xs text-muted-foreground">Peak hours & weekend incentives</p>
                     </div>
-                    <p className="font-medium">₹{Math.floor(earnings.month * 0.15)}</p>
+                    <p className="font-medium">₹{(earnings.month * 0.15).toFixed(2)}</p>
                   </div>
 
                   <div className="flex justify-between">
@@ -396,7 +390,7 @@ const toggleOnlineStatus = () => {
                       <p className="text-sm font-medium">Tips</p>
                       <p className="text-xs text-muted-foreground">Customer appreciation</p>
                     </div>
-                    <p className="font-medium">₹{Math.floor(earnings.month * 0.08)}</p>
+                    <p className="font-medium">₹{(earnings.month * 0.08).toFixed(2)}</p>
                   </div>
 
                   <div className="flex justify-between">
@@ -440,24 +434,28 @@ const toggleOnlineStatus = () => {
                   </TableHeader>
                   <TableBody>
                     {pendingDeliveries.map((delivery) => (
-                      <TableRow key={delivery.id}>
+                      <TableRow key={delivery.globalId}>
                         <TableCell className="font-medium">{delivery.id}</TableCell>
-                        <TableCell>{delivery.customerName}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{delivery.address}</TableCell>
-                        <TableCell>{getStatusBadge(delivery.status)}</TableCell>
-                        <TableCell>{delivery.assignedAt}</TableCell>
+                        <TableCell>
+                          {delivery.shippingAddress.firstName} {delivery.shippingAddress.lastName}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate">
+                          {delivery.shippingAddress.address}, {delivery.shippingAddress.city}, {delivery.shippingAddress.state}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(delivery.deliveryStatus)}</TableCell>
+                        <TableCell>{new Date(delivery.orderDate).toLocaleTimeString()}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Link href={`/delivery/orders/${delivery.id}`}>
+                            <Link href={`/delivery/orders/${delivery.globalId}`}>
                               <Button variant="ghost" size="sm">
                                 View
                               </Button>
                             </Link>
                             <Button
                               size="sm"
-                              onClick={() => handleStatusUpdate(delivery.id, getNextStatus(delivery.status))}
+                              onClick={() => handleStatusUpdate(delivery.globalId, getNextStatus(delivery.deliveryStatus))}
                             >
-                              {getStatusActionText(delivery.status)}
+                              {getStatusActionText(delivery.deliveryStatus)}
                             </Button>
                           </div>
                         </TableCell>
@@ -480,7 +478,7 @@ const toggleOnlineStatus = () => {
           <Card>
             <CardHeader>
               <CardTitle>Completed Deliveries</CardTitle>
-              <CardDescription>History of your completed deliveries</CardDescription>
+              <CardDescription>History of your assigned deliveries</CardDescription>
             </CardHeader>
             <CardContent>
               {completedDeliveries.length > 0 ? (
@@ -498,14 +496,18 @@ const toggleOnlineStatus = () => {
                   </TableHeader>
                   <TableBody>
                     {completedDeliveries.map((delivery) => (
-                      <TableRow key={delivery.id}>
+                      <TableRow key={delivery.globalId}>
                         <TableCell className="font-medium">{delivery.id}</TableCell>
-                        <TableCell>{delivery.customerName}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{delivery.address}</TableCell>
-                        <TableCell>{delivery.items}</TableCell>
-                        <TableCell>₹{delivery.amount}</TableCell>
-                        <TableCell>₹{delivery.earnings}</TableCell>
-                        <TableCell>{delivery.completedAt}</TableCell>
+                        <TableCell>
+                          {delivery.shippingAddress.firstName} {delivery.shippingAddress.lastName}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate">
+                          {delivery.shippingAddress.address}, {delivery.shippingAddress.city}, {delivery.shippingAddress.state}
+                        </TableCell>
+                        <TableCell>{delivery.items.length}</TableCell>
+                        <TableCell>₹{delivery.total}</TableCell>
+                        <TableCell>₹{(delivery.total * 0.1).toFixed(2)}</TableCell>
+                        <TableCell>{new Date(delivery.updatedAt).toLocaleDateString()}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -522,5 +524,5 @@ const toggleOnlineStatus = () => {
         </TabsContent>
       </Tabs>
     </DeliveryLayout>
-  )
+  );
 }
