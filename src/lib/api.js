@@ -257,7 +257,7 @@ export const getOrder = async (globalId) => {
 };
 
 export const cancelOrder = async (globalId) => {
-  return fetchWithAuth(`/api/orders/${globalId}/status`, {
+  return fetchWithAuth(`/api/orders/${globalId}/cancel`, {
     method: 'PUT',
     body: JSON.stringify({ status: 'cancelled' }),
   });
