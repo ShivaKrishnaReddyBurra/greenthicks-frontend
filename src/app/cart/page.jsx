@@ -27,9 +27,10 @@ export default function CartPage() {
   const handleApplyCoupon = async () => {
     if (!couponCode) {
       toast({
-        title: "No coupon code",
-        description: "Please enter a coupon code.",
+        title: "No Coupon Code Entered",
+        description: "Please enter a coupon code to apply.",
         variant: "destructive",
+        duration: 5000,
       });
       return;
     }
@@ -39,15 +40,17 @@ export default function CartPage() {
       setDiscount(response.discount);
       setAppliedCoupon(couponCode.toUpperCase());
       toast({
-        title: "Coupon applied!",
-        description: `Coupon ${couponCode.toUpperCase()} applied successfully.`,
+        title: "Coupon Applied Successfully!",
+        description: `Coupon ${couponCode.toUpperCase()} has been applied.`,
+        duration: 5000,
       });
     } catch (error) {
-      console.error("Failed to apply coupon:", error);
+      const errorMessage = error.response?.data?.message || error.message || "The coupon code is not valid.";
       toast({
-        title: "Invalid coupon",
-        description: error.message || "Please enter a valid coupon code.",
+        title: "Invalid Coupon Code",
+        description: errorMessage,
         variant: "destructive",
+        duration: 5000,
       });
     }
   };
@@ -55,9 +58,10 @@ export default function CartPage() {
   const handleCheckout = () => {
     if (cart.length === 0) {
       toast({
-        title: "Cart is empty",
+        title: "Cart is Empty",
         description: "Please add items to your cart before checking out.",
         variant: "destructive",
+        duration: 5000,
       });
       return;
     }

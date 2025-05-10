@@ -47,7 +47,7 @@ export default function RegisterPage() {
     try {
       await fetchWithoutAuth("/api/auth/signup", {
         method: "POST",
-        body: JSON.stringify({ email, password, isAdmin }),
+        body: JSON.stringify({ email, password, isAdmin, firstName, lastName, username }),
       });
 
       router.push("/login");

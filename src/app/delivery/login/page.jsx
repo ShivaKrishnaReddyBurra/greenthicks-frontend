@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { fetchWithoutAuth } from "@/lib/api";
+import { deliveryLogin } from "@/lib/api"; // Import the new deliveryLogin function
 
 export default function DeliveryLoginPage() {
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState(""); // Changed from email to identifier to match backend
   const [password, setPassword] = useState("");
   const { toast } = useToast();
   const router = useRouter();
@@ -19,10 +19,8 @@ export default function DeliveryLoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const data = await fetchWithoutAuth("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      });
+      // Use deliveryLogin instead of fetchWithoutAuth
+      const data = await deliveryLogin(identifier, password);
 
       // Store token and user data in localStorage
       localStorage.setItem("authToken", data.token);
@@ -59,13 +57,13 @@ export default function DeliveryLoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="identifier">Email or Username</Label> {/* Updated label */}
               <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="identifier"
+                type="text" // Changed to text to allow username or email
+                placeholder="you@example.com or username"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 required
               />
             </div>

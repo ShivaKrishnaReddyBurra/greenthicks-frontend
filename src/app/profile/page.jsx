@@ -1,7 +1,3 @@
-// To use this component, ensure the following environment variable is set in .env.local:
-// NEXT_PUBLIC_API_URL=https://greenthicks-backend.azurewebsites.net (or http://localhost:5000 for development)
-// The backend must have CORS configured to allow the frontend's origin (e.g., http://localhost:3000).
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -56,6 +52,7 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    username: "",
     email: "",
     address: "",
     city: "",
@@ -77,6 +74,7 @@ export default function ProfilePage() {
         ...profileData,
         globalId: profileData.globalId,
         name: profileData.name || `${profileData.firstName || ""} ${profileData.lastName || ""}`.trim(),
+        username: profileData.username || "",
         avatar: profileData.avatar || "/placeholder.svg",
         joinedDate: profileData.joinedDate || "Unknown",
         location: profileData.location || "Not set",
@@ -91,6 +89,7 @@ export default function ProfilePage() {
         setFormData({
           firstName: primaryAddress.firstName || "",
           lastName: primaryAddress.lastName || "",
+          username: userData.username || "",
           email: primaryAddress.email || profileData.email || "",
           address: primaryAddress.address || "",
           city: primaryAddress.city || "",
@@ -103,6 +102,7 @@ export default function ProfilePage() {
         setFormData({
           firstName: profileData.firstName || "",
           lastName: profileData.lastName || "",
+          username: userData.username || "",
           email: profileData.email || "",
           address: "",
           city: "",
@@ -152,12 +152,14 @@ export default function ProfilePage() {
         body: JSON.stringify({
           firstName: formData.firstName,
           lastName: formData.lastName,
+          username: formData.username,
           email: formData.email,
         }),
       });
       setUser((prev) => ({
         ...prev,
         name: `${formData.firstName} ${formData.lastName}`.trim(),
+        username: formData.username,
         email: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -227,7 +229,7 @@ export default function ProfilePage() {
         });
         setAddresses((prev) => [
           ...prev.map((addr) => ({ ...addr, isPrimary: formData.isPrimary ? false : addr.isPrimary })),
-          { ...newAddress.address, isPrimary: formData.isPrimary },
+          { ...newAddress.address, isPrimary: formData.isPrimary }
         ]);
         setSelectedAddressId(newAddress.address.addressId);
       }
@@ -259,6 +261,7 @@ export default function ProfilePage() {
       ...prev,
       firstName: user?.firstName || user?.name?.split(" ")[0] || "",
       lastName: user?.lastName || user?.name?.split(" ")[1] || "",
+      username: user?.username || "",
       email: user?.email || "",
     }));
   };
@@ -272,6 +275,7 @@ export default function ProfilePage() {
         ...prev,
         firstName: primaryAddress.firstName || "",
         lastName: primaryAddress.lastName || "",
+        username: user?.username || "",
         email: primaryAddress.email || user?.email || "",
         address: primaryAddress.address || "",
         city: primaryAddress.city || "",
@@ -286,6 +290,7 @@ export default function ProfilePage() {
         ...prev,
         firstName: user?.firstName || user?.name?.split(" ")[0] || "",
         lastName: user?.lastName || user?.name?.split(" ")[1] || "",
+        username: user?.username || "",
         email: user?.email || "",
         address: "",
         city: "",
@@ -304,6 +309,7 @@ export default function ProfilePage() {
       ...prev,
       firstName: user?.firstName || user?.name?.split(" ")[0] || "",
       lastName: user?.lastName || user?.name?.split(" ")[1] || "",
+      username: user?.username || "",
       email: user?.email || "",
       address: "",
       city: "",
@@ -343,6 +349,7 @@ export default function ProfilePage() {
         zipCode: updatedAddress.address.zipCode,
         phone: updatedAddress.address.phone,
         isPrimary: true,
+        username: user?.username || "",
       });
       await fetchUserData(); // Sync computed fields
       toast({
@@ -386,6 +393,7 @@ export default function ProfilePage() {
             zipCode: primaryAddress.zipCode,
             phone: primaryAddress.phone,
             isPrimary: primaryAddress.isPrimary,
+            username: user?.username || "",
           });
         } else {
           setSelectedAddressId(null);
@@ -393,6 +401,7 @@ export default function ProfilePage() {
             ...prev,
             firstName: user?.firstName || user?.name?.split(" ")[0] || "",
             lastName: user?.lastName || user?.name?.split(" ")[1] || "",
+            username: user?.username || "",
             email: user?.email || "",
             address: "",
             city: "",
@@ -461,17 +470,11 @@ export default function ProfilePage() {
                       .join("")}
                   </AvatarFallback>
                 </Avatar>
-                {/* Avatar upload disabled until backend support is added */}
-                {/* <Button
-                  size="icon"
-                  className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary text-primary-foreground"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button> */}
               </div>
               <div className="mt-4 md:mt-0 md:mb-2">
                 <h1 className="text-2xl font-bold">{user.name}</h1>
                 <p className="text-muted-foreground">{user.email}</p>
+                <p className="text-muted-foreground">{user.username ? `@${user.username}` : "No username set"}</p>
                 <p className="text-sm text-muted-foreground mt-1">Member since {user.joinedDate}</p>
               </div>
             </div>
@@ -558,6 +561,17 @@ export default function ProfilePage() {
                         </div>
                       </div>
                       <div className="space-y-2">
+                        <Label htmlFor="username">Username</Label>
+                        <Input
+                          id="username"
+                          name="username"
+                          value={formData.username}
+                          onChange={handleInputChange}
+                          placeholder="Your username"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="email">Email Address</Label>
                         <Input
                           id="email"
@@ -597,29 +611,33 @@ export default function ProfilePage() {
                           <p>{user.name}</p>
                         </div>
                         <div>
-                          <h3 className="text-sm font-medium text-muted-foreground">Email Address</h3>
-                          <p>{user.email}</p>
+                          <h3 className="text-sm font-medium text-muted-foreground">Username</h3>
+                          <p>{user.username || "Not set"}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h3 className="text-sm font-medium text-muted-foreground">Email Address</h3>
+                          <p>{user.email}</p>
+                        </div>
                         <div>
                           <h3 className="text-sm font-medium text-muted-foreground">Location</h3>
                           <p>{user.location}</p>
                         </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <h3 className="text-sm font-medium text-muted-foreground">Joined Date</h3>
                           <p>{user.joinedDate}</p>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <h3 className="text-sm font-medium text-muted-foreground">Total Orders</h3>
                           <p>{user.totalOrders}</p>
                         </div>
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground">Total Spent</h3>
-                          <p>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(user.totalSpent)}</p>
-                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-muted-foreground">Total Spent</h3>
+                        <p>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(user.totalSpent)}</p>
                       </div>
                     </div>
                   )}
@@ -643,7 +661,7 @@ export default function ProfilePage() {
                   </div>
                   <Button
                     variant="outline"
-                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                    className="w-full justify-start text-Destructive hover:text-Destructive hover:bg-Destructive/10"
                     onClick={() => {
                       clearAuth();
                       router.push("/login");
@@ -824,6 +842,7 @@ export default function ProfilePage() {
                               zipCode: address.zipCode,
                               phone: address.phone,
                               isPrimary: address.isPrimary,
+                              username: user?.username || "",
                             });
                           }}
                         >

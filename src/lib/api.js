@@ -29,7 +29,7 @@ export const fetchWithAuth = async (url, options = {}) => {
   const token = getAuthToken();
 
   if (!token) {
-    throw new Error("No token provided");
+    throw new Error("you are not logged in, please login");
   }
 
   const headers = {
@@ -45,6 +45,10 @@ export const fetchWithAuth = async (url, options = {}) => {
 
   if (!response.ok) {
     const error = await response.json();
+    let errorMessage = [error.message || 'Something went wrong'];
+    if(error.error){
+      errorMessage = errorMessage.concat(error.error);
+    }
     if (response.status === 401) {
       if (typeof window !== "undefined") {
         localStorage.removeItem("authToken");
@@ -55,7 +59,7 @@ export const fetchWithAuth = async (url, options = {}) => {
       const errorMessages = error.errors.map((err) => err.msg).join("; ");
       throw new Error(errorMessages || 'Something went wrong');
     }
-    throw new Error(error.message || 'Something went wrong');
+    throw new Error(errorMessage || 'Something went wrong');
   }
 
   return response.json();
@@ -131,6 +135,29 @@ export const fetchWithAuthFile = async (url, options = {}) => {
   return response;
 };
 
+export const apiAddToFavorites = async (productId) => {
+  return fetchWithAuth('/api/favorites', {
+    method: 'POST',
+    body: JSON.stringify({ productId }),
+  });
+};
+
+export const apiRemoveFromFavorites = async (productId) => {
+  return fetchWithAuth(`/api/favorites/${productId}`, {
+    method: 'DELETE',
+  });
+};
+
+export const apiClearFavorites = async () => {
+  return fetchWithAuth('/api/favorites', {
+    method: 'DELETE',
+  });
+};
+
+export const getFavorites = async () => {
+  return fetchWithAuth('/api/favorites');
+};
+
 // Delivery API functions
 export const getDeliveryOrders = async (page = 1, limit = 10) => {
   return fetchWithAuth(`/api/delivery?page=${page}&limit=${limit}`);
@@ -168,11 +195,11 @@ export const getDeliveryBoys = async () => {
 
 // Product API functions
 export const getProducts = async () => {
-  return fetchWithAuth('/api/products');
+  return fetchWithoutAuth('/api/products');
 };
 
 export const getProductById = async (globalId) => {
-  return fetchWithAuth(`/api/products/${globalId}`);
+  return fetchWithoutAuth(`/api/products/${globalId}`);
 };
 
 export const createProduct = async (productData, images) => {
@@ -311,4 +338,20 @@ export const exportInvoices = async () => {
 
 export const getInvoiceData = async (globalId) => {
   return fetchWithAuth(`/api/invoices/${globalId}`);
+};
+
+// Delivery Partner Login with role validation
+export const deliveryLogin = async (identifier, password) => {
+  // Perform login request
+  const loginData = await fetchWithoutAuth('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ identifier, password }),
+  });
+
+  // Check if user is either a delivery boy or admin
+  if (!loginData.user.isDeliveryBoy && !loginData.user.isAdmin) {
+    throw new Error('Access restricted: Only delivery partners or admins can log in');
+  }
+
+  return loginData;
 };

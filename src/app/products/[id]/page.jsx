@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react"; // Added useRef
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -8,14 +8,15 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input"; // Added for review form
-import { Textarea } from "@/components/ui/textarea"; // Added for review form
-import { Label } from "@/components/ui/label"; // Added for review form
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/lib/cart-context";
 import { useFavorites } from "@/lib/favorites-context";
 import { getProductById, getProducts } from "@/lib/api";
-import { Heart, ShoppingCart, Plus, Minus, Star, ArrowLeft, Truck, Shield, RotateCcw, Check, Camera, X } from "lucide-react"; // Added Camera, X
+import { getAuthToken } from "@/lib/auth-utils";
+import { Heart, ShoppingCart, Plus, Minus, Star, ArrowLeft, Truck, Shield, RotateCcw, Check, Camera, X } from "lucide-react";
 
 export default function ProductDetailPage({ params: paramsPromise }) {
   const params = React.use(paramsPromise);
@@ -28,9 +29,9 @@ export default function ProductDetailPage({ params: paramsPromise }) {
   const [product, setProduct] = useState(null);
   const [similarProducts, setSimilarProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showReviewForm, setShowReviewForm] = useState(false); // Added state for review form visibility
-  const [reviewImages, setReviewImages] = useState([]); // Added state for review images
-  const fileInputRef = useRef(null); // Added ref for file input
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewImages, setReviewImages] = useState([]);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,7 +59,22 @@ export default function ProductDetailPage({ params: paramsPromise }) {
 
   const handleAddToCart = () => {
     if (product) {
+      const token = getAuthToken();
+      if (!token) {
+        const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
+        router.push(`/login?returnUrl=${returnUrl}`);
+        toast({
+          title: "Please log in",
+          description: "You need to be logged in to add items to your cart.",
+          variant: "destructive",
+        });
+        return;
+      }
       addToCart(product, quantity);
+      toast({
+        title: "Added to cart",
+        description: `${product.name} has been added to your cart.`,
+      });
     }
   };
 
@@ -67,16 +83,8 @@ export default function ProductDetailPage({ params: paramsPromise }) {
 
     if (isFavorite(product.globalId)) {
       removeFromFavorites(product.globalId);
-      toast({
-        title: "Removed from favorites",
-        description: `${product.name} has been removed from your favorites.`,
-      });
     } else {
       addToFavorites(product);
-      toast({
-        title: "Added to favorites",
-        description: `${product.name} has been added to your favorites.`,
-      });
     }
   };
 
@@ -90,14 +98,6 @@ export default function ProductDetailPage({ params: paramsPromise }) {
     if (quantity > 1) {
       setQuantity(quantity - 1);
     }
-  };
-
-  const getProductImage = (index) => {
-    if (index === 0) return product.image || "/placeholder.svg?height=500&width=500";
-    if (index === 1) return product.image1 || "/placeholder.svg?height=150&width=150";
-    if (index === 2) return product.image2 || "/placeholder.svg?height=150&width=150";
-    if (index === 3) return product.image3 || "/placeholder.svg?height=150&width=150";
-    return product.image4 || "/placeholder.svg?height=150&width=150";
   };
 
   const handleImageUpload = (e) => {
@@ -160,7 +160,6 @@ export default function ProductDetailPage({ params: paramsPromise }) {
       </div>
 
       <div className="grid md:grid-cols-2 gap-8 mb-10">
-        {/* Product Images Section */}
         <div className="space-y-4">
           <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
             <Image
@@ -203,7 +202,6 @@ export default function ProductDetailPage({ params: paramsPromise }) {
           </div>
         </div>
 
-        {/* Product Info Section */}
         <div>
           <div className="mb-6">
             <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -333,7 +331,6 @@ export default function ProductDetailPage({ params: paramsPromise }) {
         </div>
       </div>
 
-      {/* Tabs Section */}
       <div className="mb-12">
         <Tabs defaultValue="description" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full justify-start border-b rounded-none bg-transparent h-auto p-0 mb-0">
@@ -690,7 +687,6 @@ export default function ProductDetailPage({ params: paramsPromise }) {
         </Tabs>
       </div>
 
-      {/* Similar Products Section */}
       <div className="mb-12">
         <h2 className="text-2xl font-bold mb-6">Similar Products</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

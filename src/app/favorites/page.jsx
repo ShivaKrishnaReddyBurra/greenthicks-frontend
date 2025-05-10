@@ -92,10 +92,6 @@ export default function FavoritesPage() {
                 <AlertDialogAction
                   onClick={() => {
                     clearFavorites()
-                    toast({
-                      title: "Favorites cleared",
-                      description: "All items have been removed from your favorites list.",
-                    })
                   }}
                   className="bg-red-500 hover:bg-red-600"
                 >
@@ -109,7 +105,7 @@ export default function FavoritesPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {favorites.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          <ProductCard key={product.globalId} product={product} />
         ))}
       </div>
     </div>

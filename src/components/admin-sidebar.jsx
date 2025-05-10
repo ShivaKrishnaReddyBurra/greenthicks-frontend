@@ -53,12 +53,15 @@ export default function AdminSidebar() {
     { name: "Cancellations", href: "/admin/cancellations", icon: AlertTriangle },
     { name: "Returns", href: "/admin/returns", icon: RefreshCw },
     { name: "Users", href: "/admin/users", icon: Users },
+    {name: "Coupons", href: "/admin/coupons", icon: ShoppingBagIcon},
+    {name:"Service-Areas", href: "/admin/service-areas", icon: ShoppingBagIcon},
     { name: "Sellers", href: "/admin/sellers", icon: Store },
     { name: "Static Pages", href: "/admin/pages", icon: FileEdit },
     { name: "Analytics", href: "/admin/analytics", icon: BarChart },
     { name: "Invoices", href: "/admin/invoices", icon: FileText },
     { name: "Notifications", href: "/admin/notifications", icon: Bell },
     { name: "Settings", href: "/admin/settings", icon: Settings },
+    
   ]
 
   const logoSrc = mounted && theme === "dark" ? logo.src : logo.src

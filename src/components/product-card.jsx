@@ -1,6 +1,7 @@
 "use client";
-import React from "react";
+
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -9,14 +10,27 @@ import { ShoppingCart, Heart, Plus, Minus } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { useFavorites } from "@/lib/favorites-context";
 import { useToast } from "@/hooks/use-toast";
+import { getAuthToken } from "@/lib/auth-utils";
 
 export function ProductCard({ product }) {
   const { addToCart } = useCart();
   const { addToFavorites, removeFromFavorites, isFavorite } = useFavorites();
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
+  const router = useRouter();
 
   const handleAddToCart = () => {
+    const token = getAuthToken();
+    if (!token) {
+      const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
+      router.push(`/login?returnUrl=${returnUrl}`);
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to add items to your cart.",
+        variant: "destructive",
+      });
+      return;
+    }
     addToCart(product, quantity);
     toast({
       title: "Added to cart",
@@ -26,18 +40,21 @@ export function ProductCard({ product }) {
   };
 
   const toggleFavorite = () => {
+    const token = getAuthToken();
+    if (!token) {
+      const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
+      router.push(`/login?returnUrl=${returnUrl}`);
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to manage your favorites.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (isFavorite(product.globalId)) {
       removeFromFavorites(product.globalId);
-      toast({
-        title: "Removed from favorites",
-        description: `${product.name} has been removed from your favorites.`,
-      });
     } else {
       addToFavorites(product);
-      toast({
-        title: "Added to favorites",
-        description: `${product.name} has been added to your favorites.`,
-      });
     }
   };
 
