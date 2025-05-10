@@ -228,7 +228,7 @@ export default function OrderTrackingPage() {
                     >
                       <Package className="h-4 w-4" />
                     </div>
-                    <p className="text-sm mt-2 font-medium">Order Placed</p>
+                    <p className="text-sm mt-2 font-medium text-center">Order Placed</p>
                   </div>
                   <div className="flex flex-col items-center">
                     <div
@@ -238,7 +238,7 @@ export default function OrderTrackingPage() {
                     >
                       <Package className="h-4 w-4" />
                     </div>
-                    <p className="text-sm mt-2 font-medium">Processing</p>
+                    <p className="text-sm mt-2 font-medium text-center">Processing</p>
                   </div>
                   <div className="flex flex-col items-center">
                     <div
@@ -248,7 +248,7 @@ export default function OrderTrackingPage() {
                     >
                       <Truck className="h-4 w-4" />
                     </div>
-                    <p className="text-sm mt-2 font-medium">Out for Delivery</p>
+                    <p className="text-sm mt-2 font-medium text-center">Out for Delivery</p>
                   </div>
                   <div className="flex flex-col items-center">
                     <div

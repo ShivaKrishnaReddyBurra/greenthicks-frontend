@@ -83,7 +83,7 @@ export default function CartPage() {
 
   if (cart.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
+      <div className="container mx-auto px-6 py-16 text-center">
         <div className="max-w-md mx-auto">
           <ShoppingBag className="h-16 w-16 mx-auto mb-6 text-muted-foreground" />
           <h1 className="text-2xl font-bold mb-2">Your cart is empty</h1>
@@ -98,14 +98,14 @@ export default function CartPage() {
 
   return (
     <div className="leaf-pattern-3">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-6 py-8">
         <h1 className="text-3xl font-bold mb-8">Your Cart</h1>
 
         <div className="grid md:grid-cols-3 gap-8">
           <div className="md:col-span-2">
             <div className="bg-card rounded-lg border overflow-hidden">
               <div className="p-4 bg-muted/50">
-                <div className="grid grid-cols-12 gap-4">
+                <div className="hidden sm:grid sm:grid-cols-12 gap-4">
                   <div className="col-span-6 font-medium">Product</div>
                   <div className="col-span-2 font-medium text-center">Price</div>
                   <div className="col-span-2 font-medium text-center">Quantity</div>
@@ -115,10 +115,10 @@ export default function CartPage() {
 
               <div className="divide-y">
                 {cart.map((item) => (
-                  <div key={item.productId} className="p-4">
-                    <div className="grid grid-cols-12 gap-4 items-center">
-                      <div className="col-span-6">
-                        <div className="flex items-center gap-3">
+                  <div key={item.productId} className="p-4 sm:p-6">
+                    <div className="flex flex-col gap-4 sm:grid sm:grid-cols-12 sm:items-center">
+                      <div className="sm:col-span-6">
+                        <div className="flex items-center gap-4">
                           <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted">
                             <Image
                               src={item.image || "/placeholder.svg?height=64&width=64"}
@@ -129,43 +129,48 @@ export default function CartPage() {
                           </div>
                           <div>
                             <h3 className="font-medium">{item.name}</h3>
+                            <div className="text-sm text-muted-foreground sm:hidden">
+                              Price: ₹{item.price.toFixed(2)}
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="col-span-2 text-center">₹{item.price.toFixed(2)}</div>
+                      <div className="hidden sm:block sm:col-span-2 text-center">₹{item.price.toFixed(2)}</div>
 
-                      <div className="col-span-2 flex justify-center">
+                      <div className="flex justify-between items-center sm:col-span-2 sm:justify-center">
                         <div className="flex items-center">
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8 rounded-r-none"
+                            className="h-9 w-9 rounded-r-none"
                             onClick={() => handleQuantityChange(item.productId, item.quantity - 1)}
                           >
-                            <Minus className="h-3 w-3" />
+                            <Minus className="h-4 w-4" />
                           </Button>
-                          <div className="h-8 px-3 flex items-center justify-center border-y">{item.quantity}</div>
+                          <div className="h-9 w-12 flex items-center justify-center border-y text-center">
+                            {item.quantity}
+                          </div>
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8 rounded-l-none"
+                            className="h-9 w-9 rounded-l-none"
                             onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}
                           >
-                            <Plus className="h-3 w-3" />
+                            <Plus className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
 
-                      <div className="col-span-2 text-right flex items-center justify-end gap-2">
-                        <span>₹{(item.price * item.quantity).toFixed(2)}</span>
+                      <div className="flex items-center justify-between sm:col-span-2 sm:justify-end gap-4 sm:gap-3">
+                        <span className="text-base font-medium">₹{(item.price * item.quantity).toFixed(2)}</span>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          className="h-10 w-10 text-muted-foreground hover:text-destructive"
                           onClick={() => removeFromCart(item.productId)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-5 w-5" />
                         </Button>
                       </div>
                     </div>
@@ -202,7 +207,7 @@ export default function CartPage() {
                 )}
 
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Shipping</span>
+                  <span class indeterminate="text-muted-foreground">Shipping</span>
                   <span>{shipping === 0 ? "Free" : `₹${shipping.toFixed(2)}`}</span>
                 </div>
 

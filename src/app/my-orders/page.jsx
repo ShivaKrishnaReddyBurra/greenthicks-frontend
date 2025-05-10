@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Package, Truck, CheckCircle, Clock, Search, ShoppingBag, XCircle } from "lucide-react";
@@ -143,6 +142,15 @@ export default function MyOrdersPage() {
     return true;
   });
 
+  const statusOptions = [
+    { value: "all", label: "All Orders" },
+    { value: "pending", label: "Order Placed" },
+    { value: "assigned", label: "Processing" },
+    { value: "out-for-delivery", label: "Out for Delivery" },
+    { value: "delivered", label: "Delivered" },
+    { value: "cancelled", label: "Cancelled" },
+  ];
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[60vh]">
@@ -172,16 +180,39 @@ export default function MyOrdersPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">My Orders</h1>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
-          <TabsList>
-            <TabsTrigger value="all">All Orders</TabsTrigger>
-            <TabsTrigger value="pending">Order Placed</TabsTrigger>
-            <TabsTrigger value="assigned">Processing</TabsTrigger>
-            <TabsTrigger value="out-for-delivery">Out for Delivery</TabsTrigger>
-            <TabsTrigger value="delivered">Delivered</TabsTrigger>
-            <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Desktop: State Bar */}
+        <div className="hidden md:flex w-full md:w-auto">
+          <div className="flex w-full border rounded-md overflow-hidden">
+            {statusOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setActiveTab(option.value)}
+                className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                  activeTab === option.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background hover:bg-muted"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Mobile: Select Dropdown */}
+        <div className="md:hidden w-full">
+          <select
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+            className="w-full px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {statusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        {/* Search Bar */}
         <div className="relative w-full md:w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -263,13 +294,13 @@ export default function MyOrdersPage() {
                         <span className="flex items-center gap-1">
                           {getStatusIcon(order.status)}
                           <span className="text-sm capitalize">
-                            {status === "pending"
+                            {order.status === "pending"
                               ? "Order Placed"
-                              : status === "assigned"
+                              : order.status === "assigned"
                               ? "Processing"
-                              : status === "out-for-delivery"
+                              : order.status === "out-for-delivery"
                               ? "Out for Delivery"
-                              : status}
+                              : order.status}
                           </span>
                         </span>
                       </div>

@@ -137,7 +137,7 @@ export default function AdminProducts() {
     const reader = new FileReader()
     reader.onload = async (event) => {
       const text = event.target.result
-      const rows = text.split("\n").slice(1) // Skip header
+      const rows = text.split("\n").slice(1)
       const importedProducts = rows
         .filter((row) => row.trim())
         .map((row) => {
@@ -150,22 +150,17 @@ export default function AdminProducts() {
             stock: parseInt(stock),
           }
         })
-
-      // Note: You'll need a backend endpoint to handle imports (e.g., POST /api/products/import)
-      // For now, we'll just log the imported data
       console.log("Imported products:", importedProducts)
       alert("Import functionality requires a backend endpoint. Check console for imported data.")
     }
     reader.readAsText(file)
   }
 
-  // Derive status from stock
   const productsWithStatus = products.map((product) => ({
     ...product,
     status: product.stock === 0 ? "Out of Stock" : product.stock <= 10 ? "Low Stock" : "In Stock",
   }))
 
-  // Apply filters and sorting
   const filteredProducts = productsWithStatus
     .filter(
       (product) =>
@@ -184,7 +179,6 @@ export default function AdminProducts() {
       }
     })
 
-  // Pagination logic
   const indexOfLastProduct = currentPage * productsPerPage
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage
   const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct)
@@ -194,7 +188,6 @@ export default function AdminProducts() {
     setCurrentPage(page)
   }
 
-  // Get unique categories for filter
   const categories = ["All", ...new Set(products.map((product) => product.category))]
   const statuses = ["All", "In Stock", "Low Stock", "Out of Stock"]
 
@@ -215,34 +208,34 @@ export default function AdminProducts() {
   }
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">Products</h1>
-        <div className="mt-4 md:mt-0 flex flex-wrap gap-2">
+    <div className="p-4 sm:p-6 max-w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">Products</h1>
+        <div className="flex flex-wrap gap-2">
           <Link
             href="/admin/products/add"
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            className="flex items-center px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
+            <Plus className="h-4 w-4 mr-1" />
+            Add
           </Link>
           <button
-            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={selectedProducts.length === 0}
             onClick={handleDeleteSelected}
           >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete Selected
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
           </button>
           <button
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             onClick={handleExport}
           >
-            <Download className="h-4 w-4 mr-2" />
+            <Download className="h-4 w-4 mr-1" />
             Export
           </button>
-          <label className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors cursor-pointer">
-            <Upload className="h-4 w-4 mr-2" />
+          <label className="flex items-center px-3 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors cursor-pointer">
+            <Upload className="h-4 w-4 mr-1" />
             Import
             <input
               type="file"
@@ -254,9 +247,8 @@ export default function AdminProducts() {
         </div>
       </div>
 
-      {/* Filters and Search */}
       <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />
@@ -264,7 +256,7 @@ export default function AdminProducts() {
             <input
               type="text"
               placeholder="Search products..."
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
               value={searchTerm}
               onChange={handleSearch}
             />
@@ -273,7 +265,7 @@ export default function AdminProducts() {
           <div className="flex items-center">
             <Filter className="h-5 w-5 text-gray-400 mr-2" />
             <select
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3 text-sm"
               value={filterCategory}
               onChange={handleFilterCategory}
             >
@@ -288,7 +280,7 @@ export default function AdminProducts() {
           <div className="flex items-center">
             <AlertTriangle className="h-5 w-5 text-gray-400 mr-2" />
             <select
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3 text-sm"
               value={filterStatus}
               onChange={handleFilterStatus}
             >
@@ -301,28 +293,25 @@ export default function AdminProducts() {
           </div>
 
           <div className="text-right text-sm text-gray-500 dark:text-gray-400 flex items-center justify-end">
-            {filteredProducts.length} products found
+            {filteredProducts.length} products
           </div>
         </div>
       </div>
 
-      {/* Products Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className="hidden lg:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectAll}
-                      onChange={handleSelectAll}
-                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                    />
-                  </div>
+                <th className="px-4 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={handleSelectAll}
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  />
                 </th>
-                <th className="px-6 py-3 text-left">
+                <th className="px-4 py-3 text-left">
                   <div className="flex items-center">
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Product
@@ -340,7 +329,7 @@ export default function AdminProducts() {
                     </button>
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left">
+                <th className="px-4 py-3 text-left">
                   <div className="flex items-center">
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Category
@@ -358,7 +347,7 @@ export default function AdminProducts() {
                     </button>
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left">
+                <th className="px-4 py-3 text-left">
                   <div className="flex items-center">
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Price
@@ -376,7 +365,7 @@ export default function AdminProducts() {
                     </button>
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left">
+                <th className="px-4 py-3 text-left">
                   <div className="flex items-center">
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Stock
@@ -394,12 +383,12 @@ export default function AdminProducts() {
                     </button>
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left">
+                <th className="px-4 py-3 text-left">
                   <span className="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Status
                   </span>
                 </th>
-                <th className="px-6 py-3 text-right">
+                <th className="px-4 py-3 text-right">
                   <span className="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Actions
                   </span>
@@ -409,7 +398,7 @@ export default function AdminProducts() {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {currentProducts.map((product) => (
                 <tr key={product.globalId} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4">
                     <input
                       type="checkbox"
                       checked={selectedProducts.includes(product.globalId)}
@@ -417,13 +406,12 @@ export default function AdminProducts() {
                       className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4">
                     <div className="flex items-center">
                       <div className="h-10 w-10 flex-shrink-0">
                         <img
                           className="h-10 w-10 rounded-md object-cover"
                           src={product.images[0] || "/placeholder.svg"}
-
                           alt={product.name}
                         />
                       </div>
@@ -433,16 +421,16 @@ export default function AdminProducts() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4">
                     <div className="text-sm text-gray-900 dark:text-white">{product.category}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4">
                     <div className="text-sm text-gray-900 dark:text-white">{formatCurrency(product.price)}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4">
                     <div className="text-sm text-gray-900 dark:text-white">{product.stock}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4">
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         product.status === "In Stock"
@@ -455,7 +443,7 @@ export default function AdminProducts() {
                       {product.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 py-4 text-right">
                     <div className="flex justify-end space-x-2">
                       <Link
                         href={`/admin/products/${product.globalId}`}
@@ -464,9 +452,7 @@ export default function AdminProducts() {
                         <Eye size={18} />
                       </Link>
                       <Link
-
                         href={`/admin/products/edit/${product.globalId}`}
-
                         className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
                       >
                         <Edit size={18} />
@@ -484,9 +470,85 @@ export default function AdminProducts() {
             </tbody>
           </table>
         </div>
+
+        <div className="lg:hidden space-y-4 p-4">
+          {currentProducts.map((product) => (
+            <div
+              key={product.globalId}
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedProducts.includes(product.globalId)}
+                    onChange={() => handleSelectProduct(product.globalId)}
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  />
+                  <img
+                    className="h-12 w-12 rounded-md object-cover"
+                    src={product.images[0] || "/placeholder.svg"}
+                    alt={product.name}
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">ID: {product.globalId}</div>
+                  </div>
+                </div>
+                <div className="flex space-x-2">
+                  <Link
+                    href={`/admin/products/${product.globalId}`}
+                    className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                  >
+                    <Eye size={16} />
+                  </Link>
+                  <Link
+                    href={`/admin/products/edit/${product.globalId}`}
+                    className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                  >
+                    <Edit size={16} />
+                  </Link>
+                  <button
+                    onClick={() => handleDeleteProduct(product.globalId, product.name)}
+                    className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-gray-500 dark:text-gray-400">Category:</span>{" "}
+                  <span className="text-gray-900 dark:text-white">{product.category}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 dark:text-gray-400">Price:</span>{" "}
+                  <span className="text-gray-900 dark:text-white">{formatCurrency(product.price)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 dark:text-gray-400">Stock:</span>{" "}
+                  <span className="text-gray-900 dark:text-white">{product.stock}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 dark:text-gray-400">Status:</span>{" "}
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      product.status === "In Stock"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                        : product.status === "Low Stock"
+                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                    }`}
+                  >
+                    {product.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Pagination */}
       <div className="bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6 mt-4 rounded-lg shadow">
         <div className="flex-1 flex justify-between sm:hidden">
           <button
@@ -528,7 +590,7 @@ export default function AdminProducts() {
                   onClick={() => handlePageChange(page)}
                   className={`relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium ${
                     currentPage === page
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-green-600 text-white"
                       : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
                   }`}
                 >

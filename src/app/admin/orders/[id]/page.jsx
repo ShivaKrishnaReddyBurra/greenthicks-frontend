@@ -43,7 +43,6 @@ export default function OrderDetails() {
         setOrder(orderData)
 
         if (print) {
-          // Open invoice PDF in a new window for printing
           window.open(`/api/invoices/${params.id}`, '_blank')
         }
       } catch (err) {
@@ -118,17 +117,17 @@ export default function OrderDetails() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6">
         <div className="max-w-6xl mx-auto">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 sm:w-1/4 mb-6"></div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
               <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
               <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
               <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
             </div>
-            <div className="h-60 bg-gray-200 dark:bg-gray-700 rounded mt-6"></div>
-            <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded mt-6"></div>
+            <div className="h-60 bg-gray-200 dark:bg-gray-700 rounded mt-4 sm:mt-6"></div>
+            <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded mt-4 sm:mt-6"></div>
           </div>
         </div>
       </div>
@@ -137,19 +136,19 @@ export default function OrderDetails() {
 
   if (error || !order) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6">
         <div className="max-w-6xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white mb-4">
             {error || "Order Not Found"}
           </h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
+          <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm sm:text-base">
             {error
               ? "An error occurred while fetching the order."
               : "The order you are looking for does not exist or has been removed."}
           </p>
           <Link
             href="/admin/orders"
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            className="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm sm:text-base"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Orders
@@ -182,35 +181,35 @@ export default function OrderDetails() {
   ]
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6">
+          <div className="flex items-center mb-4 sm:mb-0">
             <Link
               href="/admin/orders"
-              className="mr-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="mr-3 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
-              <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-300" />
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Order #{order.id}</h1>
-            <span className={`ml-4 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">Order #{order.id}</h1>
+            <span className={`ml-3 px-2 py-1 rounded-full text-xs sm:text-sm font-medium ${getStatusColor(order.status)}`}>
               {order.status}
             </span>
           </div>
-          <div className="flex space-x-3">
+          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
             <Link
               href={`/admin/invoices/${order.globalId}`}
-              className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+              className="flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm sm:text-base w-full sm:w-auto justify-center"
             >
               <FileText className="h-4 w-4 mr-2" />
               View Invoice
             </Link>
             {isAdmin ? (
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value)}
-                  className="border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3"
+                  className="border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3 text-sm sm:text-base w-full sm:w-auto"
                 >
                   <option value="">Select Status</option>
                   <option value="processing">Processing</option>
@@ -221,7 +220,7 @@ export default function OrderDetails() {
                 <button
                   onClick={updateOrderStatus}
                   disabled={!newStatus}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+                  className="flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 text-sm sm:text-base w-full sm:w-auto justify-center"
                 >
                   <Truck className="h-4 w-4 mr-2" />
                   Update Status
@@ -231,7 +230,7 @@ export default function OrderDetails() {
               ['processing', 'pending'].includes(order.status) && (
                 <button
                   onClick={handleCancelOrder}
-                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                  className="flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm sm:text-base w-full sm:w-auto justify-center"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Cancel Order
@@ -241,10 +240,10 @@ export default function OrderDetails() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Order Summary</h2>
-            <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6 mb-4 sm:mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-4">Order Summary</h2>
+            <div className="space-y-3 text-sm sm:text-base">
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Order Date:</span>
                 <span className="font-medium text-gray-800 dark:text-white flex items-center">
@@ -290,35 +289,35 @@ export default function OrderDetails() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Customer Information</h2>
-            <div className="space-y-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-4">Customer Information</h2>
+            <div className="space-y-4 text-sm sm:text-base">
               <div className="flex items-start">
-                <User className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
+                <User className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 dark:text-gray-400 mr-2 sm:mr-3 mt-0.5" />
                 <div>
                   <h3 className="font-medium text-gray-800 dark:text-white">
                     {order.shippingAddress.firstName} {order.shippingAddress.lastName}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Customer</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Customer</p>
                 </div>
               </div>
               <div className="flex items-start">
-                <Mail className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
+                <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 dark:text-gray-400 mr-2 sm:mr-3 mt-0.5" />
                 <div>
                   <h3 className="font-medium text-gray-800 dark:text-white">{user?.email || "N/A"}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Email</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Shipping Information</h2>
-            <div className="flex items-start">
-              <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-4">Shipping Information</h2>
+            <div className="flex items-start text-sm sm:text-base">
+              <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 dark:text-gray-400 mr-2 sm:mr-3 mt-0.5" />
               <div>
                 <h3 className="font-medium text-gray-800 dark:text-white">Delivery Address</h3>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-gray-600 dark:text-gray-400 mt-1 text-xs sm:text-sm">
                   {order.shippingAddress.address}, {order.shippingAddress.city}, {order.shippingAddress.state}, {order.shippingAddress.zipCode}
                 </p>
               </div>
@@ -326,28 +325,28 @@ export default function OrderDetails() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
-          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Order Items</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-4 sm:mb-6">
+          <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">Order Items</h2>
           </div>
           <div className="divide-y divide-gray-100 dark:divide-gray-700">
             {order.items.map((item) => (
-              <div key={item.productId} className="p-6 flex items-center">
-                <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
+              <div key={item.productId} className="p-4 sm:p-6 flex items-center">
+                <div className="h-16 w-16 sm:h-20 sm:w-20 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
                   <img
                     src={item.image || "/placeholder.svg"}
                     alt={item.name}
                     className="h-full w-full object-cover object-center"
                   />
                 </div>
-                <div className="ml-6 flex-1">
-                  <div className="flex justify-between">
-                    <h3 className="text-base font-medium text-gray-800 dark:text-white">{item.name}</h3>
-                    <p className="ml-4 text-base font-medium text-gray-800 dark:text-white">
+                <div className="ml-4 sm:ml-6 flex-1">
+                  <div className="flex flex-col sm:flex-row justify-between">
+                    <h3 className="text-sm sm:text-base font-medium text-gray-800 dark:text-white">{item.name}</h3>
+                    <p className="mt-1 sm:mt-0 text-sm sm:text-base font-medium text-gray-800 dark:text-white">
                       {formatCurrency(item.price * item.quantity)}
                     </p>
                   </div>
-                  <div className="mt-1 flex text-sm">
+                  <div className="mt-1 flex text-xs sm:text-sm">
                     <p className="text-gray-600 dark:text-gray-400">
                       {formatCurrency(item.price)} x {item.quantity}
                     </p>
@@ -359,13 +358,13 @@ export default function OrderDetails() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Order Timeline</h2>
+          <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">Order Timeline</h2>
           </div>
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <ol className="relative border-l border-gray-200 dark:border-gray-700">
               {timeline.map((event, index) => (
-                <li key={index} className="mb-10 ml-6">
+                <li key={index} className="mb-8 ml-6">
                   <span className="absolute flex items-center justify-center w-6 h-6 bg-green-100 rounded-full -left-3 ring-8 ring-white dark:ring-gray-800 dark:bg-green-900">
                     {event.status === "Order Placed" && (
                       <Package className="w-3 h-3 text-green-800 dark:text-green-300" />
@@ -382,13 +381,13 @@ export default function OrderDetails() {
                       <XCircle className="w-3 h-3 text-green-800 dark:text-green-300" />
                     )}
                   </span>
-                  <h3 className="flex items-center mb-1 text-lg font-semibold text-gray-800 dark:text-white">
+                  <h3 className="flex items-center mb-1 text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
                     {event.status}
                   </h3>
-                  <time className="block mb-2 text-sm font-normal leading-none text-gray-500 dark:text-gray-400">
+                  <time className="block mb-2 text-xs sm:text-sm font-normal leading-none text-gray-500 dark:text-gray-400">
                     {formatDate(event.date)}
                   </time>
-                  <p className="text-base font-normal text-gray-600 dark:text-gray-400">{event.description}</p>
+                  <p className="text-sm sm:text-base font-normal text-gray-600 dark:text-gray-400">{event.description}</p>
                 </li>
               ))}
             </ol>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, Truck, CheckCircle, Clock, AlertTriangle, Package, XCircle } from "lucide-react";
+import { MapPin, Truck, CheckCircle, AlertTriangle, Package, XCircle } from "lucide-react";
 import { getDeliveryOrders, assignDeliveryBoy, getDeliveryBoys, getDeliveryBoyById } from "@/lib/api";
 import { getAuthToken } from "@/lib/auth-utils";
 import { useToast } from "@/hooks/use-toast";
@@ -29,7 +29,6 @@ export default function DeliveryManagement() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch delivery orders
         const ordersData = await getDeliveryOrders(currentPage, 10);
         const mappedOrders = await Promise.all(
           ordersData.orders.map(async (order) => {
@@ -57,7 +56,6 @@ export default function DeliveryManagement() {
         setOrders(mappedOrders);
         setTotalPages(ordersData.totalPages || 1);
 
-        // Fetch delivery boys
         const deliveryBoys = await getDeliveryBoys();
         const mappedPartners = deliveryBoys.map((user) => ({
           id: `DEL-${user.globalId}`,
@@ -136,94 +134,76 @@ export default function DeliveryManagement() {
       case "pending":
         return (
           <span className="flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-            <Package size={14} className="mr-1" />
+            <Package size={12} className="mr-1" />
             Order Placed
           </span>
         );
       case "assigned":
         return (
           <span className="flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-            <Package size={14} className="mr-1" />
+            <Package size={12} className="mr-1" />
             Processing
           </span>
         );
       case "out-for-delivery":
         return (
           <span className="flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
-            <Truck size={14} className="mr-1" />
+            <Truck size={12} className="mr-1" />
             Out for Delivery
           </span>
         );
       case "delivered":
         return (
           <span className="flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-            <CheckCircle size={14} className="mr-1" />
+            <CheckCircle size={12} className="mr-1" />
             Delivered
           </span>
         );
       case "cancelled":
         return (
           <span className="flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">
-            <XCircle size={14} className="mr-1" />
+            <XCircle size={12} className="mr-1" />
             Cancelled
           </span>
         );
       default:
         return (
           <span className="flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
-            <AlertTriangle size={14} className="mr-1" />
+            <AlertTriangle size={12} className="mr-1" />
             Unknown
           </span>
         );
     }
   };
 
-  const getPartnerById = async (id) => {
-    if (!id) return null;
-    const globalId = parseInt(id.replace("DEL-", ""));
-    try {
-      const deliveryBoy = await getDeliveryBoyById(globalId);
-      return {
-        id: `DEL-${deliveryBoy.globalId}`,
-        name: deliveryBoy.name,
-        location: deliveryBoy.address?.city || "Unknown",
-        status: "active",
-        ordersDelivered: deliveryBoy.ordersDelivered || 0,
-      };
-    } catch (error) {
-      console.warn(`Failed to fetch partner ${id}:`, error);
-      return null;
-    }
-  };
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Delivery Management</h1>
+    <div className="container mx-auto px-3 py-4 max-w-3xl">
+      <h1 className="text-xl font-bold mb-4">Delivery Management</h1>
 
       {/* Delivery Partners Summary */}
-      <div className="bg-card rounded-lg border p-6 mb-6">
-        <h2 className="text-xl font-bold mb-4">Delivery Partners</h2>
+      <div className="bg-card rounded-lg border p-3 mb-4">
+        <h2 className="text-base font-bold mb-3">Delivery Partners</h2>
         {loading ? (
           <div className="animate-pulse">
-            <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded w-full mb-4"></div>
+            <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
           </div>
         ) : partners.length === 0 ? (
-          <p className="text-muted-foreground">No delivery partners available.</p>
+          <p className="text-muted-foreground text-xs">No delivery partners available.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-3">
             {Object.entries(
               partners.reduce((acc, partner) => {
                 acc[partner.location] = (acc[partner.location] || 0) + 1;
                 return acc;
               }, {})
             ).map(([location, count]) => (
-              <div key={location} className="bg-muted/30 rounded-lg p-4 flex items-center">
-                <div className="bg-primary/10 p-3 rounded-full mr-4">
-                  <MapPin size={24} className="text-primary" />
+              <div key={location} className="bg-muted/30 rounded-lg p-3 flex items-center">
+                <div className="bg-primary/10 p-2 rounded-full mr-3">
+                  <MapPin size={16} className="text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{location}</p>
-                  <p className="text-2xl font-bold">{count} Partners</p>
+                  <p className="text-xs text-muted-foreground">{location}</p>
+                  <p className="text-lg font-bold">{count} Partners</p>
                 </div>
               </div>
             ))}
@@ -231,189 +211,202 @@ export default function DeliveryManagement() {
         )}
       </div>
 
-      {/* Orders Table */}
-      <div className="bg-card rounded-lg border overflow-hidden mb-6">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-bold">Delivery Orders</h2>
+      {/* Orders List */}
+      <div className="bg-card rounded-lg border mb-4">
+        <div className="p-3 border-b">
+          <h2 className="text-base font-bold">Delivery Orders</h2>
         </div>
 
         {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading orders...</p>
+          <div className="p-4 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-3 text-muted-foreground text-xs">Loading orders...</p>
           </div>
         ) : orders.length === 0 ? (
-          <div className="p-8 text-center">
-            <p className="text-muted-foreground">No orders found.</p>
+          <div className="p-4 text-center">
+            <p className="text-muted-foreground text-xs">No orders found.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-muted/30">
-                  <th className="text-left py-3 px-4">Order ID</th>
-                  <th className="text-left py-3 px-4">Customer</th>
-                  <th className="text-left py-3 px-4">Address</th>
-                  <th className="text-left py-3 px-4">Items</th>
-                  <th className="text-left py-3 px-4">Total</th>
-                  <th className="text-left py-3 px-4">Status</th>
-                  <th className="text-left py-3 px-4">Delivery Partner</th>
-                  <th className="text-left py-3 px-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} className="border-t hover:bg-muted/30">
-                    <td className="py-3 px-4">{order.id}</td>
-                    <td className="py-3 px-4">{order.customer}</td>
-                    <td className="py-3 px-4">{order.address}</td>
-                    <td className="py-3 px-4">{order.items}</td>
-                    <td className="py-3 px-4">{formatCurrency(order.total)}</td>
-                    <td className="py-3 px-4">{getStatusBadge(order.status)}</td>
-                    <td className="py-3 px-4">
-                      {order.assignedTo ? (
-                        <div>
-                          <p>{partners.find((p) => p.id === order.assignedTo)?.name || "Loading..."}</p>
-                          <p className="text-xs text-muted-foreground">{order.assignedTo}</p>
-                        </div>
-                      ) : (
-                        <span className="text-blue-500">Not assigned</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      {order.status === "pending" || order.status === "assigned" ? (
-                        <Button
-                          variant="link"
-                          onClick={() => openAssignModal(order)}
-                          className="text-primary p-0 h-auto"
-                        >
-                          {order.assignedTo ? "Reassign" : "Assign"}
-                        </Button>
-                      ) : (
-                        <Link
-                          href={`/admin/delivery/orders/${order.id}`}
-                          className="text-primary hover:underline"
-                        >
-                          View
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="divide-y">
+            {orders.map((order) => (
+              <div key={order.id} className="p-3 space-y-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs font-semibold">Order ID</p>
+                    <p className="text-sm">{order.id}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-semibold">Status</p>
+                    {getStatusBadge(order.status)}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold">Customer</p>
+                  <p className="text-sm">{order.customer}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold">Address</p>
+                  <p className="text-sm truncate">{order.address}</p>
+                </div>
+                <div className="flex justify-between">
+                  <div>
+                    <p className="text-xs font-semibold">Items</p>
+                    <p className="text-sm">{order.items}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-semibold">Total</p>
+                    <p className="text-sm">{formatCurrency(order.total)}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold">Delivery Partner</p>
+                  {order.assignedTo ? (
+                    <div>
+                      <p className="text-sm">{partners.find((p) => p.id === order.assignedTo)?.name || "Loading..."}</p>
+                      <p className="text-xs text-muted-foreground">{order.assignedTo}</p>
+                    </div>
+                  ) : (
+                    <span className="text-blue-500 text-sm">Not assigned</span>
+                  )}
+                </div>
+                <div className="pt-2">
+                  {order.status === "pending" || order.status === "assigned" ? (
+                    <Button
+                      variant="link"
+                      onClick={() => openAssignModal(order)}
+                      className="text-primary p-0 h-auto text-sm"
+                    >
+                      {order.assignedTo ? "Reassign" : "Assign"}
+                    </Button>
+                  ) : (
+                    <Link
+                      href={`/admin/delivery/orders/${order.id}`}
+                      className="text-primary hover:underline text-sm"
+                    >
+                      View
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
         {!loading && totalPages > 1 && (
-          <div className="p-4 flex justify-between items-center border-t">
-            <Button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              variant="outline"
-            >
-              Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages}
-            </span>
-            <Button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              variant="outline"
-            >
-              Next
-            </Button>
+          <div className="p-3 flex flex-col gap-3 border-t">
+            <div className="flex justify-between items-center">
+              <Button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                variant="outline"
+                className="text-xs px-3 py-1"
+              >
+                Previous
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                variant="outline"
+                className="text-xs px-3 py-1"
+              >
+                Next
+              </Button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Delivery Partners Table */}
-      <div className="bg-card rounded-lg border overflow-hidden">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-bold">Delivery Partners</h2>
+      {/* Delivery Partners List */}
+      <div className="bg-card rounded-lg border">
+        <div className="p-3 border-b">
+          <h2 className="text-base font-bold">Delivery Partners</h2>
         </div>
 
         {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading partners...</p>
+          <div className="p-4 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-3 text-muted-foreground text-xs">Loading partners...</p>
           </div>
         ) : partners.length === 0 ? (
-          <div className="p-8 text-center">
-            <p className="text-muted-foreground">No delivery partners found.</p>
+          <div className="p-4 text-center">
+            <p className="text-muted-foreground text-xs">No delivery partners found.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-muted/30">
-                  <th className="text-left py-3 px-4">ID</th>
-                  <th className="text-left py-3 px-4">Name</th>
-                  <th className="text-left py-3 px-4">Location</th>
-                  <th className="text-left py-3 px-4">Status</th>
-                  <th className="text-left py-3 px-4">Orders Delivered</th>
-                  <th className="text-left py-3 px-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {partners.map((partner) => (
-                  <tr key={partner.id} className="border-t hover:bg-muted/30">
-                    <td className="py-3 px-4">{partner.id}</td>
-                    <td className="py-3 px-4">{partner.name}</td>
-                    <td className="py-3 px-4">{partner.location}</td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                        Active
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">{partner.ordersDelivered}</td>
-                    <td className="py-3 px-4">
-                      <Link
-                        href={`/admin/delivery/partners/${partner.id}`}
-                        className="text-primary hover:underline"
-                      >
-                        View Details
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="divide-y">
+            {partners.map((partner) => (
+              <div key={partner.id} className="p-3 space-y-2">
+                <div className="flex justify-between">
+                  <div>
+                    <p className="text-xs font-semibold">ID</p>
+                    <p className="text-sm">{partner.id}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-semibold">Status</p>
+                    <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                      Active
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold">Name</p>
+                  <p className="text-sm">{partner.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold">Location</p>
+                  <p className="text-sm">{partner.location}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold">Orders Delivered</p>
+                  <p className="text-sm">{partner.ordersDelivered}</p>
+                </div>
+                <div className="pt-2">
+                  <Link
+                    href={`/admin/delivery/partners/${partner.id}`}
+                    className="text-primary hover:underline text-sm"
+                  >
+                    View Details
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
       {/* Assign Delivery Partner Modal */}
       {assignModalOpen && selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card rounded-lg border p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">Assign Delivery Partner</h3>
-            <p className="mb-2">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3">
+          <div className="bg-card rounded-lg border p-3 w-full max-w-[90vw] max-h-[75vh] overflow-y-auto">
+            <h3 className="text-base font-bold mb-3">Assign Delivery Partner</h3>
+            <p className="mb-2 text-xs">
               <span className="font-semibold">Order:</span> {selectedOrder.id}
             </p>
-            <p className="mb-4">
+            <p className="mb-2 text-xs">
               <span className="font-semibold">Customer:</span> {selectedOrder.customer}
             </p>
-            <p className="mb-4">
-              <span className="font-semibold">Delivery Address:</span> {selectedOrder.address}
+            <p className="mb-3 text-xs">
+              <span className="font-semibold">Delivery Address:</span>{" "}
+              <span className="inline-block max-w-[80%]">{selectedOrder.address}</span>
             </p>
 
-            <div className="mb-4">
-              <h4 className="font-semibold mb-2">Select a delivery partner:</h4>
+            <div className="mb-3">
+              <h4 className="font-semibold mb-2 text-xs">Select a delivery partner:</h4>
               {partners.length === 0 ? (
-                <p className="text-muted-foreground">No delivery partners available.</p>
+                <p className="text-muted-foreground text-xs">No delivery partners available.</p>
               ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+                <div className="space-y-2 max-h-48 overflow-y-auto">
                   {partners.map((partner) => (
                     <Button
                       key={partner.id}
                       onClick={() => assignDeliveryPartner(partner.id)}
                       variant="outline"
-                      className="w-full text-left p-3 flex justify-between items-center h-auto"
+                      className="w-full text-left p-2 flex justify-between items-center h-auto text-xs"
                     >
                       <div>
                         <p className="font-medium">{partner.name}</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {partner.id} - {partner.location}
                         </p>
                       </div>
@@ -426,10 +419,11 @@ export default function DeliveryManagement() {
               )}
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end">
               <Button
                 onClick={closeAssignModal}
                 variant="outline"
+                className="text-xs px-3 py-1"
               >
                 Cancel
               </Button>

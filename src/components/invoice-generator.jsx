@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useRef } from "react"
 import { Printer, Download, Mail, CheckCircle, QrCode } from "lucide-react"
@@ -67,11 +67,10 @@ export default function InvoiceGenerator({ order }) {
     }).format(amount)
   }
 
-  // Generate a delivery verification QR code with order details
+  // Generate a delivery verification QR code with minimal order details
   const generateDeliveryQR = () => {
-    // This would be a URL to your delivery verification page with order ID
-    // In a real app, you might want to encrypt or sign this data
-    const deliveryVerificationUrl = `http://greenthicks.live/delivery/verify?orderId=${order.id}&ordername=${order.customer.name}&orderaddress=${order.customer.address}&orderphone=${order.customer.phone}&orderemail=${order.customer.email}&total=${order.total}&paymentMethod=${order.paymentMethod}`
+    // Only include essential order details
+    const deliveryVerificationUrl = `http://greenthicks.live/delivery/verify?orderId=${order.id}&total=${order.total}&paymentMethod=${order.paymentMethod}`
     return deliveryVerificationUrl
   }
 
@@ -135,7 +134,7 @@ export default function InvoiceGenerator({ order }) {
             </div>
             <div className="text-right">
               <img src={logo.src || "/placeholder.svg"} alt="Green Thicks" className="h-12 mb-2 inline-block" />
-              <p className="font-bold">Green Thicks </p>
+              <p className="font-bold">Green Thicks</p>
               <p className="text-gray-600">123 Main Street, Hyderabad</p>
               <p className="text-gray-600">Tel: +91 9705045597</p>
               <p className="text-gray-600">Email: greenthickss@gmail.com</p>
@@ -230,7 +229,6 @@ export default function InvoiceGenerator({ order }) {
               <h3 className="text-xl font-bold text-center text-blue-800 mb-4">Delivery Verification</h3>
               <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
                 <h4 className="font-bold text-gray-800">Order #{order.id}</h4>
-                <p className="text-gray-600">Customer: {order.customer.name}</p>
                 <p className="text-gray-600">Total Amount: {formatCurrency(order.total)}</p>
                 <p className="text-gray-600">Payment Method: {order.paymentMethod}</p>
               </div>
