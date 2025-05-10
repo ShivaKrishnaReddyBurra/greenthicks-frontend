@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Package, Truck, CheckCircle, Home, Clock, MapPin } from "lucide-react";
+import { ArrowLeft, Package, Truck, CheckCircle, Home, Clock, MapPin, XCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
@@ -40,7 +40,9 @@ export default function OrderTrackingPage() {
       try {
         const order = await getOrder(params.id);
         const orderDate = new Date(order.orderDate);
-        const deliveryDate = order.deliveryDate ? new Date(order.deliveryDate) : new Date(orderDate.getTime() + 2 * 24 * 60 * 60 * 1000); // Fallback: 2 days after order
+        const deliveryDate = order.deliveryDate
+          ? new Date(order.deliveryDate)
+          : new Date(orderDate.getTime() + 2 * 24 * 60 * 60 * 1000); // Fallback: 2 days after order
 
         setOrderDetails({
           orderId: order.id,
@@ -104,7 +106,9 @@ export default function OrderTrackingPage() {
         }
 
         if (order.deliveryStatus === "delivered") {
-          const deliveredDate = order.updatedAt ? new Date(order.updatedAt) : new Date(orderDate.getTime() + 2 * 24 * 60 * 60 * 1000); // Use updatedAt or fallback
+          const deliveredDate = order.updatedAt
+            ? new Date(order.updatedAt)
+            : new Date(orderDate.getTime() + 2 * 24 * 60 * 60 * 1000); // Use updatedAt or fallback
           history.push({
             status: "Delivered",
             date: deliveredDate.toLocaleString("en-IN"),
@@ -113,7 +117,9 @@ export default function OrderTrackingPage() {
         }
 
         if (order.deliveryStatus === "cancelled") {
-          const cancelledDate = order.updatedAt ? new Date(order.updatedAt) : new Date(orderDate.getTime() + 2 * 60 * 60 * 1000);
+          const cancelledDate = order.updatedAt
+            ? new Date(order.updatedAt)
+            : new Date(orderDate.getTime() + 2 * 60 * 60 * 1000);
           history.push({
             status: "Cancelled",
             date: cancelledDate.toLocaleString("en-IN"),
@@ -214,7 +220,9 @@ export default function OrderTrackingPage() {
                 {/* Progress bar */}
                 <div className="absolute top-4 left-0 right-0 h-1 bg-muted">
                   <div
-                    className="h-full bg-primary transition-all duration-500"
+                    className={`h-full ${
+                      currentStatus === "cancelled" ? "bg-red-500" : "bg-primary"
+                    } transition-all duration-500`}
                     style={{ width: `${(statusStep / 3) * 100}%` }}
                   />
                 </div>
@@ -253,7 +261,11 @@ export default function OrderTrackingPage() {
                   <div className="flex flex-col items-center">
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${
-                        statusStep >= 3 ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                        statusStep >= 3
+                          ? currentStatus === "cancelled"
+                            ? "bg-red-500 text-white"
+                            : "bg-primary text-white"
+                          : "bg-muted text-muted-foreground"
                       }`}
                     >
                       {currentStatus === "cancelled" ? (
@@ -275,17 +287,23 @@ export default function OrderTrackingPage() {
                 <div className="space-y-4">
                   {statusHistory.map((item, index) => (
                     <div key={index} className="flex gap-4">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex-shrink-0 flex items-center justify-center">
+                      <div
+                        className={`w-8 h-8 rounded-full ${
+                          item.status === "Cancelled" ? "bg-red-500/10" : "bg-primary/10"
+                        } flex-shrink-0 flex items-center justify-center`}
+                      >
                         {item.status === "Order Placed" && <Package className="h-4 w-4 text-primary" />}
                         {item.status === "Processing" && <Package className="h-4 w-4 text-primary" />}
                         {item.status === "Shipped" && <Package className="h-4 w-4 text-primary" />}
                         {item.status === "Out for Delivery" && <Truck className="h-4 w-4 text-primary" />}
                         {item.status === "Delivered" && <CheckCircle className="h-4 w-4 text-primary" />}
-                        {item.status === "Cancelled" && <XCircle className="h-4 w-4 text-primary" />}
+                        {item.status === "Cancelled" && <XCircle className="h-4 w-4 text-red-500" />}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-medium">{item.status}</p>
+                          <p className={`font-medium ${item.status === "Cancelled" ? "text-red-500" : ""}`}>
+                            {item.status}
+                          </p>
                           <span className="text-xs text-muted-foreground">{item.date}</span>
                         </div>
                         <p className="text-sm text-muted-foreground">{item.description}</p>
