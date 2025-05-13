@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import coverPhoto from "@/public/coverpage.png";
+import coverPhoto1 from "@/public/coverpage1.png";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,20 @@ export default function ProfilePage() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileDevice = window.matchMedia("(max-width: 640px)").matches;
+      setIsMobile(isMobileDevice);
+    };
+
+    checkMobile(); // Initial check
+    window.addEventListener("resize", checkMobile); // Listen for resize
+
+    return () => window.removeEventListener("resize", checkMobile); // Cleanup
+  }, []);
 
   const fetchUserData = async () => {
     try {
@@ -75,7 +90,7 @@ export default function ProfilePage() {
         globalId: profileData.globalId,
         name: profileData.name || `${profileData.firstName || ""} ${profileData.lastName || ""}`.trim(),
         username: profileData.username || "",
-        avatar: profileData.avatar || "/placeholder.svg",
+        avatar: profileData.avatar || "@/public/logo.png",
         joinedDate: profileData.joinedDate || "Unknown",
         location: profileData.location || "Not set",
         totalSpent: profileData.totalSpent || 0,
@@ -451,7 +466,7 @@ export default function ProfilePage() {
       <div className="relative">
         <div className="h-48 md:h-64 w-full bg-muted overflow-hidden">
           <img
-            src={coverPhoto.src}
+            src={isMobile ? coverPhoto1.src : coverPhoto.src}
             alt="Cover"
             className="w-full h-full object-cover"
           />
@@ -661,7 +676,7 @@ export default function ProfilePage() {
                   </div>
                   <Button
                     variant="outline"
-                    className="w-full justify-start text-Destructive hover:text-Destructive hover:bg-Destructive/10"
+                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
                     onClick={() => {
                       clearAuth();
                       router.push("/login");

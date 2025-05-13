@@ -96,6 +96,29 @@ export default function InvoiceGenerator({ order }) {
     setShowDeliveryOptions(true)
   }
 
+  const handleDownload = async () => {
+  setIsGenerating(true);
+
+  try {
+    // Simulate file generation (you can replace this with actual logic)
+    const blob = new Blob(["This is your invoice content."], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "invoice.pdf";
+    a.click();
+
+    URL.revokeObjectURL(url); // Clean up
+  } catch (error) {
+    console.error("Download failed:", error);
+  } finally {
+    setIsGenerating(false);
+  }
+};
+  
+
+
   if (!order) return null
 
   return (
@@ -111,11 +134,14 @@ export default function InvoiceGenerator({ order }) {
             <Printer className="h-4 w-4 mr-1" />
             {isGenerating ? "Generating..." : "Print Invoice"}
           </button>
-          <button className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+          <button
+            onClick={handleDownload}
+            className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
             <Download className="h-4 w-4 mr-1" />
             {isGenerating ? "Generating..." : "Download Invoice"}
-            Download PDF
           </button>
+
           <button className="flex items-center px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
             <Mail className="h-4 w-4 mr-1" />
             Email Invoice
@@ -131,11 +157,21 @@ export default function InvoiceGenerator({ order }) {
             <div>
               <h1 className="text-2xl font-bold">INVOICE</h1>
               <p className="text-gray-600 mt-1">#{order.id}</p>
+              {/* Delivery Verification QR Code */}
+              <div className="mt-1 text-left">
+                <div className="flex justify-left items-center">
+                  <div className="border-2 border-gray-20 p-1 rounded-lg">
+                    <QRCode value={generateDeliveryQR()} size={80} />
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* Logo and Company Details */}
             <div className="text-right">
               <img src={logo.src || "/placeholder.svg"} alt="Green Thicks" className="h-12 mb-2 inline-block" />
               <p className="font-bold">Green Thicks</p>
-              <p className="text-gray-600">123 Main Street, Hyderabad</p>
+              <p className="text-gray-600">hunmakonda,Telangana,India</p>
               <p className="text-gray-600">Tel: +91 9705045597</p>
               <p className="text-gray-600">Email: greenthickss@gmail.com</p>
             </div>
@@ -214,14 +250,6 @@ export default function InvoiceGenerator({ order }) {
             </div>
           </div>
 
-          {/* Delivery Verification QR Code */}
-          <div className="mt-8 text-center">
-            <div className="flex justify-center">
-              <div className="border-2 border-gray-200 p-4 rounded-lg">
-                <QRCode value={generateDeliveryQR()} size={200} />
-              </div>
-            </div>
-          </div>
 
           {/* Delivery Options Panel - This would normally appear on the delivery person's device */}
           {showDeliveryOptions && (

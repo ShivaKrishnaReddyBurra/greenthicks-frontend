@@ -141,23 +141,29 @@ export default function ReturnsPage() {
 
     const matchesReason = filterReason === "all" || returnItem.reason.toLowerCase() === filterReason.toLowerCase()
 
-    return matchesSearch && matchesReason
+    const matchesDate = dateRange === "all" || 
+      (dateRange === "today" && returnItem.date === new Date().toISOString().split("T")[0]) ||
+      (dateRange === "week" && new Date(returnItem.date) >= new Date(new Date().setDate(new Date().getDate() - 7))) ||
+      (dateRange === "month" && new Date(returnItem.date) >= new Date(new Date().setMonth(new Date().getMonth() - 1))) ||
+      (dateRange === "quarter" && new Date(returnItem.date) >= new Date(new Date().setMonth(new Date().getMonth() - 3)))
+
+    return matchesSearch && matchesReason && matchesDate
   })
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+        <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-green-500"></div>
       </div>
     )
   }
 
   return (
-    <div className="p-4 md:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">Product Returns</h1>
-        <div className="mt-4 md:mt-0 flex space-x-2">
-          <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+    <div className="p-4 sm:p-6 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">Product Returns</h1>
+        <div className="mt-4 sm:mt-0 flex space-x-2">
+          <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm sm:text-base">
             <Download className="h-4 w-4 mr-2" />
             Export Report
           </button>
@@ -165,25 +171,25 @@ export default function ReturnsPage() {
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-6 border border-gray-100 dark:border-gray-700">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6 mb-6 border border-gray-100 dark:border-gray-700">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
+              <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             </div>
             <input
               type="text"
               placeholder="Search returns..."
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm sm:text-base"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
           <div className="flex items-center">
-            <Filter className="h-5 w-5 text-gray-400 mr-2" />
+            <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 mr-2" />
             <select
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3 text-sm sm:text-base"
               value={filterReason}
               onChange={(e) => setFilterReason(e.target.value)}
             >
@@ -197,9 +203,9 @@ export default function ReturnsPage() {
           </div>
 
           <div className="flex items-center">
-            <Calendar className="h-5 w-5 text-gray-400 mr-2" />
+            <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 mr-2" />
             <select
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3 text-sm sm:text-base"
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
             >
@@ -217,37 +223,37 @@ export default function ReturnsPage() {
         </div>
       </div>
 
-      {/* Returns Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
+      {/* Desktop Table View */}
+      <div className="hidden sm:block bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Return ID
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Order ID
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Customer
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Amount
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Reason
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Photos
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -255,29 +261,29 @@ export default function ReturnsPage() {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredReturns.map((returnItem) => (
                 <tr key={returnItem.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     {returnItem.id}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {returnItem.orderId}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {returnItem.customer}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {returnItem.date}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {formatCurrency(returnItem.amount)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {returnItem.reason}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(returnItem.status)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">{getStatusBadge(returnItem.status)}</td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {returnItem.hasPhotos ? "Yes" : "No"}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <Link
                       href={`/admin/returns/${returnItem.id}`}
                       className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
@@ -292,7 +298,7 @@ export default function ReturnsPage() {
         </div>
 
         {/* Pagination */}
-        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-sm text-gray-500 dark:text-gray-400">
             Showing <span className="font-medium">1</span> to{" "}
             <span className="font-medium">{filteredReturns.length}</span> of{" "}
@@ -300,14 +306,66 @@ export default function ReturnsPage() {
           </div>
           <div className="flex space-x-2">
             <button
-              className="px-3 py-1 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50"
+              className="px-3 py-1 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50 text-sm sm:text-base"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(currentPage - 1)}
             >
               <ChevronLeft size={16} />
             </button>
             <button
-              className="px-3 py-1 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50"
+              className="px-3 py-1 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50 text-sm sm:text-base"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(currentPage + 1)}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="sm:hidden space-y-4">
+        {filteredReturns.map((returnItem) => (
+          <div key={returnItem.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-700">
+            <div className="flex flex-col space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-900 dark:text-white">ID: {returnItem.id}</span>
+                {getStatusBadge(returnItem.status)}
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-300">Order ID: {returnItem.orderId}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-300">Customer: {returnItem.customer}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-300">Date: {returnItem.date}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-300">Amount: {formatCurrency(returnItem.amount)}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-300">Reason: {returnItem.reason}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-300">Photos: {returnItem.hasPhotos ? "Yes" : "No"}</div>
+              <div className="flex justify-end">
+                <Link
+                  href={`/admin/returns/${returnItem.id}`}
+                  className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                >
+                  <Eye size={16} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        ))}
+        {/* Mobile Pagination */}
+        <div className="p-4 flex flex-col items-center gap-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            Showing <span className="font-medium">1</span> to{" "}
+            <span className="font-medium">{filteredReturns.length}</span> of{" "}
+            <span className="font-medium">{filteredReturns.length}</span> results
+          </div>
+          <div className="flex space-x-2">
+            <button
+              className="px-3 py-1 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50 text-sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(currentPage - 1)}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              className="px-3 py-1 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50 text-sm"
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(currentPage + 1)}
             >
