@@ -233,7 +233,7 @@ export default function CartPage() {
 
                 <div className="bg-primary/10 rounded-md p-3 text-sm flex items-start gap-2">
                   <Truck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                  <p>Free shipping on orders over $50. Orders placed before 3 PM are shipped same day!</p>
+                  <p>Free shipping on orders over ₹500</p>
                 </div>
 
                 <Button className="w-full" size="lg" onClick={handleCheckout}>

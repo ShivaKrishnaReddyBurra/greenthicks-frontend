@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { use } from "react"
 import Image from "next/image"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,186 +11,190 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { Save, Trash2, Upload, Star, Check, X, ArrowLeft, ImagePlus, Eye } from "lucide-react"
+import { Save, Trash2, Upload, X, ArrowLeft, ImagePlus, Eye } from "lucide-react"
+import { getProductById, updateProduct } from "@/lib/api"
 
-// Mock data - in a real app, this would come from an API
-const mockProduct = {
-  id: "1",
-  name: "Organic Broccoli",
-  description: "Fresh organic broccoli grown locally without pesticides.",
-  price: 2.99,
-  salePrice: 2.49,
-  stock: 150,
-  sku: "BRC-001",
-  category: "vegetables",
-  tags: ["organic", "fresh", "local"],
-  featured: true,
-  published: true,
-  images: [
-    { id: "img1", url: "/placeholder.svg", primary: true },
-    { id: "img2", url: "/placeholder.svg", primary: false },
-    { id: "img3", url: "/placeholder.svg", primary: false },
-  ],
-  nutrition: {
-    calories: 55,
-    protein: 3.7,
-    carbs: 11.2,
-    fat: 0.6,
-    fiber: 5.1,
-    vitamins: [
-      { name: "Vitamin C", amount: "135%", daily: "135%" },
-      { name: "Vitamin K", amount: "116%", daily: "116%" },
-      { name: "Folate", amount: "14%", daily: "14%" },
-    ],
-  },
-  reviews: [
-    { id: "rev1", user: "John D.", rating: 5, comment: "Very fresh and tasty!", approved: true, date: "2023-05-15" },
-    {
-      id: "rev2",
-      user: "Sarah M.",
-      rating: 4,
-      comment: "Good quality but a bit pricey.",
-      approved: true,
-      date: "2023-06-02",
-    },
-    {
-      id: "rev3",
-      user: "Mike T.",
-      rating: 3,
-      comment: "Average quality this time.",
-      approved: false,
-      date: "2023-06-10",
-    },
-  ],
-  policies: {
-    return: "Returns accepted within 24 hours if product is damaged or spoiled.",
-    shipping: "Same-day delivery available for orders placed before 2 PM.",
-    availability: "Available year-round with peak freshness in spring.",
-  },
-}
-
-export default function ProductEditor({ params }) {
+export default function EditProduct({ params }) {
   const router = useRouter()
-  const { id } = params
-  const [product, setProduct] = useState(null)
+  const { id } = use(params)
+
+  const [formData, setFormData] = useState({
+    name: "",
+    price: "",
+    stock: "",
+    discount: "",
+    category: "",
+    description: "",
+    unit: "",
+    featured: false,
+    bestseller: false,
+    new: false,
+    seasonal: false,
+  })
+  const [images, setImages] = useState([])
+  const [imagePreviews, setImagePreviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
   const [activeTab, setActiveTab] = useState("general")
-  const [newTag, setNewTag] = useState("")
-  const [newVitamin, setNewVitamin] = useState({ name: "", amount: "", daily: "" })
 
-  // Fetch product data
   useEffect(() => {
-    // In a real app, fetch from API
-    // For now, use mock data
-    setProduct(mockProduct)
-    setLoading(false)
+    if (id === "[id]") {
+      setFormData({
+        name: "Sample Product",
+        price: "100",
+        stock: "50",
+        discount: "10",
+        category: "Vegetables",
+        description: "This is a sample product description for preview mode.",
+        unit: "kg",
+        featured: true,
+        bestseller: false,
+        new: true,
+        seasonal: false,
+      })
+      setImagePreviews([{ url: "/placeholder.svg?height=300&width=300", primary: true }])
+      setLoading(false)
+      return
+    }
+
+    const fetchProduct = async () => {
+      try {
+        const product = await getProductById(id)
+        if (!product) {
+          throw new Error("Product not found")
+        }
+
+        setFormData({
+          name: product.name,
+          price: product.price.toString(),
+          stock: product.stock.toString(),
+          discount: product.discount ? product.discount.toString() : "0",
+          category: product.category,
+          description: product.description || "",
+          unit: product.unit || "",
+          featured: product.featured || false,
+          bestseller: product.bestseller || false,
+          new: product.new || false,
+          seasonal: product.seasonal || false,
+        })
+
+        // Assuming product.images is an array of URLs or objects with { url, primary }
+        const formattedImages = product.images.map((img, index) => ({
+          url: typeof img === "string" ? img : img.url,
+          primary: typeof img === "object" ? img.primary : index === 0, // First image is primary by default
+        }))
+        setImagePreviews(formattedImages)
+      } catch (error) {
+        console.error("Error fetching product:", error)
+        setError("Failed to load product. Please try again.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProduct()
   }, [id])
 
-  const handleSave = async () => {
-    setSaving(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    // In a real app, save to API
-    setSaving(false)
-    // Show success message
-    alert("Product saved successfully!")
-  }
-
-  const handleAddTag = () => {
-    if (newTag.trim() && !product.tags.includes(newTag.trim())) {
-      setProduct({
-        ...product,
-        tags: [...product.tags, newTag.trim()],
-      })
-      setNewTag("")
-    }
-  }
-
-  const handleRemoveTag = (tagToRemove) => {
-    setProduct({
-      ...product,
-      tags: product.tags.filter((tag) => tag !== tagToRemove),
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setFormData({
+      ...formData,
+      [name]: type === "checkbox" ? checked : value,
     })
   }
 
-  const handleAddVitamin = () => {
-    if (newVitamin.name && newVitamin.amount) {
-      setProduct({
-        ...product,
-        nutrition: {
-          ...product.nutrition,
-          vitamins: [...product.nutrition.vitamins, { ...newVitamin }],
-        },
-      })
-      setNewVitamin({ name: "", amount: "", daily: "" })
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files)
+    if (images.length + files.length > 5) {
+      setError("You can upload a maximum of 5 images")
+      return
     }
-  }
 
-  const handleRemoveVitamin = (index) => {
-    const updatedVitamins = [...product.nutrition.vitamins]
-    updatedVitamins.splice(index, 1)
-    setProduct({
-      ...product,
-      nutrition: {
-        ...product.nutrition,
-        vitamins: updatedVitamins,
-      },
+    const newImages = [...images, ...files]
+    setImages(newImages)
+
+    const previews = files.map((file, index) => {
+      return new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve({
+          url: reader.result,
+          primary: imagePreviews.length === 0 && index === 0, // Set first new image as primary if no images exist
+        })
+        reader.readAsDataURL(file)
+      })
+    })
+
+    Promise.all(previews).then((results) => {
+      setImagePreviews([...imagePreviews, ...results])
     })
   }
 
-  const handleSetPrimaryImage = (imageId) => {
-    setProduct({
-      ...product,
-      images: product.images.map((img) => ({
+  const removeImage = (index) => {
+    const newImages = images.filter((_, i) => i !== index)
+    const newPreviews = imagePreviews.filter((_, i) => i !== index)
+    
+    // If the removed image was primary, set the first remaining image as primary
+    if (imagePreviews[index].primary && newPreviews.length > 0) {
+      newPreviews[0].primary = true
+    }
+    
+    setImages(newImages)
+    setImagePreviews(newPreviews)
+  }
+
+  const handleSetPrimaryImage = (index) => {
+    setImagePreviews(
+      imagePreviews.map((img, i) => ({
         ...img,
-        primary: img.id === imageId,
-      })),
-    })
+        primary: i === index,
+      }))
+    )
   }
 
-  const handleRemoveImage = (imageId) => {
-    setProduct({
-      ...product,
-      images: product.images.filter((img) => img.id !== imageId),
-    })
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setError("")
+
+    try {
+      if (
+        !formData.name ||
+        !formData.price ||
+        !formData.stock ||
+        !formData.category ||
+        !formData.description ||
+        !formData.unit
+      ) {
+        throw new Error("Please fill all required fields")
+      }
+
+      if (imagePreviews.length === 0 && images.length === 0) {
+        throw new Error("At least one product image is required")
+      }
+
+      const productData = {
+        ...formData,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock),
+        discount: formData.discount ? parseInt(formData.discount) : 0,
+        images: imagePreviews, // Include primary property in images
+      }
+
+      await updateProduct(id, productData, images)
+      router.push("/admin/products")
+    } catch (err) {
+      setError(err.message)
+      console.error(err)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleApproveReview = (reviewId) => {
-    setProduct({
-      ...product,
-      reviews: product.reviews.map((review) => (review.id === reviewId ? { ...review, approved: true } : review)),
-    })
-  }
-
-  const handleRejectReview = (reviewId) => {
-    setProduct({
-      ...product,
-      reviews: product.reviews.map((review) => (review.id === reviewId ? { ...review, approved: false } : review)),
-    })
-  }
-
-  const handleDeleteReview = (reviewId) => {
-    setProduct({
-      ...product,
-      reviews: product.reviews.filter((review) => review.id !== reviewId),
-    })
-  }
+  const categories = ["leafy", "fruit", "root", "herbs"]
 
   if (loading) {
     return (
@@ -202,11 +207,11 @@ export default function ProductEditor({ params }) {
     )
   }
 
-  if (!product) {
+  if (error && !formData.name) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
-        <p className="mb-6">The product you're looking for doesn't exist or has been removed.</p>
+        <p className="mb-6">{error}</p>
         <Button onClick={() => router.push("/admin/products")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Products
@@ -231,7 +236,7 @@ export default function ProductEditor({ params }) {
             <Eye className="mr-2 h-4 w-4" />
             Preview
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button onClick={handleSubmit} disabled={saving}>
             {saving ? (
               <>
                 <div className="animate-spin mr-2 h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div>
@@ -247,13 +252,16 @@ export default function ProductEditor({ params }) {
         </div>
       </div>
 
+      {error && (
+        <div className="bg-destructive/15 border border-destructive text-destructive px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="images">Images</TabsTrigger>
-          <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
-          <TabsTrigger value="reviews">Reviews</TabsTrigger>
-          <TabsTrigger value="policies">Policies</TabsTrigger>
         </TabsList>
 
         {/* General Information Tab */}
@@ -266,142 +274,155 @@ export default function ProductEditor({ params }) {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Product Name</Label>
+                  <Label htmlFor="name">
+                    Product Name <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="name"
-                    value={product.name}
-                    onChange={(e) => setProduct({ ...product, name: e.target.value })}
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="sku">SKU</Label>
+                  <Label htmlFor="unit">
+                    Unit <span className="text-destructive">*</span>
+                  </Label>
                   <Input
-                    id="sku"
-                    value={product.sku}
-                    onChange={(e) => setProduct({ ...product, sku: e.target.value })}
+                    id="unit"
+                    name="unit"
+                    value={formData.unit}
+                    onChange={handleChange}
+                    required
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">
+                  Description <span className="text-destructive">*</span>
+                </Label>
                 <Textarea
                   id="description"
+                  name="description"
                   rows={4}
-                  value={product.description}
-                  onChange={(e) => setProduct({ ...product, description: e.target.value })}
+                  value={formData.description}
+                  onChange={handleChange}
+                  required
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="price">Regular Price ($)</Label>
+                  <Label htmlFor="price">
+                    Price (₹) <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="price"
+                    name="price"
                     type="number"
                     step="0.01"
-                    value={product.price}
-                    onChange={(e) => setProduct({ ...product, price: Number.parseFloat(e.target.value) })}
+                    min="0"
+                    value={formData.price}
+                    onChange={handleChange}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="salePrice">Sale Price ($)</Label>
+                  <Label htmlFor="discount">Discount (%)</Label>
                   <Input
-                    id="salePrice"
+                    id="discount"
+                    name="discount"
                     type="number"
-                    step="0.01"
-                    value={product.salePrice}
-                    onChange={(e) => setProduct({ ...product, salePrice: Number.parseFloat(e.target.value) })}
+                    min="0"
+                    max="100"
+                    value={formData.discount}
+                    onChange={handleChange}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="stock">Stock Quantity</Label>
+                  <Label htmlFor="stock">
+                    Stock Quantity <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="stock"
+                    name="stock"
                     type="number"
-                    value={product.stock}
-                    onChange={(e) => setProduct({ ...product, stock: Number.parseInt(e.target.value) })}
+                    min="0"
+                    value={formData.stock}
+                    onChange={handleChange}
+                    required
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
+                  <Label htmlFor="category">
+                    Category <span className="text-destructive">*</span>
+                  </Label>
                   <Select
-                    value={product.category}
-                    onValueChange={(value) => setProduct({ ...product, category: value })}
+                    name="category"
+                    value={formData.category}
+                    onValueChange={(value) => setFormData({ ...formData, category: value })}
                   >
                     <SelectTrigger id="category">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="vegetables">Vegetables</SelectItem>
-                      <SelectItem value="fruits">Fruits</SelectItem>
-                      <SelectItem value="herbs">Herbs</SelectItem>
-                      <SelectItem value="dairy">Dairy</SelectItem>
-                      <SelectItem value="bakery">Bakery</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category.charAt(0).toUpperCase() + category.slice(1)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Tags</Label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {product.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                      {tag}
-                      <button onClick={() => handleRemoveTag(tag)} className="ml-1 rounded-full hover:bg-muted p-0.5">
-                        <X className="h-3 w-3" />
-                        <span className="sr-only">Remove {tag}</span>
-                      </button>
-                    </Badge>
-                  ))}
+                <Label>Product Tags</Label>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="featured"
+                        name="featured"
+                        checked={formData.featured}
+                        onCheckedChange={(checked) => setFormData({ ...formData, featured: checked })}
+                      />
+                      <Label htmlFor="featured">Featured Product</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="bestseller"
+                        name="bestseller"
+                        checked={formData.bestseller}
+                        onCheckedChange={(checked) => setFormData({ ...formData, bestseller: checked })}
+                      />
+                      <Label htmlFor="bestseller">Bestseller</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="new"
+                        name="new"
+                        checked={formData.new}
+                        onCheckedChange={(checked) => setFormData({ ...formData, new: checked })}
+                      />
+                      <Label htmlFor="new">New Arrival</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="seasonal"
+                        name="seasonal"
+                        checked={formData.seasonal}
+                        onCheckedChange={(checked) => setFormData({ ...formData, seasonal: checked })}
+                      />
+                      <Label htmlFor="seasonal">Seasonal</Label>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add a tag"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
-                  />
-                  <Button type="button" onClick={handleAddTag} size="sm">
-                    Add
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Product Status</CardTitle>
-              <CardDescription>Control the visibility and featured status of your product.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="published">Published</Label>
-                  <p className="text-sm text-muted-foreground">Make this product visible on your store.</p>
-                </div>
-                <Switch
-                  id="published"
-                  checked={product.published}
-                  onCheckedChange={(checked) => setProduct({ ...product, published: checked })}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="featured">Featured</Label>
-                  <p className="text-sm text-muted-foreground">Show this product in featured sections.</p>
-                </div>
-                <Switch
-                  id="featured"
-                  checked={product.featured}
-                  onCheckedChange={(checked) => setProduct({ ...product, featured: checked })}
-                />
               </div>
             </CardContent>
           </Card>
@@ -412,17 +433,20 @@ export default function ProductEditor({ params }) {
           <Card>
             <CardHeader>
               <CardTitle>Product Images</CardTitle>
-              <CardDescription>
-                Manage the images for your product. The primary image will be displayed first.
-              </CardDescription>
+              <CardDescription>Manage the images for your product. The primary image will be displayed first.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {product.images.map((image) => (
-                  <div key={image.id} className="border rounded-lg overflow-hidden">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="border rounded-lg overflow-hidden">
                     <div className="relative aspect-square">
-                      <Image src={image.url || "/placeholder.svg"} alt="Product image" fill className="object-cover" />
-                      {image.primary && (
+                      <Image
+                        src={preview.url}
+                        alt={`Preview ${index + 1}`}
+                        fill
+                        className="object-contain"
+                      />
+                      {preview.primary && (
                         <div className="absolute top-2 left-2">
                           <Badge variant="default">Primary</Badge>
                         </div>
@@ -432,12 +456,16 @@ export default function ProductEditor({ params }) {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleSetPrimaryImage(image.id)}
-                        disabled={image.primary}
+                        onClick={() => handleSetPrimaryImage(index)}
+                        disabled={preview.primary}
                       >
-                        {image.primary ? "Primary" : "Set as Primary"}
+                        {preview.primary ? "Primary" : "Set as Primary"}
                       </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleRemoveImage(image.id)}>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removeImage(index)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -449,332 +477,28 @@ export default function ProductEditor({ params }) {
                   <div className="aspect-square flex flex-col items-center justify-center p-6 text-center">
                     <ImagePlus className="h-10 w-10 text-muted-foreground mb-2" />
                     <h3 className="font-medium">Add Image</h3>
-                    <p className="text-sm text-muted-foreground mb-4">Upload a new product image</p>
-                    <Button variant="secondary" size="sm">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload
+                    <p className="text-sm text-muted-foreground mb-4">Upload a new product image (up to 5)</p>
+                    <input
+                      type="file"
+                      id="images"
+                      name="images"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleImageChange}
+                    />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      asChild
+                    >
+                      <label htmlFor="images">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload
+                      </label>
                     </Button>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Nutrition Tab */}
-        <TabsContent value="nutrition" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Nutrition Facts</CardTitle>
-              <CardDescription>Add nutritional information for your product.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="calories">Calories</Label>
-                  <Input
-                    id="calories"
-                    type="number"
-                    value={product.nutrition.calories}
-                    onChange={(e) =>
-                      setProduct({
-                        ...product,
-                        nutrition: {
-                          ...product.nutrition,
-                          calories: Number.parseFloat(e.target.value),
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="protein">Protein (g)</Label>
-                  <Input
-                    id="protein"
-                    type="number"
-                    step="0.1"
-                    value={product.nutrition.protein}
-                    onChange={(e) =>
-                      setProduct({
-                        ...product,
-                        nutrition: {
-                          ...product.nutrition,
-                          protein: Number.parseFloat(e.target.value),
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="carbs">Carbs (g)</Label>
-                  <Input
-                    id="carbs"
-                    type="number"
-                    step="0.1"
-                    value={product.nutrition.carbs}
-                    onChange={(e) =>
-                      setProduct({
-                        ...product,
-                        nutrition: {
-                          ...product.nutrition,
-                          carbs: Number.parseFloat(e.target.value),
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fat">Fat (g)</Label>
-                  <Input
-                    id="fat"
-                    type="number"
-                    step="0.1"
-                    value={product.nutrition.fat}
-                    onChange={(e) =>
-                      setProduct({
-                        ...product,
-                        nutrition: {
-                          ...product.nutrition,
-                          fat: Number.parseFloat(e.target.value),
-                        },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="fiber">Fiber (g)</Label>
-                <Input
-                  id="fiber"
-                  type="number"
-                  step="0.1"
-                  value={product.nutrition.fiber}
-                  onChange={(e) =>
-                    setProduct({
-                      ...product,
-                      nutrition: {
-                        ...product.nutrition,
-                        fiber: Number.parseFloat(e.target.value),
-                      },
-                    })
-                  }
-                />
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Vitamins & Minerals</Label>
-                </div>
-
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>% Daily Value</TableHead>
-                      <TableHead className="w-[100px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {product.nutrition.vitamins.map((vitamin, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{vitamin.name}</TableCell>
-                        <TableCell>{vitamin.amount}</TableCell>
-                        <TableCell>{vitamin.daily}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" onClick={() => handleRemoveVitamin(index)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="vitaminName">Name</Label>
-                    <Input
-                      id="vitaminName"
-                      value={newVitamin.name}
-                      onChange={(e) => setNewVitamin({ ...newVitamin, name: e.target.value })}
-                      placeholder="e.g., Vitamin C"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vitaminAmount">Amount</Label>
-                    <Input
-                      id="vitaminAmount"
-                      value={newVitamin.amount}
-                      onChange={(e) => setNewVitamin({ ...newVitamin, amount: e.target.value })}
-                      placeholder="e.g., 90mg"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vitaminDaily">% Daily Value</Label>
-                    <Input
-                      id="vitaminDaily"
-                      value={newVitamin.daily}
-                      onChange={(e) => setNewVitamin({ ...newVitamin, daily: e.target.value })}
-                      placeholder="e.g., 100%"
-                    />
-                  </div>
-                </div>
-                <Button onClick={handleAddVitamin} size="sm">
-                  Add Vitamin/Mineral
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Reviews Tab */}
-        <TabsContent value="reviews" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Product Reviews</CardTitle>
-              <CardDescription>Manage customer reviews for this product.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Review</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {product.reviews.map((review) => (
-                    <TableRow key={review.id}>
-                      <TableCell>{review.user}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
-                            />
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>{review.comment}</TableCell>
-                      <TableCell>{review.date}</TableCell>
-                      <TableCell>
-                        <Badge variant={review.approved ? "success" : "secondary"}>
-                          {review.approved ? "Approved" : "Pending"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          {!review.approved && (
-                            <Button variant="outline" size="sm" onClick={() => handleApproveReview(review.id)}>
-                              <Check className="h-4 w-4 text-green-500" />
-                            </Button>
-                          )}
-                          {review.approved && (
-                            <Button variant="outline" size="sm" onClick={() => handleRejectReview(review.id)}>
-                              <X className="h-4 w-4 text-orange-500" />
-                            </Button>
-                          )}
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Review</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete this review? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteReview(review.id)}>
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Policies Tab */}
-        <TabsContent value="policies" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Product Policies</CardTitle>
-              <CardDescription>Set specific policies for this product.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="returnPolicy">Return Policy</Label>
-                <Textarea
-                  id="returnPolicy"
-                  rows={3}
-                  value={product.policies.return}
-                  onChange={(e) =>
-                    setProduct({
-                      ...product,
-                      policies: {
-                        ...product.policies,
-                        return: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Describe the return policy for this product..."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="shippingPolicy">Shipping Policy</Label>
-                <Textarea
-                  id="shippingPolicy"
-                  rows={3}
-                  value={product.policies.shipping}
-                  onChange={(e) =>
-                    setProduct({
-                      ...product,
-                      policies: {
-                        ...product.policies,
-                        shipping: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Describe the shipping policy for this product..."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="availability">Availability</Label>
-                <Textarea
-                  id="availability"
-                  rows={3}
-                  value={product.policies.availability}
-                  onChange={(e) =>
-                    setProduct({
-                      ...product,
-                      policies: {
-                        ...product.policies,
-                        availability: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="Describe the availability of this product..."
-                />
               </div>
             </CardContent>
           </Card>
