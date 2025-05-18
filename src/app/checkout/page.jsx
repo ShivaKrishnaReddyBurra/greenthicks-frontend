@@ -627,7 +627,7 @@ function OrderSummary({ cart, orderSummary }) {
 
       <div className="bg-primary/10 rounded-md p-3 text-sm flex items-start gap-2">
         <Truck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-        <p>Your order will be delivered within 24-48 hours after payment confirmation.</p>
+        <p>Your order will be delivered within 12-24 hours after payment confirmation.</p>
       </div>
     </div>
   );

@@ -9,6 +9,18 @@ export const setAuthToken = (token) => {
 };
 
 
+export function checkDeliveryStatus() {
+  // Check if the user has delivery role
+  const user = getCurrentUser(); // Hypothetical function to get user data
+  return user?.role === "delivery";
+}
+
+function getCurrentUser() {
+  // Implement logic to get current user from session, token, or context
+  // Example: return JSON.parse(localStorage.getItem("user")) or fetch from API
+  return null; // Replace with actual logic
+}
+
 // Get JWT token from localStorage
 export const getAuthToken = () => {
   if (typeof window !== "undefined") {

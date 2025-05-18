@@ -26,7 +26,7 @@ export default function AdminReturnButton() {
   return (
     <Link
       href="/admin/dashboard"
-      className="fixed bottom-4 right-4 z-50 bg-primary text-white p-3 rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+      className="fixed bottom-4 right-4 z-60 bg-green-600 text-white p-3 rounded-full shadow-lg hover:bg-green-700 transition-colors"
       aria-label="Return to Admin Dashboard"
     >
       <Settings className="h-6 w-6" />

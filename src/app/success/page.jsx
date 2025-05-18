@@ -57,11 +57,11 @@ export default function CheckoutSuccessPage() {
         const today = new Date();
         const tomorrow = new Date(today);
         tomorrow.setDate(today.getDate() + 1);
-        let deliveryTime = "Morning (6 AM - 10 AM)";
+        let deliveryTime = "Morning (6 pm - 10 pm)";
         if (deliveryDate.toDateString() === today.toDateString()) {
           deliveryTime = "Today (Evening Delivery)";
         } else if (deliveryDate.toDateString() === tomorrow.toDateString()) {
-          deliveryTime = "Tomorrow Morning (6 AM - 10 AM)";
+          deliveryTime = "Tomorrow Evening (6 pm - 10 pm)";
         }
 
         setOrderDetails({

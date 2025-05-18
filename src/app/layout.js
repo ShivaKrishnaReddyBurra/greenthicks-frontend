@@ -11,6 +11,8 @@ import webicon from "@/public/favicon.ico";
 import LayoutWrapper from "@/components/layout-wrapper";
 import { Toaster } from "@/components/ui/toaster";
 import { metadata } from './metadata'; // Import metadata from the separate file
+import DeliveryReturnButton from '@/components/DeliveryReturnButton'; // Adjust the path if needed
+
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -63,7 +65,8 @@ export default function RootLayout({ children }) {
             <LayoutWrapper>{children}</LayoutWrapper>
           </Providers>
         </ThemeProvider>
-        <AdminReturnButton href="/admin/dashboard" className="fixed bottom-4 right-4 z-50" />
+        <DeliveryReturnButton />
+        <AdminReturnButton />
         <Toaster />
       </body>
     </html>

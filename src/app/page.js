@@ -34,7 +34,6 @@ export default function Home() {
       <CategorySection />
       <FeaturedProducts />
       <WhyChooseUs />
-      <TestimonialsSection />
     </div>
   );
 }

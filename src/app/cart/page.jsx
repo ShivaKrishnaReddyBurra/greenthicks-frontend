@@ -21,7 +21,7 @@ export default function CartPage() {
   const { toast } = useToast();
 
   const subtotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
-  const shipping = subtotal > 50 ? 0 : 5.99;
+  const shipping = subtotal > 500 ? 0 : 25.99;
   const total = subtotal + shipping - discount;
 
   const handleApplyCoupon = async () => {
