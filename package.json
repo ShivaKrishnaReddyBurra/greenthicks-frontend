@@ -34,6 +34,7 @@
     "axios": "^1.8.4",
     "class-variance-authority": "^0.7.1",
     "framer-motion": "^12.9.4",
+    "html2pdf.js": "^0.10.3",
     "html5-qrcode": "^2.3.8",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.1",

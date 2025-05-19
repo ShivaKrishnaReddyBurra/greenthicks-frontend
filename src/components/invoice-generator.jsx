@@ -171,7 +171,7 @@ export default function InvoiceGenerator({ order }) {
             <div className="text-right">
               <img src={logo.src || "/placeholder.svg"} alt="Green Thicks" className="h-12 mb-2 inline-block" />
               <p className="font-bold">Green Thicks</p>
-              <p className="text-gray-600">hunmakonda,Telangana,India</p>
+              <p className="text-gray-600">hanmakonda,Telangana,India</p>
               <p className="text-gray-600">Tel: +91 9705045597</p>
               <p className="text-gray-600">Email: greenthickss@gmail.com</p>
             </div>
@@ -183,7 +183,7 @@ export default function InvoiceGenerator({ order }) {
               <h2 className="font-bold text-gray-700 mb-2">BILL TO:</h2>
               <p className="font-medium">{order.customer.name}</p>
               <p>{order.customer.address}</p>
-              <p>{order.customer.phone}</p>
+              <p>{order.customer.phoneNumber || "Phone not provided"}</p>
               <p>{order.customer.email}</p>
             </div>
             <div className="text-right">
