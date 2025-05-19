@@ -169,13 +169,13 @@ export default function Footer() {
               <div className="flex items-start space-x-3">
                 <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0 mt-0.5" />
                 <span className="text-muted-foreground text-sm sm:text-base">
-                  Hunamakona, Warangal, Telangana, India
+                  Hanamkonda, Warangal, Telangana, India
                 </span>
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 <span className="text-muted-foreground text-sm sm:text-base">
-                  +91 9849900596
+                  +91 9705045597
                 </span>
               </div>
               <div className="flex items-center space-x-3">
