@@ -1,129 +1,97 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Bell, ShoppingBag, AlertTriangle, CheckCircle, Trash2 } from "lucide-react"
+import { useState, useEffect } from "react";
+import { Bell, ShoppingBag, AlertTriangle, CheckCircle, Trash2 } from "lucide-react";
+import {
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  clearAllNotifications,
+} from "@/lib/api"; // Adjust path to your api.js
 
 export default function AdminNotifications() {
-  const [notifications, setNotifications] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState("all")
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
-    // Simulate fetching notifications
     const fetchNotifications = async () => {
       try {
-        // In a real app, this would be an API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        // Sample notifications data
-        const notificationsData = [
-          {
-            id: 1,
-            type: "order",
-            title: "New Order Received",
-            message: "Order #ORD-1234 has been placed by John Doe",
-            time: "10 minutes ago",
-            read: false,
-          },
-          {
-            id: 2,
-            type: "stock",
-            title: "Low Stock Alert",
-            message: "Organic Tomatoes is running low on stock (5 remaining)",
-            time: "1 hour ago",
-            read: false,
-          },
-          {
-            id: 3,
-            type: "seller",
-            title: "New Seller Registration",
-            message: "Farm Fresh Organics has registered as a new seller",
-            time: "3 hours ago",
-            read: true,
-          },
-          {
-            id: 4,
-            type: "order",
-            title: "Order Delivered",
-            message: "Order #ORD-1230 has been successfully delivered",
-            time: "5 hours ago",
-            read: true,
-          },
-          {
-            id: 5,
-            type: "stock",
-            title: "Out of Stock Alert",
-            message: "Organic Honey is now out of stock",
-            time: "1 day ago",
-            read: true,
-          },
-          {
-            id: 6,
-            type: "order",
-            title: "Order Cancelled",
-            message: "Order #ORD-1228 has been cancelled by the customer",
-            time: "2 days ago",
-            read: true,
-          },
-          {
-            id: 7,
-            type: "seller",
-            title: "New Product Submission",
-            message: "Nature's Basket has submitted a new product for approval",
-            time: "2 days ago",
-            read: true,
-          },
-        ]
-
-        setNotifications(notificationsData)
+        const data = await getNotifications();
+        setNotifications(data);
       } catch (error) {
-        console.error("Error fetching notifications:", error)
+        console.error("Error fetching notifications:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
+
+  const markAsRead = async (id) => {
+    try {
+      await markNotificationAsRead(id);
+      setNotifications(
+        notifications.map((notification) =>
+          notification._id === id ? { ...notification, read: true } : notification
+        )
+      );
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await markAllNotificationsAsRead();
+      setNotifications(
+        notifications.map((notification) => ({ ...notification, read: true }))
+      );
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+    }
+  };
+
+  const deleteSingleNotification = async (id) => {
+    try {
+      await deleteNotification(id);
+      setNotifications(notifications.filter((notification) => notification._id !== id));
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    }
+  };
+
+  const clearNotifications = async () => {
+    if (window.confirm("Are you sure you want to clear all notifications?")) {
+      try {
+        await clearAllNotifications();
+        setNotifications([]);
+      } catch (error) {
+        console.error("Error clearing all notifications:", error);
       }
     }
-
-    fetchNotifications()
-  }, [])
-
-  const markAsRead = (id) => {
-    setNotifications(
-      notifications.map((notification) => (notification.id === id ? { ...notification, read: true } : notification)),
-    )
-  }
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((notification) => ({ ...notification, read: true })))
-  }
-
-  const deleteNotification = (id) => {
-    setNotifications(notifications.filter((notification) => notification.id !== id))
-  }
-
-  const clearAllNotifications = () => {
-    if (window.confirm("Are you sure you want to clear all notifications?")) {
-      setNotifications([])
-    }
-  }
+  };
 
   const filteredNotifications = notifications.filter((notification) => {
-    if (filter === "all") return true
-    if (filter === "unread") return !notification.read
-    return notification.type === filter
-  })
+    if (filter === "all") return true;
+    if (filter === "unread") return !notification.read;
+    return notification.type === filter;
+  });
 
   const getNotificationIcon = (type) => {
     switch (type) {
       case "order":
-        return <ShoppingBag size={20} className="text-blue-500" />
+        return <ShoppingBag size={20} className="text-blue-500" />;
       case "stock":
-        return <AlertTriangle size={20} className="text-amber-500" />
+        return <AlertTriangle size={20} className="text-amber-500" />;
       case "seller":
-        return <CheckCircle size={20} className="text-green-500" />
+        return <CheckCircle size={20} className="text-green-500" />;
       default:
-        return <Bell size={20} className="text-gray-500" />
+        return <Bell size={20} className="text-gray-500" />;
     }
-  }
+  };
 
   return (
     <div>
@@ -156,7 +124,7 @@ export default function AdminNotifications() {
               Mark All as Read
             </button>
             <button
-              onClick={clearAllNotifications}
+              onClick={clearNotifications}
               className="px-3 py-2 border rounded-md hover:bg-muted transition-colors flex items-center"
               disabled={notifications.length === 0}
             >
@@ -186,7 +154,7 @@ export default function AdminNotifications() {
           <div className="divide-y">
             {filteredNotifications.map((notification) => (
               <div
-                key={notification.id}
+                key={notification._id}
                 className={`p-4 hover:bg-muted/50 transition-colors ${!notification.read ? "bg-primary/5" : ""}`}
               >
                 <div className="flex items-start gap-4">
@@ -205,7 +173,7 @@ export default function AdminNotifications() {
                   <div className="flex gap-2">
                     {!notification.read && (
                       <button
-                        onClick={() => markAsRead(notification.id)}
+                        onClick={() => markAsRead(notification._id)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded-md"
                         title="Mark as Read"
                       >
@@ -213,7 +181,7 @@ export default function AdminNotifications() {
                       </button>
                     )}
                     <button
-                      onClick={() => deleteNotification(notification.id)}
+                      onClick={() => deleteSingleNotification(notification._id)}
                       className="p-1 text-red-600 hover:bg-red-50 rounded-md"
                       title="Delete Notification"
                     >
@@ -227,5 +195,5 @@ export default function AdminNotifications() {
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -27,15 +27,10 @@ export default function ShippingPage() {
               </p>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                <div className="bg-muted/50 p-2 rounded text-center">Mumbai</div>
-                <div className="bg-muted/50 p-2 rounded text-center">Delhi</div>
-                <div className="bg-muted/50 p-2 rounded text-center">Bangalore</div>
-                <div className="bg-muted/50 p-2 rounded text-center">Chennai</div>
-                <div className="bg-muted/50 p-2 rounded text-center">Hyderabad</div>
-                <div className="bg-muted/50 p-2 rounded text-center">Pune</div>
-                <div className="bg-muted/50 p-2 rounded text-center">Kolkata</div>
-                <div className="bg-muted/50 p-2 rounded text-center">Ahmedabad</div>
-                <div className="bg-muted/50 p-2 rounded text-center">Jaipur</div>
+                <div className="bg-muted/50 p-2 rounded text-center">Warangal</div>
+                <div className="bg-muted/50 p-2 rounded text-center">Hanamkonda</div>
+                <div className="bg-muted/50 p-2 rounded text-center">Kazipet</div>
+
               </div>
 
               <p className="mt-4 text-sm text-muted-foreground">
@@ -74,9 +69,8 @@ export default function ShippingPage() {
                   <h3 className="font-medium mb-2">Delivery Windows</h3>
                   <p>You can select your preferred delivery window during checkout:</p>
                   <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground">
-                    <li>Morning: 8 AM - 12 PM</li>
-                    <li>Afternoon: 12 PM - 4 PM</li>
-                    <li>Evening: 4 PM - 8 PM</li>
+                    <li>Morning: 6 AM - 10 AM</li>
+                    <li>Evening: 5 PM - 9 PM</li>
                   </ul>
                 </div>
               </div>
@@ -96,16 +90,15 @@ export default function ShippingPage() {
                 <div>
                   <h3 className="font-medium mb-2">Standard Shipping</h3>
                   <p>
-                    Orders under $50: $5.99 shipping fee
                     <br />
-                    Orders over $50: FREE shipping
+                    Orders over ₹500: FREE shipping
                   </p>
                 </div>
 
                 <div>
                   <h3 className="font-medium mb-2">Express Shipping</h3>
                   <p>
-                    Same-day delivery: Additional $9.99
+                    Same-day delivery: Additional ₹14.99
                     <br />
                     Available only in select areas
                   </p>
@@ -134,7 +127,7 @@ export default function ShippingPage() {
                 <div>
                   <h3 className="font-medium mb-2">Delivery Confirmation</h3>
                   <p>
-                    You'll receive SMS and email notifications when your order is out for delivery and when it has been
+                    You'll receive email notifications when your order is out for delivery and when it has been
                     delivered.
                   </p>
                 </div>

@@ -355,3 +355,39 @@ export const deliveryLogin = async (identifier, password) => {
 
   return loginData;
 };
+
+// Notification API functions
+export const getNotifications = async () => {
+  return fetchWithAuth('/api/notifications');
+};
+
+export const createNotification = async (notificationData) => {
+  return fetchWithAuth('/api/notifications', {
+    method: 'POST',
+    body: JSON.stringify(notificationData),
+  });
+};
+
+export const markNotificationAsRead = async (notificationId) => {
+  return fetchWithAuth(`/api/notifications/${notificationId}/read`, {
+    method: 'PATCH',
+  });
+};
+
+export const markAllNotificationsAsRead = async () => {
+  return fetchWithAuth('/api/notifications/read-all', {
+    method: 'PATCH',
+  });
+};
+
+export const deleteNotification = async (notificationId) => {
+  return fetchWithAuth(`/api/notifications/${notificationId}`, {
+    method: 'DELETE',
+  });
+};
+
+export const clearAllNotifications = async () => {
+  return fetchWithAuth('/api/notifications', {
+    method: 'DELETE',
+  });
+};
