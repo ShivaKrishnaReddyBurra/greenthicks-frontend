@@ -20,15 +20,6 @@ import {
   ChevronRight,
   Store,
 } from "lucide-react"
-import Spinach from "@/public/images/Spinach.jpg"
-
-import Mint from "@/public/images/Mint1.jpg"
-
-import Tomato from "@/public/images/Tomato.jpg"
-
-import Brinjal from "@/public/images/Brinjal.jpg"
-
-import Green_Chili from "@/public/images/GreenChili.jpg"
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -57,38 +48,41 @@ export default function AdminDashboard() {
   useEffect(() => {
     // Simulate API call
     setTimeout(() => {
-      setStats({
-        todayOrders: 24,
-        monthOrders: 543,
-        yearOrders: 6248,
-        todayIncome: 4320,
-        monthIncome: 98760,
-        yearIncome: 1245600,
-        pendingOrders: 18,
-        lowStockItems: 7,
-        totalUsers: 1245,
-        totalSellers: 32,
-        totalDeliveryPartners: 28,
-      })
-
-      setRecentOrders([
-        { id: "ORD-9876", customer: "Rahul Sharma", amount: 1250, status: "Delivered", date: "2023-05-01" },
-        { id: "ORD-9875", customer: "Priya Patel", amount: 890, status: "Processing", date: "2023-05-01" },
-        { id: "ORD-9874", customer: "Amit Kumar", amount: 2340, status: "Shipped", date: "2023-05-01" },
-        { id: "ORD-9873", customer: "Neha Singh", amount: 760, status: "Pending", date: "2023-04-30" },
-        { id: "ORD-9872", customer: "Vikram Reddy", amount: 1890, status: "Delivered", date: "2023-04-30" },
-      ])
-
-      setTopProducts([
-        { id: 1, name: "Organic Apples", sales: 234, revenue: 23400, image: Spinach, },
-        { id: 2, name: "Fresh Spinach", sales: 198, revenue: 9900, image: Mint, },
-        { id: 3, name: "Organic Milk", sales: 187, revenue: 18700, image: Tomato, },
-        { id: 4, name: "Brown Rice", sales: 156, revenue: 15600, image: Brinjal, },
-        { id: 5, name: "Honey", sales: 145, revenue: 21750, image: Green_Chili, },
-      ])
-
       setIsLoading(false)
     }, 1000)
+    // Fetch stats data
+    const fetchStats = async () => {
+      // Simulate fetching data from an API
+      const response = await fetch("/api/stats")
+      const data = await response.json()
+      setStats(data)
+    }
+    fetchStats()
+    // Fetch recent orders
+    const fetchRecentOrders = async () => {
+      // Simulate fetching data from an API
+      const response = await fetch("/api/recent-orders")
+      const data = await response.json()
+      setRecentOrders(data)
+    }
+    fetchRecentOrders()
+    // Fetch top products
+    const fetchTopProducts = async () => {
+      // Simulate fetching data from an API
+      const response = await fetch("/api/top-products")
+      const data = await response.json()
+      setTopProducts(data)
+    }
+    fetchTopProducts()
+    // Fetch sales trend data
+    const fetchSalesTrend = async () => {
+      // Simulate fetching data from an API
+      const response = await fetch("/api/sales-trend")
+      const data = await response.json()    
+      setSalesTrend(data) 
+    }
+    fetchSalesTrend()
+    
   }, [])
 
   const formatCurrency = (amount) => {
