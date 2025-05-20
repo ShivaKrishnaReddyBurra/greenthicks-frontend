@@ -14,7 +14,7 @@ import { checkAdminStatus, setAuthToken } from "@/lib/auth-utils";
 import LogOut from "@/public/logo.png";
 import { useToast } from "@/hooks/use-toast";
 
-export default function LoginPage() {
+export default function ClientLogin() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -23,7 +23,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const returnUrl = searchParams.get("returnUrl") || "/products"; // Fallback to /products
+  const returnUrl = searchParams.get("returnUrl") || "/products";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,13 +48,27 @@ export default function LoginPage() {
         description: "You are now logged in.",
       });
     } catch (err) {
-      setError(
-        err.message === "Invalid credentials"
-          ? "Invalid username or password"
-          : err.message.includes("is required")
-          ? "Please fill in all fields"
-          : "Login failed. Please try again."
-      );
+      let errorMessage = err.message;
+      if (err.message === "Invalid credentials") {
+        errorMessage = "Invalid username or password";
+      } else if (err.message.includes("is required")) {
+        errorMessage = "Please fill in all fields";
+      } else if (err.message === "Please verify your email before logging in.") {
+        errorMessage = (
+          <>
+            Please verify your email to log in.{" "}
+            <Link
+              href={`/resend-verification?email=${encodeURIComponent(identifier)}`}
+              className="text-primary font-medium hover:underline"
+            >
+              Resend verification email
+            </Link>
+          </>
+        );
+      } else {
+        errorMessage = "Login failed. Please try again.";
+      }
+      setError(errorMessage);
       console.error(err);
     } finally {
       setLoading(false);

@@ -29,6 +29,13 @@ export const fetchWithAuth = async (url, options = {}) => {
   const token = getAuthToken();
 
   if (!token) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    throw new Error("you are not logged in, please login");
+  }
+
+  if (!token) {
     throw new Error("you are not logged in, please login");
   }
 
@@ -389,5 +396,19 @@ export const deleteNotification = async (notificationId) => {
 export const clearAllNotifications = async () => {
   return fetchWithAuth('/api/notifications', {
     method: 'DELETE',
+  });
+};
+
+// Email Verification API functions
+export const verifyEmail = async (email, token) => {
+  return fetchWithoutAuth(`/api/auth/verify-email?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`, {
+    method: 'GET',
+  });
+};
+
+export const resendVerificationEmail = async (email) => {
+  return fetchWithoutAuth('/api/auth/resend-verification', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
   });
 };

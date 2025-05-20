@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { fetchWithoutAuth } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import LogOut from "@/public/logo.png";
 
 export default function RegisterPage() {
@@ -24,13 +25,16 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(""); // New state for success message
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { toast } = useToast();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
@@ -50,7 +54,12 @@ export default function RegisterPage() {
         body: JSON.stringify({ email, password, isAdmin, firstName, lastName, username }),
       });
 
-      router.push("/login");
+      setSuccess("Registration successful! Please check your email to verify your account.");
+      toast({
+        title: "Registration Successful",
+        description: "Please verify your email to activate your account.",
+      });
+      setTimeout(() => router.push("/login"), 3000); // Redirect to login after 3 seconds
     } catch (err) {
       setError(err.message || "Registration failed. Please try again.");
       console.error(err);
@@ -88,6 +97,11 @@ export default function RegisterPage() {
             {error && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                 {error}
+              </div>
+            )}
+            {success && (
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                {success}
               </div>
             )}
             <form onSubmit={handleSubmit}>
@@ -131,7 +145,7 @@ export default function RegisterPage() {
                     id="username"
                     type="text"
                     placeholder="Greenthicks user"
-                    className="pl-10 bg-white/50 focus:bg-white/80 transition-colors"
+                    classfilters="pl-10 bg-white/50 focus:bg-white/80 transition-colors"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
