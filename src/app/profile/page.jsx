@@ -750,9 +750,9 @@ export default function ProfilePage() {
                         name="phone"
                         value={formData.phone}
                         onChange={handleInputChange}
-                        placeholder="+12345678901"
-                        pattern="^\+\d{10,12}$"
-                        title="Phone number must be in international format (e.g., +12345678901)"
+                        placeholder="+91 9234567890"
+                        pattern="^(\+91[\-\s]?)?[6-9]\d{9}$"
+                        title="Phone number must be in indian format (e.g., +91 92345678901)"
                         required
                       />
                       <p className="text-xs text-muted-foreground">

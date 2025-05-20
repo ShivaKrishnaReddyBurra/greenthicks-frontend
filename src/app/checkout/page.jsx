@@ -193,7 +193,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!/^\+\d{10,12}$/.test(phone)) {
+    if (!/^(\+91[\-\s]?)?[6-9]\d{9}$/.test(phone)) {
       toast({
         title: "Invalid Phone",
         description: "Phone number must be in indian format (e.g., +91 9234567890).",
@@ -417,7 +417,7 @@ export default function CheckoutPage() {
         name="phone"
         value={formData.phone}
         onChange={handleInputChange}
-        placeholder="+12345678901"
+        placeholder="+91 92345678901"
         required
       />
     </div>
