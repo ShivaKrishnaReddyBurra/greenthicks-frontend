@@ -3,14 +3,12 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Upload, X } from "lucide-react"
-
 import { getProductById, updateProduct } from "@/lib/api"
-import { use } from "react" // Import React's use
-
+import { use } from "react"
 
 export default function EditProduct({ params }) {
   const router = useRouter()
-  const { id } = use(params) // Unwrap params with React.use()
+  const { id } = use(params)
 
   const [formData, setFormData] = useState({
     name: "",
@@ -32,9 +30,7 @@ export default function EditProduct({ params }) {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    // Check if we're in preview mode with the literal [id] parameter
     if (id === "[id]") {
-      // Use a default product for preview
       setFormData({
         name: "Sample Product",
         price: "100",
@@ -42,12 +38,13 @@ export default function EditProduct({ params }) {
         discount: "10",
         category: "Vegetables",
         description: "This is a sample product description for preview mode.",
+        unit: "kg",
         featured: true,
         bestseller: false,
         new: true,
         seasonal: false,
       })
-      setImagePreview("/placeholder.svg?height=300&width=300")
+      setImagePreviews(["/placeholder.svg?height=300&width=300"])
       setLoading(false)
       return
     }
@@ -76,7 +73,6 @@ export default function EditProduct({ params }) {
         setImagePreviews(product.images || [])
       } catch (error) {
         console.error("Error fetching product:", error)
-        setErrorotiation
         setError("Failed to load product. Please try again.")
       } finally {
         setLoading(false)
@@ -96,8 +92,17 @@ export default function EditProduct({ params }) {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files)
-    if (images.length + files.length > 5) {
-      setError("You can upload a maximum of 5 images")
+    const maxSize = 3 * 1024 * 1024 // 3MB in bytes
+
+    // Check for file size
+    const oversizedFiles = files.filter(file => file.size > maxSize)
+    if (oversizedFiles.length > 0) {
+      setError("⚠ Some images exceed 3MB. Please upload images smaller than 3MB.")
+      return
+    }
+
+    if (images.length + files.length > 6) {
+      setError("You can upload a maximum of 6 images")
       return
     }
 
@@ -128,7 +133,6 @@ export default function EditProduct({ params }) {
     setError("")
 
     try {
-      // Validate form
       if (
         !formData.name ||
         !formData.price ||
@@ -161,7 +165,7 @@ export default function EditProduct({ params }) {
     }
   }
 
-  const categories = ["leafy", "fruit", "root", "herbs"]
+  const categories = ["leafy", "fruit", "root", "herbs", "milk", "pulses", "grains", "spices", "nuts", "oils", "snacks", "beverages"]
 
   if (loading) {
     return (
@@ -291,7 +295,7 @@ export default function EditProduct({ params }) {
           <div>
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">
-                Product Images (up to 5) <span className="text-red-500">*</span>
+                Product Images (up to 6, max 3MB each) <span className="text-red-500">*</span>
               </label>
 
               {imagePreviews.length > 0 ? (

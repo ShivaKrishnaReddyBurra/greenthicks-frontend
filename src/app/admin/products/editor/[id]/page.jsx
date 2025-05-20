@@ -82,10 +82,9 @@ export default function EditProduct({ params }) {
           seasonal: product.seasonal || false,
         })
 
-        // Assuming product.images is an array of URLs or objects with { url, primary }
         const formattedImages = product.images.map((img, index) => ({
           url: typeof img === "string" ? img : img.url,
-          primary: typeof img === "object" ? img.primary : index === 0, // First image is primary by default
+          primary: typeof img === "object" ? img.primary : index === 0,
         }))
         setImagePreviews(formattedImages)
       } catch (error) {
@@ -109,8 +108,17 @@ export default function EditProduct({ params }) {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files)
-    if (images.length + files.length > 5) {
-      setError("You can upload a maximum of 5 images")
+    const maxSize = 3 * 1024 * 1024 // 3MB in bytes
+
+    // Check for file size
+    const oversizedFiles = files.filter(file => file.size > maxSize)
+    if (oversizedFiles.length > 0) {
+      setError("⚠ Some images exceed 3MB. Please upload images smaller than 3MB.")
+      return
+    }
+
+    if (images.length + files.length > 6) {
+      setError("You can upload a maximum of 6 images")
       return
     }
 
@@ -122,7 +130,7 @@ export default function EditProduct({ params }) {
         const reader = new FileReader()
         reader.onloadend = () => resolve({
           url: reader.result,
-          primary: imagePreviews.length === 0 && index === 0, // Set first new image as primary if no images exist
+          primary: imagePreviews.length === 0 && index === 0,
         })
         reader.readAsDataURL(file)
       })
@@ -137,7 +145,6 @@ export default function EditProduct({ params }) {
     const newImages = images.filter((_, i) => i !== index)
     const newPreviews = imagePreviews.filter((_, i) => i !== index)
     
-    // If the removed image was primary, set the first remaining image as primary
     if (imagePreviews[index].primary && newPreviews.length > 0) {
       newPreviews[0].primary = true
     }
@@ -181,7 +188,7 @@ export default function EditProduct({ params }) {
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
         discount: formData.discount ? parseInt(formData.discount) : 0,
-        images: imagePreviews, // Include primary property in images
+        images: imagePreviews,
       }
 
       await updateProduct(id, productData, images)
@@ -194,7 +201,7 @@ export default function EditProduct({ params }) {
     }
   }
 
-  const categories = ["leafy", "fruit", "root", "herbs"]
+  const categories = ["leafy", "fruit", "root", "herbs", "milk", "pulses", "grains", "spices", "nuts", "oils", "snacks", "beverages"]
 
   if (loading) {
     return (
@@ -367,6 +374,7 @@ export default function EditProduct({ params }) {
                     value={formData.category}
                     onValueChange={(value) => setFormData({ ...formData, category: value })}
                   >
+                   empresa
                     <SelectTrigger id="category">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -433,7 +441,7 @@ export default function EditProduct({ params }) {
           <Card>
             <CardHeader>
               <CardTitle>Product Images</CardTitle>
-              <CardDescription>Manage the images for your product. The primary image will be displayed first.</CardDescription>
+              <CardDescription>Manage the images for your product. The primary image will be displayed first. Maximum file size: 3MB.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -477,7 +485,7 @@ export default function EditProduct({ params }) {
                   <div className="aspect-square flex flex-col items-center justify-center p-6 text-center">
                     <ImagePlus className="h-10 w-10 text-muted-foreground mb-2" />
                     <h3 className="font-medium">Add Image</h3>
-                    <p className="text-sm text-muted-foreground mb-4">Upload a new product image (up to 5)</p>
+                    <p className="text-sm text-muted-foreground mb-4">Upload a new product image (up to 6, max 3MB)</p>
                     <input
                       type="file"
                       id="images"

@@ -186,9 +186,9 @@ export default function PrivacyPolicyPage() {
           React.createElement("h2", { className: "text-2xl font-semibold mb-4" }, "Contact Us"),
           React.createElement("p", null, "If you have any questions about this Privacy Policy, please contact us at:"),
           React.createElement("ul", { className: "list-none pl-0 mb-4" },
-            React.createElement("li", null, "Email: privacy@greenthicks.com"),
-            React.createElement("li", null, "Phone: +91 98765 43210"),
-            React.createElement("li", null, "Address: 123 Organic Way, Green City, India")
+            React.createElement("li", null, "Email: greenthickss@gmail.com"),
+            React.createElement("li", null, "Phone: +91 9705045597"),
+            React.createElement("li", null, "Address: Hanamkonda, Warangal, Telangana, India - 506001")
           )
         )
       )

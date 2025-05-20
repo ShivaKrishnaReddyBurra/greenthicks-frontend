@@ -37,8 +37,17 @@ export default function AddProduct() {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files)
-    if (images.length + files.length > 5) {
-      setError("You can upload a maximum of 5 images")
+    const maxSize = 3 * 1024 * 1024 // 3MB in bytes
+
+    // Check for file size
+    const oversizedFiles = files.filter(file => file.size > maxSize)
+    if (oversizedFiles.length > 0) {
+      setError("⚠ Some images exceed 3MB. Please upload images smaller than 3MB.")
+      return
+    }
+
+    if (images.length + files.length > 6) {
+      setError("You can upload a maximum of 6 images")
       return
     }
 
@@ -98,7 +107,7 @@ export default function AddProduct() {
     }
   }
 
-  const categories = ["leafy", "fruit", "root", "herbs"]
+  const categories = ["leafy", "fruit", "root", "herbs", "milk", "pulses", "grains", "spices", "nuts", "oils", "snacks", "beverages"]
 
   return (
     <div>
@@ -249,7 +258,7 @@ export default function AddProduct() {
           <h2 className="text-lg font-semibold mb-4">Images & Tags</h2>
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">
-              Product Images (up to 5) <span className="text-red-500">*</span>
+              Product Images (up to 6, max 3MB each) <span className="text-red-500">*</span>
             </label>
             {imagePreviews.length > 0 && (
               <div className="grid grid-cols-3 gap-2 mb-4">

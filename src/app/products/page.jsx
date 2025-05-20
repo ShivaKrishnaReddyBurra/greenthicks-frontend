@@ -8,7 +8,7 @@ import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
-import { Leaf, Filter } from "lucide-react";
+import { Leaf, Filter, Milk } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -20,6 +20,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { getProducts } from "@/lib/api";
+import { PillBottle } from "lucide-react";
 
 export default function ProductsPage() {
   const searchParams = useSearchParams();
@@ -63,6 +64,14 @@ export default function ProductsPage() {
     { id: "root", name: "Root Vegetables" },
     { id: "fruit", name: "Fruit Vegetables" },
     { id: "herbs", name: "Herbs & Aromatics" },
+    { id: "milk", name: "Milk" },
+    { id: "pulses", name: "Pulses" },
+    { id: "grains", name: "Grains" },
+    { id: "spices", name: "Spices" },
+    { id: "nuts", name: "Nuts & Seeds" },
+    { id: "oils", name: "Oils & Fats" },
+    { id: "snacks", name: "Snacks & Sweets" },
+    { id: "beverages", name: "Beverages" }
   ];
 
   const filteredProducts = products.filter((product) => {
