@@ -28,7 +28,7 @@ export default function ProductsPage() {
 
   const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(categoryParam || "all");
-  const [priceRange, setPriceRange] = useState([0, 100]);
+  const [priceRange, setPriceRange] = useState([0, 1000]);
   const [searchQuery, setSearchQuery] = useState(searchQueryParam || "");
   const [loading, setLoading] = useState(true);
 
