@@ -320,7 +320,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                   />
                 ))}
               </div>
-              <span className="text-sm text-muted-foreground">(24 reviews)</span>
+              <span className="text-sm text-muted-foreground">( reviews)</span>
             </div>
 
             <div className="flex items-center gap-3 mb-4">
@@ -503,7 +503,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
               value="reviews"
               className="flex-shrink-0 rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none py-3 px-4 sm:px-6 text-sm sm:text-base"
             >
-              Reviews (24)
+              Reviews (0)
             </TabsTrigger>
           </TabsList>
           <div className="p-4 sm:p-6 border border-t-0 rounded-b-lg bg-card text-card-foreground">
@@ -702,159 +702,6 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                   </Card>
                 )}
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  <Card className="bg-card">
-                    <CardContent className="p-4 sm:p-5">
-                      <div className="flex justify-between mb-3">
-                        <div>
-                          <h4 className="font-medium text-sm sm:text-base">Priya Sharma</h4>
-                          <p className="text-xs sm:text-sm text-muted-foreground">Verified Purchase</p>
-                        </div>
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${i < 5 ? "fill-yellow-400 text-yellow-400" : "fill-muted text-muted"}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-xs sm:text-sm mb-3">
-                        Absolutely fresh and delicious! The {product.name} arrived in perfect condition and tasted
-                        amazing in my salad. Will definitely order again.
-                      </p>
-                      <div className="flex gap-2 mb-3">
-                        <div className="w-16 h-16 rounded-md overflow-hidden border">
-                          <Image
-                            src="/placeholder.svg?height=64&width=64"
-                            alt="User review image"
-                            width={64}
-                            height={64}
-                            className="object-cover h-full w-full"
-                            loading="lazy"
-                          />
-                        </div>
-                        <div className="w-16 h-16 rounded-md overflow-hidden border">
-                          <Image
-                            src="/placeholder.svg?height=64&width=64"
-                            alt="User review image"
-                            width={64}
-                            height={64}
-                            className="object-cover h-full w-full"
-                            loading="lazy"
-                          />
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Posted on March 15, 2025</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-card">
-                    <CardContent className="p-4 sm:p-5">
-                      <div className="flex justify-between mb-3">
-                        <div>
-                          <h4 className="font-medium text-sm sm:text-base">Rahul Patel</h4>
-                          <p className="text-xs sm:text-sm text-muted-foreground">Verified Purchase</p>
-                        </div>
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${i < 4 ? "fill-yellow-400 text-yellow-400" : "fill-muted text-muted"}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-xs sm:text-sm mb-3">
-                        Great quality and very fresh. I could really taste the difference compared to supermarket
-                        produce. The only reason for 4 stars is that one item was slightly bruised.
-                      </p>
-                      <div className="flex gap-2 mb-3">
-                        <div className="w-16 h-16 rounded-md overflow-hidden border">
-                          <Image
-                            src="/placeholder.svg?height=64&width=64"
-                            alt="User review image"
-                            width={64}
-                            height={64}
-                            className="object-cover h-full w-full"
-                            loading="lazy"
-                          />
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Posted on March 10, 2025</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-card">
-                    <CardContent className="p-4 sm:p-5">
-                      <div className="flex justify-between mb-3">
-                        <div>
-                          <h4 className="font-medium text-sm sm:text-base">Anita Desai</h4>
-                          <p className="text-xs sm:text-sm text-muted-foreground">Verified Purchase</p>
-                        </div>
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${i < 5 ? "fill-yellow-400 text-yellow-400" : "fill-muted text-muted"}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-xs sm:text-sm mb-3">
-                        As a nutritionist, I'm very particular about the quality of produce I recommend. These
-                        {product.name} are exceptional - truly organic, fresh, and packed with nutrients.
-                      </p>
-                      <p className="text-xs text-muted-foreground">Posted on February 28, 2025</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-card">
-                    <CardContent className="p-4 sm:p-5">
-                      <div className="flex justify-between mb-3">
-                        <div>
-                          <h4 className="font-medium text-sm sm:text-base">Vikram Singh</h4>
-                          <p className="text-xs sm:text-sm text-muted-foreground">Verified Purchase</p>
-                        </div>
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${i < 4 ? "fill-yellow-400 text-yellow-400" : "fill-muted text-muted"}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-xs sm:text-sm mb-3">
-                        The flavor is outstanding! You can really taste the difference with organic produce. Delivery
-                        was prompt and everything was well-packaged.
-                      </p>
-                      <div className="flex gap-2 mb-3">
-                        <div className="w-16 h-16 rounded-md overflow-hidden border">
-                          <Image
-                            src="/placeholder.svg?height=64&width=64"
-                            alt="User review image"
-                            width={64}
-                            height={64}
-                            className="object-cover h-full w-full"
-                            loading="lazy"
-                          />
-                        </div>
-                        <div className="w-16 h-16 rounded-md overflow-hidden border">
-                          <Image
-                            src="/placeholder.svg?height=64&width=64"
-                            alt="User review image"
-                            width={64}
-                            height={64}
-                            className="object-cover h-full w-full"
-                            loading="lazy"
-                          />
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Posted on February 22, 2025</p>
-                    </CardContent>
-                  </Card>
-                </div>
 
                 <Button variant="outline" className="w-full h-12 text-sm sm:text-base">
                   Load More Reviews

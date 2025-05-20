@@ -1,211 +1,240 @@
-"use client";
+"use client"
 
-import { Suspense, useState, useEffect } from 'react';
-import { useSearchParams } from "next/navigation";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import {
   ArrowLeft,
   CheckCircle,
   Clock,
+  MapPin,
   Package,
   QrCode,
+  RefreshCw,
+  ShoppingBag,
   Truck,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
-import QRCode from "react-qr-code";
+  User,
+  X,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import QRCode from "react-qr-code"
+import { Html5Qrcode } from "html5-qrcode"
 
-function DeliveryVerificationContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
-  const [showPaymentQR, setShowPaymentQR] = useState(false);
-  const [order, setOrder] = useState(null);
+export default function DeliveryVerificationPage() {
+  const searchParams = useSearchParams()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [order, setOrder] = useState(null)
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false)
+  const [showPaymentQR, setShowPaymentQR] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
+  const [scanResult, setScanResult] = useState(null)
 
-  // Get order details from URL parameters
-  const orderId = searchParams.get("orderId");
-  const total = searchParams.get("total");
-  const paymentMethod = searchParams.get("paymentMethod");
+  // Get order ID from URL parameters
+  const orderId = searchParams.get("orderId")
+  const total = searchParams.get("total")
+  const paymentMethod = searchParams.get("paymentMethod")
 
-  // Check if user is a delivery partner or admin
   useEffect(() => {
-    const checkAuthorization = async () => {
-      setLoading(true);
+    const fetchOrderDetails = async () => {
+      setLoading(true)
       try {
-        const token = localStorage.getItem("authToken");
-        const user = JSON.parse(localStorage.getItem("user") || "{}");
+        await new Promise((resolve) => setTimeout(resolve, 1000))
 
-        if (!token || !["delivery-partner", "admin"].includes(user.role)) {
-          setIsAuthorized(false);
-          return;
+        if (!orderId) {
+          throw new Error("Order ID is missing")
         }
 
-        setIsAuthorized(true);
-
-        // Fetch order details
-        const response = await fetch(`/api/orders/${orderId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch order details");
-        }
-
-        const orderData = await response.json();
-        setOrder({
+        const mockOrder = {
           id: orderId,
-          total: Number.parseFloat(total),
-          paymentMethod: paymentMethod,
-          status: orderData.status || "out-for-delivery",
           date: new Date().toISOString(),
-          subtotal: Number.parseFloat(total) * 0.9,
-          deliveryCharge: Number.parseFloat(total) * 0.1,
-        });
+          status: "out-for-delivery",
+          paymentMethod: paymentMethod || "Cash on Delivery",
+          total: Number.parseFloat(total || "0") || 1250,
+          subtotal: Number.parseFloat(total || "0") * 0.9 || 1150,
+          deliveryCharge: 100,
+          discount: 0,
+          customer: {
+            name: "Priya Sharma",
+            address: "Flat 302, Sunshine Apartments, 15 Marine Drive, Mumbai, Maharashtra - 400001",
+            phone: "+91 98765 43210",
+            email: "priya.sharma@example.com",
+          },
+          items: [
+            {
+              name: "Organic Spinach",
+              quantity: 2,
+              price: 35,
+              total: 70,
+            },
+            {
+              name: "Fresh Carrots",
+              quantity: 1,
+              price: 40,
+              total: 40,
+            },
+            {
+              name: "Red Bell Peppers",
+              quantity: 3,
+              price: 60,
+              total: 180,
+            },
+          ],
+        }
+
+        setOrder(mockOrder)
+        setError(null)
       } catch (err) {
-        toast({
-          title: "Error",
-          description: err.message || "Failed to load order details",
-          variant: "destructive",
-        });
+        setError(err.message || "Failed to load order details")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    checkAuthorization();
-  }, [orderId, total, paymentMethod, toast]);
+    fetchOrderDetails()
+  }, [orderId, total, paymentMethod])
 
-  // Format currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       maximumFractionDigits: 2,
-    }).format(amount);
-  };
+    }).format(amount)
+  }
 
-  // Generate UPI payment QR code
+  const formatDate = (dateString) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
   const generateUpiQR = (amount) => {
-    return `upi://pay?pa=funnygn156@&oksbi&mc=123456&tid=${orderId}&tr=${orderId}&tn=Payment+for+order&am=${amount}&cu=INR`;
-  };
-
-  // Handle cash payment confirmation
-  const confirmCashPayment = async () => {
-    try {
-      const token = localStorage.getItem("authToken");
-      const response = await fetch(`/api/orders/${orderId}/confirm-payment`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ paymentMethod: "Cash on Delivery" }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to confirm payment");
-      }
-
-      setPaymentConfirmed(true);
-      toast({
-        title: "Success",
-        description: "Cash payment confirmed",
-      });
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to confirm payment",
-        variant: "destructive",
-      });
+    if (!amount || amount <= 0) {
+      console.error("Invalid amount for UPI QR code")
+      return ""
     }
-  };
+    const upiId = "funnygn156@oksbi" // Replace with process.env.NEXT_PUBLIC_UPI_ID in production
+    const merchantName = "Green Thicks"
+    const transactionNote = `Payment for order ${orderId}`
+    const currency = "INR"
+    const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
+      merchantName
+    )}&tn=${encodeURIComponent(transactionNote)}&am=${amount}&cu=${currency}`
+    console.log("Generated UPI URL:", upiUrl) // For debugging
+    return upiUrl
+  }
 
-  // Confirm delivery
-  const confirmDelivery = async () => {
-    try {
-      const token = localStorage.getItem("authToken");
-      const response = await fetch(`/api/orders/${orderId}/confirm-delivery`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+  const confirmCashPayment = () => {
+    setPaymentConfirmed(true)
+  }
 
-      if (!response.ok) {
-        throw new Error("Failed to confirm delivery");
-      }
-
-      toast({
-        title: "Success",
-        description: "Delivery confirmed successfully",
-      });
-      router.push("/delivery/dashboard");
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to confirm delivery",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Toggle payment QR code display
   const togglePaymentQR = () => {
-    setShowPaymentQR(!showPaymentQR);
-  };
+    setShowPaymentQR(!showPaymentQR)
+  }
+
+  const toggleScanner = () => {
+    setShowScanner(!showScanner)
+  }
+
+  const startScanner = () => {
+    const html5QrCode = new Html5Qrcode("qr-reader")
+    html5QrCode
+      .start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          console.log("Scanned data:", decodedText)
+          setScanResult(decodedText)
+          setPaymentConfirmed(true)
+          setShowScanner(false)
+          html5QrCode.stop()
+        },
+        (error) => {
+          console.error("QR scan error:", error)
+        }
+      )
+      .catch((err) => {
+        console.error("Failed to start QR scanner:", err)
+        alert("Failed to start QR scanner. Please try again.")
+      })
+  }
+
+  useEffect(() => {
+    if (showScanner) {
+      startScanner()
+    }
+  }, [showScanner])
+
+  const verifyPayment = async () => {
+    // TODO: Implement backend API call to verify payment with UPI provider
+    // Example:
+    // try {
+    //   const response = await fetch(`/api/verify-payment?orderId=${orderId}`);
+    //   const result = await response.json();
+    //   if (result.success) {
+    //     setPaymentConfirmed(true)
+    //     setShowPaymentQR(false)
+    //   } else {
+    //     alert("Payment verification failed")
+    //   }
+    // } catch (err) {
+    //   console.error("Payment verification error:", err)
+    //   alert("Error verifying payment")
+    // }
+    // For now, simulate successful verification
+    setPaymentConfirmed(true)
+    setShowPaymentQR(false)
+  }
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <h1 className="text-xl font-semibold">Loading...</h1>
+        <RefreshCw className="h-12 w-12 text-primary animate-spin mb-4" />
+        <h1 className="text-xl font-semibold">Loading order details...</h1>
       </div>
-    );
+    )
   }
 
-  if (!isAuthorized) {
+  if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-green-50">
-        <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
-        <h1 className="text-2xl font-bold text-green-800 mb-2">Thank You!</h1>
-        <p className="text-center text-green-700 mb-6">
-          Thanks for ordering from Green Thicks! Your order #{orderId} is being processed.
-        </p>
-        <Button onClick={() => router.push("/")} variant="outline">
-          Back to Home
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <X className="h-12 w-12 text-destructive mb-4" />
+        <h1 className="text-xl font-semibold">Error</h1>
+        <p className="text-muted-foreground">{error}</p>
+        <Button className="mt-4" variant="outline" onClick={() => window.history.back()}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Go Back
         </Button>
       </div>
-    );
+    )
   }
 
   if (!order) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <h1 className="text-xl font-semibold">Order Not Found</h1>
-        <Button className="mt-4" variant="outline" onClick={() => router.push("/delivery/dashboard")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Dashboard
-        </Button>
-      </div>
-    );
+    return null
   }
 
+  const isAdmin = false
   return (
     <div className="container max-w-md mx-auto p-4 min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.push("/delivery/dashboard")}>
+          <Button variant="ghost" size="icon" className="mr-2" onClick={() => window.history.back()}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-bold">Delivery Verification</h1>
@@ -221,6 +250,7 @@ function DeliveryVerificationContent() {
           <div className="flex justify-between items-start">
             <div>
               <CardTitle>Order #{order.id}</CardTitle>
+              <CardDescription>{formatDate(order.date)}</CardDescription>
             </div>
             <Badge
               variant={
@@ -233,7 +263,46 @@ function DeliveryVerificationContent() {
         </CardHeader>
         <CardContent className="pb-2">
           <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">Customer Details</h3>
+              <div className="flex items-start gap-2">
+                <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="font-medium">{order.customer.name}</p>
+                  <p className="text-sm text-muted-foreground">{order.customer.phone}</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-1">Delivery Address</h3>
+              <div className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                <p className="text-sm">{order.customer.address}</p>
+              </div>
+            </div>
+
             <Separator />
+
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Order Summary</h3>
+              <div className="space-y-2">
+                {order.items.map((item, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                      <span>
+                        {item.name} <span className="text-muted-foreground">x{item.quantity}</span>
+                      </span>
+                    </div>
+                    <span>{formatCurrency(item.total)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
             <div className="space-y-1">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
@@ -243,6 +312,12 @@ function DeliveryVerificationContent() {
                 <span className="text-muted-foreground">Delivery Fee</span>
                 <span>{formatCurrency(order.deliveryCharge)}</span>
               </div>
+              {order.discount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span className="text-green-600">-{formatCurrency(order.discount)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold pt-2">
                 <span>Total</span>
                 <span>{formatCurrency(order.total)}</span>
@@ -267,6 +342,7 @@ function DeliveryVerificationContent() {
               </div>
               <Badge variant="outline">{order.paymentMethod}</Badge>
             </div>
+
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <Package className="h-4 w-4 text-muted-foreground" />
@@ -274,10 +350,22 @@ function DeliveryVerificationContent() {
               </div>
               <span className="font-bold">{formatCurrency(order.total)}</span>
             </div>
+
+            {scanResult && (
+              <div className="bg-green-50 border border-green-200 rounded-md p-3 text-green-800 text-sm">
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Payment Verified</p>
+                    <p>{scanResult}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3 pt-2">
-          {order.paymentMethod === "Cash on Delivery" && !paymentConfirmed ? (
+          {order.paymentMethod === "CASH ON-DELIVERY" && !paymentConfirmed ? (
             <>
               <Button className="w-full" onClick={confirmCashPayment} variant="default">
                 <CheckCircle className="h-4 w-4 mr-2" />
@@ -288,6 +376,18 @@ function DeliveryVerificationContent() {
                 Generate Payment QR
               </Button>
             </>
+          ) : order.paymentMethod === "CASH ON-DELIVERY" && paymentConfirmed ? (
+            <div className="bg-green-50 border border-green-200 rounded-md p-3 text-green-800 text-sm w-full">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <p>Cash payment confirmed</p>
+              </div>
+            </div>
+          ) : !paymentConfirmed ? (
+            <Button className="w-full" variant="outline" onClick={toggleScanner}>
+              <QrCode className="h-4 w-4 mr-2" />
+              Scan Payment Confirmation
+            </Button>
           ) : (
             <div className="bg-green-50 border border-green-200 rounded-md p-3 text-green-800 text-sm w-full">
               <div className="flex items-center gap-2">
@@ -325,7 +425,7 @@ function DeliveryVerificationContent() {
           </div>
         </CardContent>
         <CardFooter className="pt-2">
-          <Button className="w-full" variant={paymentConfirmed ? "default" : "secondary"} disabled={!paymentConfirmed} onClick={confirmDelivery}>
+          <Button className="w-full" variant={paymentConfirmed ? "default" : "secondary"} disabled={!paymentConfirmed}>
             <Truck className="h-4 w-4 mr-2" />
             Confirm Delivery
           </Button>
@@ -339,11 +439,15 @@ function DeliveryVerificationContent() {
             <DialogTitle>Payment QR Code</DialogTitle>
             <DialogDescription>Ask the customer to scan this QR code to make the payment</DialogDescription>
           </DialogHeader>
-          <div className="flex items-center justify-center p-4">
-            <div className="border-2 border-gray-200 p-4 rounded-lg">
-              <QRCode value={generateUpiQR(order.total)} size={200} />
+          {generateUpiQR(order.total) ? (
+            <div className="flex items-center justify-center p-4">
+              <div className="border-2 border-gray-200 p-4 rounded-lg">
+                <QRCode value={generateUpiQR(order.total)} size={56} level="H" />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="text-center text-red-600">Error: Invalid payment amount</div>
+          )}
           <div className="text-center">
             <p className="font-medium">Amount: {formatCurrency(order.total)}</p>
             <p className="text-sm text-muted-foreground mt-1">The payment will be processed through UPI</p>
@@ -352,27 +456,31 @@ function DeliveryVerificationContent() {
             <Button variant="outline" onClick={() => setShowPaymentQR(false)} className="sm:w-auto w-full">
               Cancel
             </Button>
-            <Button
-              onClick={() => {
-                setPaymentConfirmed(true);
-                setShowPaymentQR(false);
-              }}
-              className="sm:w-auto w-full"
-            >
+            <Button onClick={verifyPayment} className="sm:w-auto w-full">
               <CheckCircle className="h-4 w-4 mr-2" />
               Payment Received
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
 
-export default function DeliveryVerificationPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <DeliveryVerificationContent />
-    </Suspense>
-  );
+      {/* QR Scanner Dialog */}
+      <Dialog open={showScanner} onOpenChange={setShowScanner}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Scan Payment QR</DialogTitle>
+            <DialogDescription>Scan the customer's payment confirmation QR code</DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center p-4 bg-gray-100 rounded-lg">
+            <div id="qr-reader" style={{ width: "100%" }}></div>
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowScanner(false)} className="sm:w-auto w-full">
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
 }

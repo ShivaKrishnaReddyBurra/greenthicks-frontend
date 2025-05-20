@@ -76,7 +76,7 @@ export default function InvoiceGenerator({ order }) {
 
   // Generate UPI payment QR code when needed
   const generateUpiQR = (amount) => {
-    const upiUrl = `upi://pay?pa=funnygn156@&mc=123456&tid=${order.id}&tr=${order.id}&tn=Payment+for+order&am=${amount}&cu=INR`
+    const upiUrl = `upi://pay?pa=funnygn156@oksbi&pn=Green+Thicks@&mc=123456&tid=${order.id}&tr=${order.id}&tn=Payment+for+order&am=${amount}&cu=INR`
     return upiUrl
   }
 
@@ -183,7 +183,7 @@ export default function InvoiceGenerator({ order }) {
               <h2 className="font-bold text-gray-700 mb-2">BILL TO:</h2>
               <p className="font-medium">{order.customer.name}</p>
               <p>{order.customer.address}</p>
-              <p>{order.customer.phoneNumber || "Phone not provided"}</p>
+              <p>{order.customer.phone || "PhoneNumber not provided"}</p>
               <p>{order.customer.email}</p>
             </div>
             <div className="text-right">

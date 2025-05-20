@@ -756,7 +756,7 @@ export default function ProfilePage() {
                         required
                       />
                       <p className="text-xs text-muted-foreground">
-                        Use international format (e.g., +12345678901)
+                        Use indian format (e.g., +91 9234567890)
                       </p>
                     </div>
                     <div className="space-y-2">

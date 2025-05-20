@@ -7,6 +7,8 @@ import {
   ArrowLeft,
   Truck,
   Package,
+  Location,
+  Phone,
   CheckCircle,
   Clock,
   FileText,
@@ -304,7 +306,14 @@ export default function OrderDetails() {
               <div className="flex items-start">
                 <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 dark:text-gray-400 mr-2 sm:mr-3 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-gray-800 dark:text-white">{user?.email || "N/A"}</h3>
+                  <h3 className="font-medium text-gray-800 dark:text-white">{order.shippingAddress.email || "N/A"}</h3>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Email</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 dark:text-gray-400 mr-2 sm:mr-3 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-gray-800 dark:text-white">{order.shippingAddress.phone || "N/A"}</h3>
                   <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Email</p>
                 </div>
               </div>

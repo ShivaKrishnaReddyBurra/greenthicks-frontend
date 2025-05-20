@@ -196,7 +196,7 @@ export default function CheckoutPage() {
     if (!/^\+\d{10,12}$/.test(phone)) {
       toast({
         title: "Invalid Phone",
-        description: "Phone number must be in international format (e.g., +12345678901).",
+        description: "Phone number must be in indian format (e.g., +91 9234567890).",
         variant: "destructive",
       });
       return;

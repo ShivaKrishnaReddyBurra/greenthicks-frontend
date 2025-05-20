@@ -133,43 +133,43 @@ export default function DeliveryManagement() {
     switch (status) {
       case "pending":
         return (
-          <span className="flex items-center px-1.5 py-0.5 rounded-full text-3xs sm:text-xs bg-amber-100 text-amber-800">
-            <Package size={10} className="mr-0.5" />
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+            <Package size={14} className="mr-1" />
             Pending
           </span>
         );
       case "assigned":
         return (
-          <span className="flex items-center px-1.5 py-0.5 rounded-full text-3xs sm:text-xs bg-blue-100 text-blue-800">
-            <Truck size={10} className="mr-0.5" />
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+            <Truck size={14} className="mr-1" />
             Assigned
           </span>
         );
       case "out-for-delivery":
         return (
-          <span className="flex items-center px-1.5 py-0.5 rounded-full text-3xs sm:text-xs bg-purple-100 text-purple-800">
-            <Truck size={10} className="mr-0.5" />
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+            <Truck size={14} className="mr-1" />
             In Transit
           </span>
         );
       case "delivered":
         return (
-          <span className="flex items-center px-1.5 py-0.5 rounded-full text-3xs sm:text-xs bg-green-100 text-green-800">
-            <CheckCircle size={10} className="mr-0.5" />
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+            <CheckCircle size={14} className="mr-1" />
             Delivered
           </span>
         );
       case "cancelled":
         return (
-          <span className="flex items-center px-1.5 py-0.5 rounded-full text-3xs sm:text-xs bg-red-100 text-red-800">
-            <XCircle size={10} className="mr-0.5" />
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+            <XCircle size={14} className="mr-1" />
             Cancelled
           </span>
         );
       default:
         return (
-          <span className="flex items-center px-1.5 py-0.5 rounded-full text-3xs sm:text-xs bg-gray-100 text-gray-800">
-            <AlertTriangle size={10} className="mr-0.5" />
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+            <AlertTriangle size={14} className="mr-1" />
             Unknown
           </span>
         );
@@ -188,29 +188,35 @@ export default function DeliveryManagement() {
 
   const locationCounts = getPartnersCountByLocation();
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto px-1 sm:px-4 py-2 sm:py-6">
-      <h1 className="text-lg sm:text-3xl font-bold mb-2 sm:mb-6">Delivery Management</h1>
+    <div className="p-3 sm:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-800 dark:text-white">Delivery Management</h1>
+      </div>
 
       {/* Delivery Partners Summary */}
-      <div className="bg-card rounded-lg shadow-md p-2 sm:p-6 mb-2 sm:mb-6">
-        <h2 className="text-sm sm:text-xl font-bold mb-2 sm:mb-4">Delivery Partners</h2>
-        {loading ? (
-          <div className="animate-pulse">
-            <div className="h-8 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-          </div>
-        ) : partners.length === 0 ? (
-          <p className="text-muted-foreground text-3xs sm:text-sm">No delivery partners available.</p>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 mb-4 border border-gray-100 dark:border-gray-700">
+        <h2 className="text-base sm:text-lg font-bold mb-3 text-gray-800 dark:text-white">Delivery Partners</h2>
+        {partners.length === 0 ? (
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">No delivery partners available.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {Object.entries(locationCounts).map(([location, count]) => (
-              <div key={location} className="bg-muted/50 rounded-lg p-2 sm:p-4 flex items-center">
-                <div className="bg-primary/10 p-1.5 sm:p-3 rounded-full mr-1.5 sm:mr-4">
-                  <MapPin size={12} className="text-primary w-3 h-3 sm:w-6 sm:h-6" />
+              <div key={location} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 sm:p-3 flex items-center">
+                <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-full mr-2 sm:mr-3">
+                  <MapPin size={16} className="text-green-600 dark:text-green-400" />
                 </div>
                 <div>
-                  <p className="text-3xs sm:text-sm text-muted-foreground">{location}</p>
-                  <p className="text-base sm:text-2xl font-bold">{count} Partners</p>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{location}</p>
+                  <p className="text-base sm:text-lg font-bold text-gray-800 dark:text-white">{count} Partners</p>
                 </div>
               </div>
             ))}
@@ -218,188 +224,300 @@ export default function DeliveryManagement() {
         )}
       </div>
 
-      {/* Orders Table */}
-      <div className="bg-card rounded-lg shadow-md overflow-hidden mb-2 sm:mb-6">
-        <div className="p-2 sm:p-6 border-b">
-          <h2 className="text-sm sm:text-xl font-bold">Delivery Orders</h2>
+      {/* Orders Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
+        <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white">Delivery Orders</h2>
         </div>
-
-        {loading ? (
-          <div className="p-3 sm:p-8 text-center">
-            <div className="animate-spin rounded-full h-6 w-6 sm:h-12 sm:w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 sm:mt-4 text-3xs sm:text-sm">Loading orders...</p>
-          </div>
-        ) : orders.length === 0 ? (
-          <div className="p-3 sm:p-8 text-center">
-            <p className="text-3xs sm:text-sm">No orders found.</p>
+        {orders.length === 0 ? (
+          <div className="p-4 text-center">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">No orders found.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="sticky top-0 bg-muted/50 z-10">
-                <tr>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs min-w-[60px]">Order ID</th>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs min-w-[80px]">Customer</th>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs min-w-[100px] hidden sm:table-cell">Address</th>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs hidden sm:table-cell">Items</th>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs hidden sm:table-cell">Total</th>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs min-w-[60px]">Status</th>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs hidden sm:table-cell">Delivery Partner</th>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs min-w-[60px]">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} className="border-t hover:bg-muted/50">
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs">{order.id}</td>
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs break-words">{order.customer}</td>
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs break-words hidden sm:table-cell">{order.address}</td>
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs hidden sm:table-cell">{order.items}</td>
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs hidden sm:table-cell">{formatCurrency(order.total)}</td>
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs">{getStatusBadge(order.status)}</td>
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs hidden sm:table-cell">
-                      {order.assignedTo ? (
-                        <div>
-                          <p className="text-3xs sm:text-xs">{partners.find((p) => p.id === order.assignedTo)?.name || "Loading..."}</p>
-                          <p className="text-3xs text-muted-foreground">{order.assignedTo}</p>
-                        </div>
-                      ) : (
-                        <span className="text-amber-500 text-3xs sm:text-xs">Not assigned</span>
-                      )}
-                    </td>
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs">
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Order ID
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Customer
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Address
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Items
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Total
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Delivery Partner
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {orders.map((order) => (
+                    <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="px-3 sm:px-4 py-3 text-xs font-medium text-gray-900 dark:text-white">
+                        {order.id}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {order.customer}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {order.address}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {order.items}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {formatCurrency(order.total)}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3">{getStatusBadge(order.status)}</td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {order.assignedTo ? (
+                          <div>
+                            <p className="text-xs">{partners.find((p) => p.id === order.assignedTo)?.name || "Loading..."}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{order.assignedTo}</p>
+                          </div>
+                        ) : (
+                          <span className="text-yellow-500 dark:text-yellow-400 text-xs">Not assigned</span>
+                        )}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-right text-xs font-medium">
+                        {order.status === "pending" || order.status === "assigned" ? (
+                          <Button
+                            variant="link"
+                            onClick={() => openAssignModal(order)}
+                            className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-0"
+                          >
+                            {order.assignedTo ? "Reassign" : "Assign"}
+                          </Button>
+                        ) : (
+                          <Link
+                            href={`/admin/delivery/orders/${order.id}`}
+                            className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                          >
+                            View
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Mobile Card View */}
+            <div className="sm:hidden space-y-3 p-3">
+              {orders.map((order) => (
+                <div key={order.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 border border-gray-100 dark:border-gray-700">
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-gray-900 dark:text-white">{order.id}</span>
+                      {getStatusBadge(order.status)}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-300">Customer: {order.customer}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-300">Address: {order.address}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-300">Items: {order.items}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-300">Total: {formatCurrency(order.total)}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-300">
+                      Delivery Partner: {order.assignedTo ? partners.find((p) => p.id === order.assignedTo)?.name || "Loading..." : "Not assigned"}
+                    </div>
+                    <div className="flex justify-end">
                       {order.status === "pending" || order.status === "assigned" ? (
                         <Button
                           variant="link"
                           onClick={() => openAssignModal(order)}
-                          className="text-primary p-0 h-auto text-3xs sm:text-xs hover:underline min-h-[40px] min-w-[40px]"
+                          className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-0 text-xs"
                         >
                           {order.assignedTo ? "Reassign" : "Assign"}
                         </Button>
                       ) : (
                         <Link
                           href={`/admin/delivery/orders/${order.id}`}
-                          className="text-primary hover:underline text-3xs sm:text-xs min-h-[40px] min-w-[40px] inline-block"
+                          className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 text-xs"
                         >
                           View
                         </Link>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {!loading && totalPages > 1 && (
-          <div className="p-2 sm:p-4 flex flex-col sm:flex-row justify-between items-center border-t gap-1.5 sm:gap-3">
-            <Button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              variant="outline"
-              className="w-full sm:w-auto px-2 sm:px-4 py-1.5 sm:py-2 text-3xs sm:text-xs min-h-[40px]"
-            >
-              Previous
-            </Button>
-            <span className="text-3xs sm:text-xs text-muted-foreground">
-              Page {currentPage} of {totalPages}
-            </span>
-            <Button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              variant="outline"
-              className="w-full sm:w-auto px-2 sm:px-4 py-1.5 sm:py-2 text-3xs sm:text-xs min-h-[40px]"
-            >
-              Next
-            </Button>
-          </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <div className="p-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex flex-col items-center gap-3">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Page {currentPage} of {totalPages}
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    variant="outline"
+                    className="px-3 py-1 text-xs"
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    variant="outline"
+                    className="px-3 py-1 text-xs"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* Delivery Partners Table */}
-      <div className="bg-card rounded-lg shadow-md overflow-hidden">
-        <div className="p-2 sm:p-6 border-b">
-          <h2 className="text-sm sm:text-xl font-bold">Delivery Partners</h2>
+      {/* Delivery Partners Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white">Delivery Partners</h2>
         </div>
-
-        {loading ? (
-          <div className="p-3 sm:p-8 text-center">
-            <div className="animate-spin rounded-full h-6 w-6 sm:h-12 sm:w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 sm:mt-4 text-3xs sm:text-sm">Loading partners...</p>
-          </div>
-        ) : partners.length === 0 ? (
-          <div className="p-3 sm:p-8 text-center">
-            <p className="text-3xs sm:text-sm">No partners found.</p>
+        {partners.length === 0 ? (
+          <div className="p-4 text-center">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">No partners found.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="sticky top-0 bg-muted/50 z-10">
-                <tr>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs min-w-[60px]">ID</th>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs min-w-[80px]">Name</th>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs hidden sm:table-cell">Location</th>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs min-w-[60px]">Status</th>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs hidden sm:table-cell">Orders Delivered</th>
-                  <th className="text-left py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs min-w-[60px]">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {partners.map((partner) => (
-                  <tr key={partner.id} className="border-t hover:bg-muted/50">
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs">{partner.id}</td>
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs break-words">{partner.name}</td>
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs hidden sm:table-cell">{partner.location}</td>
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs">
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      ID
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Location
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Orders Delivered
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {partners.map((partner) => (
+                    <tr key={partner.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="px-3 sm:px-4 py-3 text-xs font-medium text-gray-900 dark:text-white">
+                        {partner.id}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {partner.name}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {partner.location}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            partner.status === "active"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                          }`}
+                        >
+                          {partner.status === "active" ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {partner.ordersDelivered}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-right text-xs font-medium">
+                        <Link
+                          href={`/admin/delivery/partners/${partner.id}`}
+                          className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                        >
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+ Flavor Flav</table>
+            </div>
+            {/* Mobile Card View */}
+            <div className="sm:hidden space-y-3 p-3">
+              {partners.map((partner) => (
+                <div key={partner.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 border border-gray-100 dark:border-gray-700">
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-gray-900 dark:text-white">{partner.name}</span>
                       <span
-                        className={`px-1.5 py-0.5 rounded-full text-3xs ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                           partner.status === "active"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
                         }`}
                       >
                         {partner.status === "active" ? "Active" : "Inactive"}
                       </span>
-                    </td>
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs hidden sm:table-cell">{partner.ordersDelivered}</td>
-                    <td className="py-0.5 px-0.5 sm:py-3 sm:px-4 text-3xs sm:text-xs">
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-300">ID: {partner.id}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-300">Location: {partner.location}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-300">Orders Delivered: {partner.ordersDelivered}</div>
+                    <div className="flex justify-end">
                       <Link
                         href={`/admin/delivery/partners/${partner.id}`}
-                        className="text-primary hover:underline text-3xs sm:text-xs min-h-[40px] min-w-[40px] inline-block"
+                        className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 text-xs"
                       >
                         View
                       </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
       {/* Assign Delivery Partner Modal */}
       {assignModalOpen && selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-1 sm:p-4">
-          <div className="bg-card rounded-lg shadow-lg p-2 sm:p-6 w-full max-w-[92vw] max-h-[80vh] overflow-y-auto">
-            <h3 className="text-sm sm:text-xl font-bold mb-2 sm:mb-4">Assign Delivery Partner</h3>
-            <p className="mb-1.5 sm:mb-2 text-3xs sm:text-sm">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 w-full max-w-[95vw] max-h-[75vh] overflow-y-auto border border-gray-100 dark:border-gray-700">
+            <h3 className="text-base font-bold mb-3 text-gray-800 dark:text-white">Assign Delivery Partner</h3>
+            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
               <span className="font-semibold">Order:</span> {selectedOrder.id}
             </p>
-            <p className="mb-1.5 sm:mb-2 text-3xs sm:text-sm">
+            <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
               <span className="font-semibold">Customer:</span> {selectedOrder.customer}
             </p>
-            <p className="mb-2 sm:mb-4 text-3xs sm:text-sm">
+            <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
               <span className="font-semibold">Address:</span>{" "}
-              <span className="inline-block max-w-[90%] break-words">{selectedOrder.address}</span>
+              <span className="inline-block max-w-[85%] break-words">{selectedOrder.address}</span>
             </p>
 
-            <div className="mb-2 sm:mb-4">
-              <h4 className="font-semibold mb-1.5 sm:mb-2 text-3xs sm:text-sm">Select a delivery partner:</h4>
+            <div className="mb-3">
+              <h4 className="font-semibold mb-2 text-xs text-gray-800 dark:text-white">Select a delivery partner:</h4>
               {partners.length === 0 ? (
-                <p className="text-muted-foreground text-3xs sm:text-sm">No delivery partners available.</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">No delivery partners available.</p>
               ) : (
-                <div className="space-y-1.5 sm:space-y-2 max-h-40 sm:max-h-60 overflow-y-auto">
+                <div className="space-y-2 max-h-48 overflow-y-auto">
                   {partners
                     .filter((partner) => partner.status === "active")
                     .map((partner) => (
@@ -407,15 +525,15 @@ export default function DeliveryManagement() {
                         key={partner.id}
                         onClick={() => assignDeliveryPartner(partner.id)}
                         variant="outline"
-                        className="w-full text-left p-1.5 sm:p-3 flex justify-between items-center h-auto text-3xs sm:text-sm hover:bg-muted/50 min-h-[40px] min-w-[40px]"
+                        className="w-full text-left p-2 flex justify-between items-center text-xs hover:bg-gray-50 dark:hover:bg-gray-700/50"
                       >
                         <div>
-                          <p className="font-medium">{partner.name}</p>
-                          <p className="text-3xs text-muted-foreground">
+                          <p className="font-medium text-gray-800 dark:text-white">{partner.name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {partner.id} - {partner.location}
                           </p>
                         </div>
-                        <span className="text-3xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-full">
                           {partner.ordersDelivered} orders
                         </span>
                       </Button>
@@ -428,7 +546,7 @@ export default function DeliveryManagement() {
               <Button
                 onClick={closeAssignModal}
                 variant="outline"
-                className="px-2 sm:px-4 py-1.5 sm:py-2 text-3xs sm:text-sm min-h-[40px] min-w-[40px]"
+                className="px-3 py-1 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
               >
                 Cancel
               </Button>

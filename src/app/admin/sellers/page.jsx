@@ -1,24 +1,23 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Search, Filter, CheckCircle, XCircle, AlertTriangle } from "lucide-react"
+import { useState, useEffect } from "react";
+import { Search, Filter, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function SellerManagement() {
-  const [sellers, setSellers] = useState([])
-  const [pendingProducts, setPendingProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState("sellers")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filter, setFilter] = useState("all")
+  const [sellers, setSellers] = useState([]);
+  const [pendingProducts, setPendingProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("sellers");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     // Simulate fetching sellers and pending products
     const fetchData = async () => {
       try {
-        // In a real app, this would be API calls
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        // Sample sellers data
         const sellersData = [
           {
             id: "SEL-001",
@@ -80,9 +79,8 @@ export default function SellerManagement() {
             status: "pending",
             joinedDate: "2023-05-01",
           },
-        ]
+        ];
 
-        // Sample pending products data
         const pendingProductsData = [
           {
             id: "PROD-101",
@@ -139,102 +137,108 @@ export default function SellerManagement() {
             category: "Organic",
             submittedDate: "2023-05-01",
           },
-        ]
+        ];
 
-        setSellers(sellersData)
-        setPendingProducts(pendingProductsData)
+        setSellers(sellersData);
+        setPendingProducts(pendingProductsData);
       } catch (error) {
-        console.error("Error fetching data:", error)
+        console.error("Error fetching data:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
   const approveProduct = (productId) => {
-    // In a real app, this would be an API call
-    setPendingProducts(pendingProducts.filter((product) => product.id !== productId))
-  }
+    setPendingProducts(pendingProducts.filter((product) => product.id !== productId));
+  };
 
   const rejectProduct = (productId) => {
-    // In a real app, this would be an API call
-    setPendingProducts(pendingProducts.filter((product) => product.id !== productId))
-  }
+    setPendingProducts(pendingProducts.filter((product) => product.id !== productId));
+  };
 
   const approveSeller = (sellerId) => {
-    // In a real app, this would be an API call
-    setSellers(sellers.map((seller) => (seller.id === sellerId ? { ...seller, status: "active" } : seller)))
-  }
+    setSellers(sellers.map((seller) => (seller.id === sellerId ? { ...seller, status: "active" } : seller)));
+  };
 
   const filteredSellers = sellers.filter((seller) => {
     const matchesSearch =
       seller.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       seller.owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      seller.id.toLowerCase().includes(searchTerm.toLowerCase())
+      seller.id.toLowerCase().includes(searchTerm.toLowerCase());
 
-    if (filter === "all") return matchesSearch
-    if (filter === "active") return matchesSearch && seller.status === "active"
-    if (filter === "pending") return matchesSearch && seller.status === "pending"
+    if (filter === "all") return matchesSearch;
+    if (filter === "active") return matchesSearch && seller.status === "active";
+    if (filter === "pending") return matchesSearch && seller.status === "pending";
 
-    return matchesSearch
-  })
+    return matchesSearch;
+  });
 
   const filteredProducts = pendingProducts.filter(
     (product) =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.sellerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.id.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Seller Management</h1>
+    <div className="p-3 sm:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+      <h1 className="text-lg sm:text-2xl font-bold text-gray-800 dark:text-white mb-4">Seller Management</h1>
 
       {/* Tabs */}
-      <div className="flex border-b mb-6">
-        <button
-          className={`px-4 py-2 font-medium ${
+      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
+        <Button
+          variant="ghost"
+          className={`px-3 py-1 text-xs sm:text-sm font-medium ${
             activeTab === "sellers"
-              ? "border-b-2 border-primary text-primary"
-              : "text-muted-foreground hover:text-foreground"
+              ? "border-b-2 border-green-600 text-green-600 dark:text-green-400"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
           }`}
           onClick={() => setActiveTab("sellers")}
         >
           Sellers
-        </button>
-        <button
-          className={`px-4 py-2 font-medium ${
+        </Button>
+        <Button
+          variant="ghost"
+          className={`px-3 py-1 text-xs sm:text-sm font-medium ${
             activeTab === "pending-products"
-              ? "border-b-2 border-primary text-primary"
-              : "text-muted-foreground hover:text-foreground"
+              ? "border-b-2 border-green-600 text-green-600 dark:text-green-400"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
           }`}
           onClick={() => setActiveTab("pending-products")}
         >
           Pending Products
-        </button>
+        </Button>
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-card rounded-lg shadow-md p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 mb-4 border border-gray-100 dark:border-gray-700">
+        <div className="flex flex-col gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
               placeholder={activeTab === "sellers" ? "Search sellers..." : "Search products..."}
-              className="w-full pl-10 pr-4 py-2 border rounded-md bg-background"
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-xs sm:text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
           {activeTab === "sellers" && (
             <div className="flex items-center">
-              <Filter size={18} className="mr-2 text-muted-foreground" />
+              <Filter className="h-4 w-4 text-gray-400 mr-2" />
               <select
-                className="border rounded-md bg-background px-3 py-2"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3 text-xs sm:text-sm"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
               >
@@ -247,58 +251,87 @@ export default function SellerManagement() {
         </div>
       </div>
 
-      {/* Content based on active tab */}
-      {activeTab === "sellers" ? (
-        <div className="bg-card rounded-lg shadow-md overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-4">Loading sellers...</p>
-            </div>
-          ) : filteredSellers.length === 0 ? (
-            <div className="p-8 text-center">
-              <p>No sellers found.</p>
-            </div>
-          ) : (
+      {/* Sellers Tab */}
+      {activeTab === "sellers" && (
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden sm:block bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-muted/50">
-                    <th className="text-left py-3 px-4">ID</th>
-                    <th className="text-left py-3 px-4">Name</th>
-                    <th className="text-left py-3 px-4">Owner</th>
-                    <th className="text-left py-3 px-4">Location</th>
-                    <th className="text-left py-3 px-4">Products</th>
-                    <th className="text-left py-3 px-4">Total Sales</th>
-                    <th className="text-left py-3 px-4">Status</th>
-                    <th className="text-left py-3 px-4">Actions</th>
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      ID
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Owner
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Location
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Products
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Total Sales
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredSellers.map((seller) => (
-                    <tr key={seller.id} className="border-t hover:bg-muted/50">
-                      <td className="py-3 px-4">{seller.id}</td>
-                      <td className="py-3 px-4">{seller.name}</td>
-                      <td className="py-3 px-4">{seller.owner}</td>
-                      <td className="py-3 px-4">{seller.location}</td>
-                      <td className="py-3 px-4">{seller.productsListed}</td>
-                      <td className="py-3 px-4">₹{seller.totalSales.toLocaleString()}</td>
-                      <td className="py-3 px-4">
+                    <tr key={seller.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="px-3 sm:px-4 py-3 text-xs font-medium text-gray-900 dark:text-white">
+                        {seller.id}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {seller.name}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {seller.owner}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {seller.location}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {seller.productsListed}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        ₹{seller.totalSales.toLocaleString()}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            seller.status === "active" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            seller.status === "active"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
                           }`}
                         >
                           {seller.status === "active" ? "Active" : "Pending Approval"}
                         </span>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="px-3 sm:px-4 py-3 text-right text-xs font-medium">
                         {seller.status === "pending" ? (
-                          <button onClick={() => approveSeller(seller.id)} className="text-primary hover:underline">
+                          <Button
+                            variant="link"
+                            onClick={() => approveSeller(seller.id)}
+                            className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-0"
+                          >
                             Approve
-                          </button>
+                          </Button>
                         ) : (
-                          <a href={`/admin/sellers/${seller.id}`} className="text-primary hover:underline">
+                          <a
+                            href={`/admin/sellers/${seller.id}`}
+                            className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                          >
                             View Details
                           </a>
                         )}
@@ -308,71 +341,138 @@ export default function SellerManagement() {
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
-      ) : (
-        <div className="bg-card rounded-lg shadow-md overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-4">Loading products...</p>
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="p-8 text-center">
-              <p>No pending products found.</p>
-            </div>
-          ) : (
+          </div>
+          {/* Mobile Card View */}
+          <div className="sm:hidden space-y-3 mb-4">
+            {filteredSellers.map((seller) => (
+              <div key={seller.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 border border-gray-100 dark:border-gray-700">
+                <div className="flex flex-col space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-medium text-gray-900 dark:text-white">{seller.name}</span>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        seller.status === "active"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                      }`}
+                    >
+                      {seller.status === "active" ? "Active" : "Pending Approval"}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">ID: {seller.id}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">Owner: {seller.owner}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">Location: {seller.location}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">Products: {seller.productsListed}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">Total Sales: ₹{seller.totalSales.toLocaleString()}</div>
+                  <div className="flex justify-end">
+                    {seller.status === "pending" ? (
+                      <Button
+                        variant="link"
+                        onClick={() => approveSeller(seller.id)}
+                        className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-0 text-xs"
+                      >
+                        Approve
+                      </Button>
+                    ) : (
+                      <a
+                        href={`/admin/sellers/${seller.id}`}
+                        className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 text-xs"
+                      >
+                        View Details
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Pending Products Tab */}
+      {activeTab === "pending-products" && (
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden sm:block bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-muted/50">
-                    <th className="text-left py-3 px-4">ID</th>
-                    <th className="text-left py-3 px-4">Product Name</th>
-                    <th className="text-left py-3 px-4">Seller</th>
-                    <th className="text-left py-3 px-4">Category</th>
-                    <th className="text-left py-3 px-4">Price (₹)</th>
-                    <th className="text-left py-3 px-4">Suggested Price (₹)</th>
-                    <th className="text-left py-3 px-4">Stock</th>
-                    <th className="text-left py-3 px-4">Actions</th>
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      ID
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Product Name
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Seller
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Price (₹)
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-5-400 uppercase tracking-wider">
+                      Suggested Price (₹)
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Stock
+                    </th>
+                    <th className="px-3 sm:px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredProducts.map((product) => (
-                    <tr key={product.id} className="border-t hover:bg-muted/50">
-                      <td className="py-3 px-4">{product.id}</td>
-                      <td className="py-3 px-4">{product.name}</td>
-                      <td className="py-3 px-4">
+                    <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="px-3 sm:px-4 py-3 text-xs font-medium text-gray-900 dark:text-white">
+                        {product.id}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {product.name}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
                         <div>
                           <p>{product.sellerName}</p>
-                          <p className="text-xs text-muted-foreground">{product.sellerId}</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500">{product.sellerId}</p>
                         </div>
                       </td>
-                      <td className="py-3 px-4">{product.category}</td>
-                      <td className="py-3 px-4">₹{product.price}</td>
-                      <td className="py-3 px-4">₹{product.suggestedPrice}</td>
-                      <td className="py-3 px-4">{product.stock}</td>
-                      <td className="py-3 px-4">
-                        <div className="flex space-x-2">
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {product.category}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        ₹{product.price}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        ₹{product.suggestedPrice}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 dark:text-gray-300">
+                        {product.stock}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 text-right text-xs font-medium">
+                        <div className="flex justify-end space-x-2">
                           <button
                             onClick={() => approveProduct(product.id)}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-md"
+                            className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
                             title="Approve Product"
                           >
-                            <CheckCircle size={18} />
+                            <CheckCircle size={14} />
                           </button>
                           <button
                             onClick={() => rejectProduct(product.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-md"
+                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                             title="Reject Product"
                           >
-                            <XCircle size={18} />
+                            <XCircle size={14} />
                           </button>
                           <a
                             href={`/admin/sellers/products/${product.id}`}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-md"
+                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                             title="Edit Product"
                           >
-                            <AlertTriangle size={18} />
+                            <AlertTriangle size={14} />
                           </a>
                         </div>
                       </td>
@@ -381,9 +481,50 @@ export default function SellerManagement() {
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
+          </div>
+          {/* Mobile Card View */}
+          <div className="sm:hidden space-y-3 mb-4">
+            {filteredProducts.map((product) => (
+              <div key={product.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 border border-gray-100 dark:border-gray-700">
+                <div className="flex flex-col space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-medium text-gray-900 dark:text-white">{product.name}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-300">{product.id}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">Seller: {product.sellerName} ({product.sellerId})</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">Category: {product.category}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">Price: ₹{product.price}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">Suggested Price: ₹{product.suggestedPrice}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">Stock: {product.stock}</div>
+                  <div className="flex justify-end space-x-2">
+                    <button
+                      onClick={() => approveProduct(product.id)}
+                      className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                      title="Approve Product"
+                    >
+                      <CheckCircle size={14} />
+                    </button>
+                    <button
+                      onClick={() => rejectProduct(product.id)}
+                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                      title="Reject Product"
+                    >
+                      <XCircle size={14} />
+                    </button>
+                    <a
+                      href={`/admin/sellers/products/${product.id}`}
+                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                      title="Edit Product"
+                    >
+                      <AlertTriangle size={14} />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
-  )
+  );
 }
