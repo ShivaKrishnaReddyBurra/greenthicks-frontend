@@ -62,7 +62,7 @@ export default function InvoicePage() {
         y += 20
         doc.text(`Email: ${invoiceData.customer.email}`, margin, y)
         y += 30
-        doc.text(`Phone: ${invoiceData.customer.phone}`, margin, y)
+        doc.text(`Phone: ${invoiceData.customer.phoneNumber}`, margin, y)
         y += 30
 
         // Items Table (unchanged)

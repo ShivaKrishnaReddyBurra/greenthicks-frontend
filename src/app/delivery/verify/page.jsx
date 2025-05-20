@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import QRCode from "react-qr-code";
+import { Scanner } from '@yudiel/react-qr-scanner';
 
 function DeliveryVerificationContent() {
   const searchParams = useSearchParams();
@@ -26,7 +26,7 @@ function DeliveryVerificationContent() {
   const [loading, setLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
-  const [showPaymentQR, setShowPaymentQR] = useState(false);
+  const [showPaymentScanner, setShowPaymentScanner] = useState(false);
   const [order, setOrder] = useState(null);
 
   // Get order details from URL parameters
@@ -93,11 +93,6 @@ function DeliveryVerificationContent() {
     }).format(amount);
   };
 
-  // Generate UPI payment QR code
-  const generateUpiQR = (amount) => {
-    return `upi://pay?pa=funnygn156@&oksbi&mc=123456&tid=${orderId}&tr=${orderId}&tn=Payment+for+order&am=${amount}&cu=INR`;
-  };
-
   // Handle cash payment confirmation
   const confirmCashPayment = async () => {
     try {
@@ -126,6 +121,40 @@ function DeliveryVerificationContent() {
         description: err.message || "Failed to confirm payment",
         variant: "destructive",
       });
+    }
+  };
+
+  // Handle UPI payment confirmation via QR scan
+  const handleQRScan = async (result) => {
+    if (result) {
+      try {
+        const token = localStorage.getItem("authToken");
+        const response = await fetch(`/api/orders/${orderId}/confirm-payment`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ paymentMethod: "UPI", transactionId: result.rawValue }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to confirm UPI payment");
+        }
+
+        setPaymentConfirmed(true);
+        setShowPaymentScanner(false);
+        toast({
+          title: "Success",
+          description: "UPI payment confirmed",
+        });
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: err.message || "Failed to confirm UPI payment",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -159,9 +188,9 @@ function DeliveryVerificationContent() {
     }
   };
 
-  // Toggle payment QR code display
-  const togglePaymentQR = () => {
-    setShowPaymentQR(!showPaymentQR);
+  // Toggle payment scanner display
+  const togglePaymentScanner = () => {
+    setShowPaymentScanner(!showPaymentScanner);
   };
 
   if (loading) {
@@ -283,9 +312,9 @@ function DeliveryVerificationContent() {
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Confirm Cash Payment
               </Button>
-              <Button className="w-full" variant="outline" onClick={togglePaymentQR}>
+              <Button className="w-full" variant="outline" onClick={togglePaymentScanner}>
                 <QrCode className="h-4 w-4 mr-2" />
-                Generate Payment QR
+                Scan UPI Payment QR
               </Button>
             </>
           ) : (
@@ -332,35 +361,33 @@ function DeliveryVerificationContent() {
         </CardFooter>
       </Card>
 
-      {/* Payment QR Code Dialog */}
-      <Dialog open={showPaymentQR} onOpenChange={setShowPaymentQR}>
+      {/* Payment QR Scanner Dialog */}
+      <Dialog open={showPaymentScanner} onOpenChange={setShowPaymentScanner}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Payment QR Code</DialogTitle>
-            <DialogDescription>Ask the customer to scan this QR code to make the payment</DialogDescription>
+            <DialogTitle>Scan UPI Payment QR</DialogTitle>
+            <DialogDescription>Scan the customer's UPI payment QR code to confirm payment</DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-center p-4">
             <div className="border-2 border-gray-200 p-4 rounded-lg">
-              <QRCode value={generateUpiQR(order.total)} size={200} />
+              <Scanner
+                onScan={handleQRScan}
+                constraints={{ facingMode: "environment" }}
+                formats={["qr_code"]}
+                styles={{
+                  container: { width: "200px", height: "200px" },
+                  video: { width: "100%", height: "100%", objectFit: "cover" },
+                }}
+              />
             </div>
           </div>
           <div className="text-center">
             <p className="font-medium">Amount: {formatCurrency(order.total)}</p>
-            <p className="text-sm text-muted-foreground mt-1">The payment will be processed through UPI</p>
+            <p className="text-sm text-muted-foreground mt-1">Scan the UPI QR code to verify payment</p>
           </div>
           <DialogFooter className="flex flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setShowPaymentQR(false)} className="sm:w-auto w-full">
+            <Button variant="outline" onClick={() => setShowPaymentScanner(false)} className="sm:w-auto w-full">
               Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                setPaymentConfirmed(true);
-                setShowPaymentQR(false);
-              }}
-              className="sm:w-auto w-full"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Payment Received
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -183,7 +183,7 @@ export default function InvoiceGenerator({ order }) {
               <h2 className="font-bold text-gray-700 mb-2">BILL TO:</h2>
               <p className="font-medium">{order.customer.name}</p>
               <p>{order.customer.address}</p>
-              <p>{order.customer.phone || "PhoneNumber not provided"}</p>
+              <p>{order.customer.phoneNumber || "PhoneNumber not provided"}</p>
               <p>{order.customer.email}</p>
             </div>
             <div className="text-right">
