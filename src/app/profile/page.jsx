@@ -621,8 +621,8 @@ iatives      }
                           name="phone"
                           value={formData.phone}
                           onChange={handleInputChange}
-                          placeholder="+12345678901"
-                          pattern="/^(?:\+91)?[6-9]\d{9}$/"
+                          placeholder="+91 912345678901"
+                          pattern="/^(?:\+91\s?)?\d{10}$/"
                           title="Phone number must be in indian format (e.g., +91 92345678901)"
                           required
                         />
@@ -788,8 +788,8 @@ iatives      }
                         name="phone"
                         value={formData.phone}
                         onChange={handleInputChange}
-                        placeholder="+12345678901"
-                        pattern="/^(?:\+91)?[6-9]\d{9}$/"
+                        placeholder="+91 92345678901"
+                        pattern="/^(?:\+91\s?)?\d{10}$/"
                         title="Phone number must be in indian format (e.g., +91 92345678901)"
                         required
                       />

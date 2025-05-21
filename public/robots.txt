@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-Host: https://www.greenthicks.live
+Host: https://greenthicks.live
 
 # Sitemaps
-Sitemap: https://www.greenthicks.live/sitemap.xml
+Sitemap: https://greenthicks.live/sitemap.xml
