@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,6 +14,7 @@ import {
   Trash,
   User,
   X,
+  Phone,
 } from "lucide-react";
 import coverPhoto from "@/public/coverpage.png";
 import coverPhoto1 from "@/public/coverpage1.png";
@@ -49,6 +51,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [showAddressPrompt, setShowAddressPrompt] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -73,10 +76,9 @@ export default function ProfilePage() {
       setIsMobile(isMobileDevice);
     };
 
-    checkMobile(); // Initial check
-    window.addEventListener("resize", checkMobile); // Listen for resize
-
-    return () => window.removeEventListener("resize", checkMobile); // Cleanup
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   const fetchUserData = async () => {
@@ -95,9 +97,11 @@ export default function ProfilePage() {
         location: profileData.location || "Not set",
         totalSpent: profileData.totalSpent || 0,
         totalOrders: profileData.totalOrders || 0,
+        phone: profileData.phone || "Not set",
       };
       setUser(userData);
       setAddresses(addressesData);
+      setShowAddressPrompt(addressesData.length === 0);
       const primaryAddress = addressesData.find((addr) => addr.isPrimary) || addressesData[0];
       if (primaryAddress) {
         setSelectedAddressId(primaryAddress.addressId);
@@ -123,7 +127,7 @@ export default function ProfilePage() {
           city: "",
           state: "",
           zipCode: "",
-          phone: "",
+          phone: profileData.phone || "",
           isPrimary: false,
         });
       }
@@ -169,6 +173,7 @@ export default function ProfilePage() {
           lastName: formData.lastName,
           username: formData.username,
           email: formData.email,
+          phone: formData.phone,
         }),
       });
       setUser((prev) => ({
@@ -178,6 +183,7 @@ export default function ProfilePage() {
         email: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
+        phone: formData.phone,
       }));
       setIsEditingProfile(false);
       toast({
@@ -194,7 +200,7 @@ export default function ProfilePage() {
       if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
         clearAuth();
         router.push("/login");
-      }
+iatives      }
     } finally {
       setIsSubmitting(false);
     }
@@ -248,8 +254,9 @@ export default function ProfilePage() {
         ]);
         setSelectedAddressId(newAddress.address.addressId);
       }
-      await fetchUserData(); // Sync computed fields (name, location)
+      await fetchUserData();
       setIsEditingAddress(false);
+      setShowAddressPrompt(false);
       toast({
         title: "Success",
         description: selectedAddressId ? "Address updated successfully." : "Address added successfully.",
@@ -278,6 +285,7 @@ export default function ProfilePage() {
       lastName: user?.lastName || user?.name?.split(" ")[1] || "",
       username: user?.username || "",
       email: user?.email || "",
+      phone: user?.phone || "",
     }));
   };
 
@@ -311,7 +319,7 @@ export default function ProfilePage() {
         city: "",
         state: "",
         zipCode: "",
-        phone: "",
+        phone: user?.phone || "",
         isPrimary: false,
       }));
     }
@@ -330,7 +338,7 @@ export default function ProfilePage() {
       city: "",
       state: "",
       zipCode: "",
-      phone: "",
+      phone: user?.phone || "",
       isPrimary: true,
     }));
   };
@@ -366,7 +374,7 @@ export default function ProfilePage() {
         isPrimary: true,
         username: user?.username || "",
       });
-      await fetchUserData(); // Sync computed fields
+      await fetchUserData();
       toast({
         title: "Success",
         description: "Primary address updated successfully.",
@@ -422,12 +430,13 @@ export default function ProfilePage() {
             city: "",
             state: "",
             zipCode: "",
-            phone: "",
+            phone: user?.phone || "",
             isPrimary: false,
           }));
         }
       }
-      await fetchUserData(); // Sync computed fields
+      await fetchUserData();
+      setShowAddressPrompt(addresses.length === 1);
       toast({
         title: "Success",
         description: "Address deleted successfully.",
@@ -457,11 +466,28 @@ export default function ProfilePage() {
   }
 
   if (!user) {
-    return null; // Redirect handled in useEffect
+    return null;
   }
 
   return (
     <div className="bg-background min-h-screen">
+      {showAddressPrompt && (
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mx-auto max-w-2xl mt-4">
+          <p className="font-medium">Please add an address to complete your profile!</p>
+          <p className="text-sm">Adding an address will help us serve you better.</p>
+          <Button
+            className="mt-2"
+            onClick={() => {
+              setActiveTab("addresses");
+              handleAddNewAddress();
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Address Now
+          </Button>
+        </div>
+      )}
+
       {/* Cover Photo and Profile Header */}
       <div className="relative">
         <div className="h-48 md:h-64 w-full bg-muted overflow-hidden">
@@ -598,6 +624,22 @@ export default function ProfilePage() {
                           required
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input
+                          id="phone"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          placeholder="+12345678901"
+                          pattern="^\+\d{10,12}$"
+                          title="Phone number must be in international format (e.g., +12345678901)"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Use international format (e.g., +12345678901)
+                        </p>
+                      </div>
                       <div className="flex justify-end gap-2">
                         <Button
                           variant="outline"
@@ -636,23 +678,29 @@ export default function ProfilePage() {
                           <p>{user.email}</p>
                         </div>
                         <div>
-                          <h3 className="text-sm font-medium text-muted-foreground">Location</h3>
-                          <p>{user.location}</p>
+                          <h3 className="text-sm font-medium text-muted-foreground">Phone Number</h3>
+                          <p>{user.phone || "Not set"}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
+                          <h3 className="text-sm font-medium text-muted-foreground">Location</h3>
+                          <p>{user.location}</p>
+                        </div>
+                        <div>
                           <h3 className="text-sm font-medium text-muted-foreground">Joined Date</h3>
                           <p>{user.joinedDate}</p>
                         </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <h3 className="text-sm font-medium text-muted-foreground">Total Orders</h3>
                           <p>{user.totalOrders}</p>
                         </div>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-muted-foreground">Total Spent</h3>
-                        <p>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(user.totalSpent)}</p>
+                        <div>
+                          <h3 className="text-sm font-medium text-muted-foreground">Total Spent</h3>
+                          <p>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(user.totalSpent)}</p>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -750,13 +798,13 @@ export default function ProfilePage() {
                         name="phone"
                         value={formData.phone}
                         onChange={handleInputChange}
-                        placeholder="+91 9234567890"
-                        pattern="^(\+91[\-\s]?)?[6-9]\d{9}$"
-                        title="Phone number must be in indian format (e.g., +91 92345678901)"
+                        placeholder="+12345678901"
+                        pattern="^\+\d{10,12}$"
+                        title="Phone number must be in international format (e.g., +12345678901)"
                         required
                       />
                       <p className="text-xs text-muted-foreground">
-                        Use indian format (e.g., +91 9234567890)
+                        Use international format (e.g., +12345678901)
                       </p>
                     </div>
                     <div className="space-y-2">

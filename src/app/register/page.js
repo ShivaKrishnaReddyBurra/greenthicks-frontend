@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Lock, Mail, User, UserPlus } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, User, UserPlus, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,12 +20,13 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(""); // New state for success message
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -48,10 +49,18 @@ export default function RegisterPage() {
       return;
     }
 
+    // Basic client-side phone number validation
+    const phoneRegex = /^\+\d{10,12}$/;
+    if (!phoneRegex.test(phone)) {
+      setError("Phone number must be in international format (e.g., +12345678901)");
+      setLoading(false);
+      return;
+    }
+
     try {
       await fetchWithoutAuth("/api/auth/signup", {
         method: "POST",
-        body: JSON.stringify({ email, password, isAdmin, firstName, lastName, username }),
+        body: JSON.stringify({ email, password, isAdmin, firstName, lastName, username, phone }),
       });
 
       setSuccess("Registration successful! Please check your email to verify your account.");
@@ -59,7 +68,7 @@ export default function RegisterPage() {
         title: "Registration Successful",
         description: "Please verify your email to activate your account.",
       });
-      setTimeout(() => router.push("/login"), 3000); // Redirect to login after 3 seconds
+      setTimeout(() => router.push("/login"), 3000);
     } catch (err) {
       setError(err.message || "Registration failed. Please try again.");
       console.error(err);
@@ -145,7 +154,7 @@ export default function RegisterPage() {
                     id="username"
                     type="text"
                     placeholder="Greenthicks user"
-                    classfilters="pl-10 bg-white/50 focus:bg-white/80 transition-colors"
+                    className="pl-10 bg-white/50 focus:bg-white/80 transition-colors"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
@@ -169,6 +178,29 @@ export default function RegisterPage() {
                     required
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    <Phone size={16} />
+                  </div>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+12345678901"
+                    className="pl-10 bg-white/50 focus:bg-white/80 transition-colors"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    pattern="^\+\d{10,12}$"
+                    title="Phone number must be in international format (e.g., +12345678901)"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Use international format (e.g., +12345678901)
+                </p>
               </div>
 
               <div className="space-y-2">

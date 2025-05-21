@@ -68,11 +68,14 @@ export default function InvoiceGenerator({ order }) {
   }
 
   // Generate a delivery verification QR code with minimal order details
-  const generateDeliveryQR = () => {
-    // Only include essential order details
-    const deliveryVerificationUrl = `http://greenthicks.live/delivery/verify?orderId=${order.id}&total=${order.total}&paymentMethod=${order.paymentMethod}`
-    return deliveryVerificationUrl
-  }
+// Generate a delivery verification QR code with order ID
+const generateDeliveryQR = () => {
+  // Encode a URL that points to a route for handling role-based redirection
+  const orderId = order.id
+  const orderIdNumbers = orderId.split('-')[1];
+  const verificationUrl = `https://greenthicks.live/orders/verify?globalId=${orderIdNumbers}`;
+  return verificationUrl;
+};
 
   // Generate UPI payment QR code when needed
   const generateUpiQR = (amount) => {
@@ -208,6 +211,7 @@ export default function InvoiceGenerator({ order }) {
               <thead>
                 <tr className="bg-gray-100">
                   <th className="py-2 px-4 text-left border border-gray-300">Item</th>
+                  <th className="py-2 px-4 text-right border border-gray-300">Unit</th>
                   <th className="py-2 px-4 text-right border border-gray-300">Quantity</th>
                   <th className="py-2 px-4 text-right border border-gray-300">Unit Price</th>
                   <th className="py-2 px-4 text-right border border-gray-300">Amount</th>
@@ -217,6 +221,7 @@ export default function InvoiceGenerator({ order }) {
                 {order.items.map((item, index) => (
                   <tr key={index}>
                     <td className="py-2 px-4 border border-gray-300">{item.name}</td>
+                    <td className="py-2 px-4 text-right border border-gray-300">{item.unit}</td>
                     <td className="py-2 px-4 text-right border border-gray-300">{item.quantity}</td>
                     <td className="py-2 px-4 text-right border border-gray-300">{formatCurrency(item.price)}</td>
                     <td className="py-2 px-4 text-right border border-gray-300">{formatCurrency(item.total)}</td>
