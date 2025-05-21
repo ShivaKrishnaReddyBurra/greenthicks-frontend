@@ -7,11 +7,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeliveryLayout } from "@/components/delivery-layout";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Package, MapPin, Phone, Clock, CheckCircle, Navigation, Camera } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  ArrowLeft,
+  Package,
+  MapPin,
+  Phone,
+  Clock,
+  CheckCircle,
+  Navigation,
+  Camera,
+  QrCode,
+  DollarSign,
+  IndianRupeeIcon,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import QRCode from 'react-qr-code';
 import { getOrder, getAllUsers, getUserProfile, assignDeliveryBoy, updateDeliveryStatus } from "@/lib/api";
 import { formatCurrency } from "@/lib/currency";
 
@@ -28,7 +42,8 @@ export default function DeliveryOrderDetailPage() {
   const [showScanner, setShowScanner] = useState(false);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [qrPaymentGenerated, setQrPaymentGenerated] = useState(false);
-  const [qrImageUrl, setQrImageUrl] = useState("");
+  const [orderIdInput, setOrderIdInput] = useState("");
+  const [showOrderIdForm, setShowOrderIdForm] = useState(false);
 
   useEffect(() => {
     const fetchOrderAndUser = async () => {
@@ -72,7 +87,19 @@ export default function DeliveryOrderDetailPage() {
     }
   };
 
+  const generateUPIQR = () => {
+  // Encode a URL that points to a route for handling role-based redirection
+  const orderId = order.id
+  const orderIdNumbers = orderId.split('-')[1];
+  const verificationUrl = `upi://pay?pa=funnygn156@oksbi&pn=Greenthicks&am=${order.total}&cu=INR&tn=Order-${order.id}`;
+  return verificationUrl;
+};
+
   const handleStatusUpdate = async (newStatus) => {
+    if (newStatus === "delivered" && order.paymentMethod !== "cash-on-delivery") {
+      setShowOrderIdForm(true);
+      return;
+    }
     try {
       const updatedOrder = await updateDeliveryStatus(id, newStatus);
       setOrder(updatedOrder.order);
@@ -88,16 +115,34 @@ export default function DeliveryOrderDetailPage() {
     }
   };
 
-  const handleCashPaymentDone = () => {
+  const handleCashPaymentDone = async () => {
     setPaymentConfirmed(true);
     toast({ title: "Payment Confirmed", description: "Cash payment has been received." });
+    await handleStatusUpdate("delivered");
+  };
+
+  const handleOrderIdSubmit = async () => {
+    if (orderIdInput !== order.id.toString()) {
+      toast({ title: "Error", description: "Invalid Order ID", variant: "destructive" });
+      return;
+    }
+    try {
+      const updatedOrder = await updateDeliveryStatus(id, "delivered");
+      setOrder(updatedOrder.order);
+      setShowOrderIdForm(false);
+      setOrderIdInput("");
+      toast({
+        title: "Status updated",
+        description: `Order ${id} has been updated to delivered.`,
+      });
+      setTimeout(() => router.push("/delivery/dashboard"), 2000);
+    } catch (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
   };
 
   const generatePaymentQR = () => {
     setQrPaymentGenerated(true);
-    setQrImageUrl(
-      `https://api.qrserver.com/v1/create-qr-code/?data=upi://pay?pa=funnygn156@oksbi&am=${order.total}&cu=INR&size=200x200`
-    );
   };
 
   const getStatusBadge = (status) => {
@@ -342,7 +387,7 @@ export default function DeliveryOrderDetailPage() {
                   <div className="space-y-4">
                     {/* QR Scanner Trigger */}
                     {!showScanner && (
-                      <Button onClick={() => setShowScanner(true)}>Scan Invoice QR Code</Button>
+                      <Button className="w-full" onClick={() => setShowScanner(true)}>Scan Invoice QR Code</Button>
                     )}
 
                     {/* QR Reader */}
@@ -352,22 +397,51 @@ export default function DeliveryOrderDetailPage() {
                     {order.paymentMethod === "cash-on-delivery" && !paymentConfirmed && (
                       <>
                         <p className="text-muted-foreground">This is a COD order. Choose how payment was made:</p>
-                        <div className="flex flex-col md:flex-row gap-4">
-                          <Button onClick={handleCashPaymentDone}>Cash Payment Received</Button>
-                        </div>
-                        <div className="flex flex-col md:flex-row gap-4">
-                          <Button variant="secondary" onClick={generatePaymentQR}>
-                            Generate QR Code for Customer
+                        <div className="flex flex-col gap-4">
+                          <Button
+                            onClick={handleCashPaymentDone}
+                            className="w-full"
+                          >
+                            <IndianRupeeIcon className="mr-2 h-4 w-4" /> Confirm Cash Payment
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            onClick={generatePaymentQR}
+                            className="w-full"
+                          >
+                            <QrCode className="mr-2 h-4 w-4" /> Generate QR Code for Customer
                           </Button>
                         </div>
+                        {/* QR Code Image */}
+                        {qrPaymentGenerated && (
+                          <div className="mt-4">
+                            <p className="mb-2">Customer can scan this to pay {formatCurrency(order.total)}:</p>
+                            <QRCode value={generateUPIQR()} className="mx-auto" level="L" renderAs="svg"  size={180} />
+                          </div>
+                        )}
                       </>
                     )}
 
-                    {/* QR Code Image */}
-                    {qrPaymentGenerated && (
-                      <div className="mt-4">
-                        <p className="mb-2">Customer can scan this to pay {formatCurrency(order.total)}:</p>
-                        <img src={qrImageUrl} alt="QR Code" width={200} height={200} />
+                    {/* Non-COD Order ID Verification */}
+                    {order.paymentMethod !== "cash-on-delivery" && showOrderIdForm && (
+                      <div className="space-y-4">
+                        <p className="text-muted-foreground">Enter Order ID to verify delivery:</p>
+                        <div className="flex gap-3">
+                          <Input
+                            type="text"
+                            value={orderIdInput}
+                            onChange={(e) => setOrderIdInput(e.target.value)}
+                            placeholder="Enter Order ID"
+                            className="flex-1"
+                          />
+                          <Button
+                            onClick={handleOrderIdSubmit}
+                            disabled={!orderIdInput}
+                            className="inline-flex items-center px-4 py-2"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" /> Verify & Complete
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>

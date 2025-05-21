@@ -17,9 +17,13 @@ import {
   Navigation,
   MessageSquare,
   Camera,
+  QrCode,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import QRCode from "qrcode.react";
 import { getOrder, updateDeliveryStatus, fetchWithAuthFormData } from "@/lib/api";
 
 export default function DeliveryDetailsPage() {
@@ -37,6 +41,8 @@ export default function DeliveryDetailsPage() {
   const [notificationType, setNotificationType] = useState("success");
   const [selectedImage, setSelectedImage] = useState(null);
   const [deliveryPhotos, setDeliveryPhotos] = useState([]);
+  const [orderIdInput, setOrderIdInput] = useState("");
+  const [showOrderIdForm, setShowOrderIdForm] = useState(false);
 
   useEffect(() => {
     const fetchDelivery = async () => {
@@ -170,8 +176,109 @@ export default function DeliveryDetailsPage() {
       setTimeout(() => setShowNotification(false), 3000);
       return;
     }
-    setConfirmationAction("complete");
-    setShowConfirmation(true);
+    if (delivery.paymentMethod === "cash-on-delivery") {
+      setShowConfirmation(true);
+      setConfirmationAction("complete");
+    } else {
+      setShowOrderIdForm(true);
+    }
+  };
+
+  const handleCashPayment = async () => {
+    setProcessingAction(true);
+    try {
+      const updatedOrder = await updateDeliveryStatus(delivery.globalId, "delivered");
+      const updatedDelivery = {
+        ...delivery,
+        deliveryStatus: "delivered",
+        updatedAt: new Date().toISOString(),
+        photos: deliveryPhotos,
+        timeline: [
+          ...delivery.timeline,
+          {
+            status: "Delivered",
+            time: new Date().toISOString(),
+            description: deliveryNote
+              ? `Delivery completed. Note: ${deliveryNote}`
+              : "Delivery completed successfully (Cash Payment)",
+          },
+        ],
+      };
+      setDelivery(updatedDelivery);
+      setProcessingAction(false);
+      setNotificationType("success");
+      setNotificationMessage("Delivery marked as completed with cash payment!");
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+      setDeliveryNote("");
+    } catch (error) {
+      setProcessingAction(false);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process cash payment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOrderIdSubmit = async () => {
+    if (orderIdInput !== delivery.id) {
+      toast({
+        title: "Error",
+        description: "Invalid Order ID",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setProcessingAction(true);
+    try {
+      const formData = new FormData();
+      for (const photo of deliveryPhotos) {
+        const response = await fetch(photo);
+        const blob = await response.blob();
+        formData.append("photos", blob, `photo-${Date.now()}.jpg`);
+      }
+      formData.append("note", deliveryNote);
+      await fetchWithAuthFormData(`/api/delivery/${delivery.globalId}/photos`, formData, "POST");
+
+      const updatedOrder = await updateDeliveryStatus(delivery.globalId, "delivered");
+      const updatedDelivery = {
+        ...delivery,
+        deliveryStatus: "delivered",
+        updatedAt: new Date().toISOString(),
+        photos: [...deliveryPhotos],
+        timeline: [
+          ...delivery.timeline,
+          {
+            status: "Delivered",
+            time: new Date().toISOString(),
+            description: deliveryNote
+              ? `Delivery completed. Note: ${deliveryNote}`
+              : "Delivery completed successfully",
+          },
+        ],
+      };
+      setDelivery(updatedDelivery);
+      setProcessingAction(false);
+      setShowOrderIdForm(false);
+      setOrderIdInput("");
+      setNotificationType("success");
+      setNotificationMessage("Delivery marked as completed!");
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+      setDeliveryNote("");
+    } catch (error) {
+      setProcessingAction(false);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process action",
+        variant: "destructive",
+      });
+      if (error.message.includes("Token expired")) {
+        router.push("/delivery/login");
+      }
+    }
   };
 
   const confirmAction = async () => {
@@ -410,6 +517,57 @@ export default function DeliveryDetailsPage() {
                         </label>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {delivery.paymentMethod === "Cash on Delivery" && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Payment Options
+                  </label>
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="flex flex-col items-center">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Scan to pay with UPI</p>
+                      <QRCode
+                        value={`upi://pay?pa=greenthicks@upi&pn=Greenthicks&am=${delivery.total}&cu=INR&tn=Order-${delivery.id}`}
+                        size={150}
+                        className="border-2 border-gray-200 dark:border-gray-600 rounded-lg p-2"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleCashPayment}
+                      disabled={processingAction}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      Confirm Cash Payment
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {delivery.paymentMethod !== "Cash on Delivery" && showOrderIdForm && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Verify Order ID
+                  </label>
+                  <div className="flex gap-3">
+                    <Input
+                      type="text"
+                      value={orderIdInput}
+                      onChange={(e) => setOrderIdInput(e.target.value)}
+                      placeholder="Enter Order ID"
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={handleOrderIdSubmit}
+                      disabled={processingAction || !orderIdInput}
+                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Verify & Complete
+                    </Button>
                   </div>
                 </div>
               )}

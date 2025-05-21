@@ -519,16 +519,6 @@ iatives      }
                 <p className="text-sm text-muted-foreground mt-1">Member since {user.joinedDate}</p>
               </div>
             </div>
-            <div className="mt-4 md:mt-0 flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditingProfile(true)}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Profile
-              </Button>
-            </div>
           </div>
         </div>
       </div>
@@ -632,12 +622,12 @@ iatives      }
                           value={formData.phone}
                           onChange={handleInputChange}
                           placeholder="+12345678901"
-                          pattern="^\+\d{10,12}$"
-                          title="Phone number must be in international format (e.g., +12345678901)"
+                          pattern="/^(?:\+91)?[6-9]\d{9}$/"
+                          title="Phone number must be in indian format (e.g., +91 92345678901)"
                           required
                         />
                         <p className="text-xs text-muted-foreground">
-                          Use international format (e.g., +12345678901)
+                          Use international format (e.g., +91 2345678901)
                         </p>
                       </div>
                       <div className="flex justify-end gap-2">
@@ -799,12 +789,12 @@ iatives      }
                         value={formData.phone}
                         onChange={handleInputChange}
                         placeholder="+12345678901"
-                        pattern="^\+\d{10,12}$"
-                        title="Phone number must be in international format (e.g., +12345678901)"
+                        pattern="/^(?:\+91)?[6-9]\d{9}$/"
+                        title="Phone number must be in indian format (e.g., +91 92345678901)"
                         required
                       />
                       <p className="text-xs text-muted-foreground">
-                        Use international format (e.g., +12345678901)
+                        Use international format (e.g., +91 92345678901)
                       </p>
                     </div>
                     <div className="space-y-2">
