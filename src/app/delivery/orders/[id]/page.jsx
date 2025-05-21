@@ -416,7 +416,8 @@ export default function DeliveryOrderDetailPage() {
                         {qrPaymentGenerated && (
                           <div className="mt-4">
                             <p className="mb-2">Customer can scan this to pay {formatCurrency(order.total)}:</p>
-                            <QRCode value={generateUPIQR()} className="mx-auto" level="L" renderAs="svg"  size={180} />
+                            <QRCode value={generateUPIQR()} className="mx-auto p-4 bg-white rounded-xl shadow-md" level="H" includeMargin={true} // Adds spacing around QR
+  renderAs="canvas"  size={200} />
                           </div>
                         )}
                       </>
