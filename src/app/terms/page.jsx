@@ -7,7 +7,7 @@ export default function TermsPage() {
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Terms & Conditions</h1>
-          <p className="text-muted-foreground">Last updated: April 7, 2025</p>
+          <p className="text-muted-foreground">Last updated: May 20, 2025</p>
         </div>
 
         <div className="prose prose-green dark:prose-invert max-w-none">
@@ -179,9 +179,9 @@ export default function TermsPage() {
 
             <p>If you have any questions about these Terms, please contact us at:</p>
             <ul className="list-none pl-0 mb-4">
-              <li>Email: legal@greenthicks.com</li>
-              <li>Phone: +91 98765 43210</li>
-              <li>Address: 123 Organic Way, Green City, India</li>
+              <li>Email: greenthickss@gmail.com</li>
+              <li>Phone: +91 9705045597</li>
+              <li>Address: Hanamkonda, Warangal, Telangana, India</li>
             </ul>
           </section>
         </div>

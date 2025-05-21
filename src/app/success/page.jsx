@@ -9,6 +9,7 @@ import { getOrder } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function CheckoutSuccessPage() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function CheckoutSuccessPage() {
     appliedCoupon: "",
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isAfter1PM, setIsAfter1PM] = useState(false);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -52,21 +54,25 @@ export default function CheckoutSuccessPage() {
         // Fetch order details from backend
         const response = await getOrder(orderId);
         const order = response;
-        // Calculate delivery time
-        const deliveryDate = new Date(order.deliveryDate);
+        
+        // Calculate delivery date and time based on order time
+        const orderDate = new Date(order.orderDate);
         const today = new Date();
         const tomorrow = new Date(today);
         tomorrow.setDate(today.getDate() + 1);
-        let deliveryTime = "Morning (6 pm - 10 pm)";
-        if (deliveryDate.toDateString() === today.toDateString()) {
-          deliveryTime = "Today (Evening Delivery)";
-        } else if (deliveryDate.toDateString() === tomorrow.toDateString()) {
-          deliveryTime = "Tomorrow Evening (6 pm - 10 pm)";
-        }
+        
+        // Check if order was placed before 1 PM
+        const isBefore1PM = orderDate.getHours() < 13;
+        setIsAfter1PM(!isBefore1PM);
+        
+        const deliveryDate = isBefore1PM ? today : tomorrow;
+        const deliveryTime = isBefore1PM 
+          ? "Today (Evening Delivery, 6 PM - 10 PM)" 
+          : "Tomorrow (Evening Delivery, 6 PM - 10 PM)";
 
         setOrderDetails({
           orderId: order.id,
-          orderDate: new Date(order.orderDate).toLocaleDateString("en-US", {
+          orderDate: orderDate.toLocaleDateString("en-US", {
             weekday: "long",
             year: "numeric",
             month: "long",
@@ -110,44 +116,7 @@ export default function CheckoutSuccessPage() {
           description: "Failed to load order details. Using cached information.",
           variant: "destructive",
         });
-
-        // Fallback to session storage
-        // const orderDate = new Date(sessionStorage.getItem("orderDate") || "");
-        // const deliveryDate = new Date(sessionStorage.getItem("deliveryDate") || "");
-        // const orderTotal = parseFloat(sessionStorage.getItem("orderTotal") || "0");
-        // const orderItems = JSON.parse(sessionStorage.getItem("orderItems") || "[]");
-        // const shippingAddress = JSON.parse(sessionStorage.getItem("shippingAddress") || "{}");
-        // const paymentMethod = sessionStorage.getItem("paymentMethod") || "cash-on-delivery";
-        // const appliedCoupon = sessionStorage.getItem("appliedCoupon") || "";
-        // const today = new Date();
-        // const tomorrow = new Date(today);
-        // tomorrow.setDate(today.getDate() + 1);
-        // let deliveryTime = "Tomorrow Morning (6 AM - 10 AM)";
-        // if (deliveryDate.toDateString() === today.toDateString()) {
-        //   deliveryTime = "Today (Evening Delivery)";
-        // }
-
-        // setOrderDetails({
-        //   orderId,
-        //   orderDate: orderDate.toLocaleDateString("en-US", {
-        //     weekday: "long",
-        //     year: "numeric",
-        //     month: "long",
-        //     day: "numeric",
-        //   }),
-        //   deliveryDate: deliveryDate.toLocaleDateString("en-US", {
-        //     weekday: "long",
-        //     year: "numeric",
-        //     month: "long",
-        //     day: "numeric",
-        //   }),
-        //   deliveryTime,
-        //   orderTotal,
-        //   orderItems,
-        //   paymentMethod,
-        //   shippingAddress,
-        //   appliedCoupon,
-        // });
+        
       } finally {
         setIsLoading(false);
       }
@@ -180,9 +149,17 @@ export default function CheckoutSuccessPage() {
           </div>
 
           <h1 className="text-3xl font-bold mb-4">Order Confirmed!</h1>
-          <p className="text-gray-600 mb-8">
+          <p className="text-gray-600 mb-4">
             Thank you for your order. Your vegetables will be delivered {orderDetails.deliveryTime.toLowerCase()}.
           </p>
+          
+          {isAfter1PM && (
+            <Alert variant="destructive" className="mb-6 w-full">
+              <AlertDescription>
+                Since your order was placed after 1 PM, it will be delivered tomorrow evening.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <div className="w-full bg-card border rounded-lg p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Order Details</h2>
@@ -257,7 +234,7 @@ export default function CheckoutSuccessPage() {
                 {orderDetails.appliedCoupon && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount ({orderDetails.appliedCoupon})</span>
-                    <span>-₹{discount.toFixed(2)}</span>
+                    <span>-₹{orderDetails.discount.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">

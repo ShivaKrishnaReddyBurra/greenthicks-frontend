@@ -54,8 +54,8 @@ export default function ReturnsPage() {
                     delivery. You can reach us through:
                   </p>
                   <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground">
-                    <li>Email: support@greenthicks.com</li>
-                    <li>Phone: +91 98765 43210</li>
+                    <li>Email: greenthickss@gmail.com</li>
+                    <li>Phone: +91 9705045597</li>
                     <li>Contact form on our website</li>
                   </ul>
                 </div>

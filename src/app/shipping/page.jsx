@@ -53,7 +53,7 @@ export default function ShippingPage() {
                 <div>
                   <h3 className="font-medium mb-2">Standard Delivery</h3>
                   <p>
-                    Orders are typically delivered within 24-48 hours of being placed. Orders placed before 3 PM are
+                    Orders are typically delivered within 12-24 hours of being placed. Orders placed before 3 PM are
                     usually shipped the same day.
                   </p>
                 </div>
@@ -63,15 +63,6 @@ export default function ShippingPage() {
                   <p>
                     For an additional fee, we offer same-day delivery for orders placed before 12 PM in select areas.
                   </p>
-                </div>
-
-                <div>
-                  <h3 className="font-medium mb-2">Delivery Windows</h3>
-                  <p>You can select your preferred delivery window during checkout:</p>
-                  <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground">
-                    <li>Morning: 6 AM - 10 AM</li>
-                    <li>Evening: 5 PM - 9 PM</li>
-                  </ul>
                 </div>
               </div>
             </div>
@@ -98,7 +89,7 @@ export default function ShippingPage() {
                 <div>
                   <h3 className="font-medium mb-2">Express Shipping</h3>
                   <p>
-                    Same-day delivery: Additional ₹14.99
+                    Spot-day delivery: Additional ₹14.99
                     <br />
                     Available only in select areas
                   </p>
