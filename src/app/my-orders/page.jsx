@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,25 +14,55 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
+const LeafLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const { toast } = useToast();
   const router = useRouter();
+  const actionTimeout = useRef(null);
+  const searchTimeout = useRef(null);
 
   useEffect(() => {
     if (!getAuthToken()) {
-      router.push("/login");
+      setActionLoading(true);
+      setTimeout(() => {
+        router.push("/login");
+        setActionLoading(false);
+      }, 1000);
       return;
     }
 
     async function fetchOrders() {
+      setActionLoading(true);
       try {
-        setLoading(true);
         const response = await getUserOrders(currentPage);
         const fetchedOrders = response.orders || [];
 
@@ -50,12 +80,13 @@ export default function MyOrdersPage() {
           total: order.total,
           estimatedDelivery: order.deliveryDate
             ? new Date(order.deliveryDate).toLocaleDateString("en-IN")
-            : new Date(new Date(order.orderDate).getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN"),
+            : new Date(new Date(order.orderDate).getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString(
+                "en-IN"
+              ),
         }));
 
         setOrders(enrichedOrders);
         setTotalPages(response.totalPages || 1);
-        setLoading(false);
       } catch (error) {
         toast({
           title: "Error fetching orders",
@@ -63,9 +94,12 @@ export default function MyOrdersPage() {
           variant: "destructive",
         });
         if (error.message.includes("Token expired")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
           router.push("/login");
         }
-        setLoading(false);
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
     }
     fetchOrders();
@@ -128,6 +162,47 @@ export default function MyOrdersPage() {
     }
   };
 
+  const handleSearchQuery = (value) => {
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      setActionLoading(true);
+      setTimeout(() => {
+        setSearchQuery(value);
+        setActionLoading(false);
+      }, 1000);
+    }, 500);
+  };
+
+  const handleTabChange = (value) => {
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(() => {
+      setActionLoading(true);
+      setTimeout(() => {
+        setActiveTab(value);
+        setActionLoading(false);
+      }, 1000);
+    }, 500);
+  };
+
+  const handlePageChange = (newPage) => {
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(() => {
+      setActionLoading(true);
+      setTimeout(() => {
+        setCurrentPage(newPage);
+        setActionLoading(false);
+      }, 1000);
+    }, 500);
+  };
+
+  const handleNavigation = async (e, href) => {
+    e.preventDefault();
+    setActionLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    router.push(href);
+    setActionLoading(false);
+  };
+
   const filteredOrders = orders.filter((order) => {
     if (activeTab !== "all" && order.status !== activeTab) {
       return false;
@@ -151,15 +226,11 @@ export default function MyOrdersPage() {
     { value: "cancelled", label: "Cancelled" },
   ];
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+  if (actionLoading) {
+    return <LeafLoader />;
   }
 
-  if (orders.length === 0 && !loading) {
+  if (orders.length === 0 && !actionLoading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <div className="max-w-md mx-auto">
@@ -168,7 +239,7 @@ export default function MyOrdersPage() {
           <p className="text-muted-foreground mb-8">
             You haven't placed any orders yet. Start shopping to see your orders here.
           </p>
-          <Link href="/products">
+          <Link href="/products" onClick={(e) => handleNavigation(e, "/products")}>
             <Button className="px-8">Start Shopping</Button>
           </Link>
         </div>
@@ -186,7 +257,7 @@ export default function MyOrdersPage() {
             {statusOptions.map((option) => (
               <button
                 key={option.value}
-                onClick={() => setActiveTab(option.value)}
+                onClick={() => handleTabChange(option.value)}
                 className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === option.value
                     ? "bg-primary text-primary-foreground"
@@ -202,7 +273,7 @@ export default function MyOrdersPage() {
         <div className="md:hidden w-full">
           <select
             value={activeTab}
-            onChange={(e) => setActiveTab(e.target.value)}
+            onChange={(e) => handleTabChange(e.target.value)}
             className="w-full px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {statusOptions.map((option) => (
@@ -219,7 +290,7 @@ export default function MyOrdersPage() {
             placeholder="Search orders..."
             className="pl-9 w-full"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchQuery(e.target.value)}
           />
         </div>
       </div>
@@ -238,12 +309,18 @@ export default function MyOrdersPage() {
                   </div>
                   <div className="flex items-center gap-4">
                     {getStatusBadge(order.status)}
-                    <Link href={`/tracking/${order.id}`}>
+                    <Link
+                      href={`/tracking/${order.id}`}
+                      onClick={(e) => handleNavigation(e, `/tracking/${order.id}`)}
+                    >
                       <Button variant="outline" size="sm">
                         Track Order
                       </Button>
                     </Link>
-                    <Link href={`/my-orders/${order.id}`}>
+                    <Link
+                      href={`/my-orders/${order.id}`}
+                      onClick={(e) => handleNavigation(e, `/my-orders/${order.id}`)}
+                    >
                       <Button size="sm">View Details</Button>
                     </Link>
                   </div>
@@ -267,7 +344,10 @@ export default function MyOrdersPage() {
                             </Link>
                           </div>
                           <div className="flex-1">
-                            <Link href={`/products/${item.productId}`} className="font-medium hover:text-primary">
+                            <Link
+                              href={`/products/${item.productId}`}
+                              className="font-medium hover:text-primary"
+                            >
                               {item.name}
                             </Link>
                             <p className="text-sm text-muted-foreground">
@@ -277,7 +357,9 @@ export default function MyOrdersPage() {
                         </div>
                       ))}
                       {order.items.length > 2 && (
-                        <p className="text-sm text-muted-foreground">+ {order.items.length - 2} more items</p>
+                        <p className="text-sm text-muted-foreground">
+                          + {order.items.length - 2} more items
+                        </p>
                       )}
                     </div>
                   </div>
@@ -328,7 +410,7 @@ export default function MyOrdersPage() {
         <div className="flex justify-center gap-4 mt-6">
           <Button
             disabled={currentPage === 1}
-            onClick={() => setCurrentPage((prev) => prev - 1)}
+            onClick={() => handlePageChange(currentPage - 1)}
             variant="outline"
           >
             Previous
@@ -338,7 +420,7 @@ export default function MyOrdersPage() {
           </span>
           <Button
             disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((prev) => prev + 1)}
+            onClick={() => handlePageChange(currentPage + 1)}
             variant="outline"
           >
             Next

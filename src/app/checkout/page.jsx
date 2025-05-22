@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-context";
 import { fetchWithAuth, createOrder } from "@/lib/api";
@@ -15,13 +16,38 @@ import { ArrowLeft, Truck, ShieldCheck, LockIcon, MapPin } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
+const LeafLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, clearCart } = useCart();
   const { toast } = useToast();
 
-  const [paymentMethod] = useState("cash-on-delivery"); // Fixed to cash on delivery
+  const [paymentMethod] = useState("cash-on-delivery");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [orderSummary, setOrderSummary] = useState({
     subtotal: 0,
     shipping: 0,
@@ -34,8 +60,8 @@ export default function CheckoutPage() {
   const [shouldRedirect, setShouldRedirect] = useState(null);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [isServiceAvailable, setIsServiceAvailable] = useState(null);
+  const debounceTimeout = useRef(null);
 
-  // Form state for address
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -49,7 +75,6 @@ export default function CheckoutPage() {
     currentLocation: null,
   });
 
-  // Check for empty cart and redirect
   useEffect(() => {
     if (cart.length === 0 && !isProcessing) {
       toast({
@@ -61,16 +86,15 @@ export default function CheckoutPage() {
     }
   }, [cart, toast, isProcessing]);
 
-  // Handle navigation
   useEffect(() => {
     if (shouldRedirect) {
       router.push(shouldRedirect);
     }
   }, [shouldRedirect, router]);
 
-  // Fetch user profile and addresses
   useEffect(() => {
     const fetchData = async () => {
+      setActionLoading(true);
       try {
         const [profile, addressData] = await Promise.all([
           fetchWithAuth('/api/auth/profile'),
@@ -92,13 +116,11 @@ export default function CheckoutPage() {
             useCurrentLocation: false,
             currentLocation: primaryAddress.location || null,
           });
-          // Check service availability for primary address
-          checkServiceAvailability(primaryAddress.zipCode);
+          await checkServiceAvailability(primaryAddress.zipCode);
         } else {
-          setIsAddingAddress(true); // Show address form if no addresses
+          setIsAddingAddress(true);
         }
 
-        // Load order summary from session storage
         const subtotal = parseFloat(sessionStorage.getItem("cartSubtotal") || "0");
         const shipping = parseFloat(sessionStorage.getItem("cartShipping") || "0");
         const discount = parseFloat(sessionStorage.getItem("cartDiscount") || "0");
@@ -119,13 +141,16 @@ export default function CheckoutPage() {
           description: "Failed to load user profile or addresses.",
           variant: "destructive",
         });
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
     };
     fetchData();
   }, []);
 
-  // Check service availability
   const checkServiceAvailability = async (pincode) => {
+    setActionLoading(true);
     try {
       const response = await fetchWithAuth(`/api/service-areas/check?pincode=${pincode}`);
       setIsServiceAvailable(true);
@@ -140,10 +165,12 @@ export default function CheckoutPage() {
         description: error.message || "Delivery is not available in this area.",
         variant: "destructive",
       });
+    } finally {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setActionLoading(false);
     }
   };
 
-  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -151,14 +178,16 @@ export default function CheckoutPage() {
       [name]: value,
     }));
 
-    // Check service availability when zipCode changes
     if (name === "zipCode" && value.match(/^\d{5,6}$/)) {
-      checkServiceAvailability(value);
+      clearTimeout(debounceTimeout.current);
+      debounceTimeout.current = setTimeout(() => {
+        checkServiceAvailability(value);
+      }, 500);
     }
   };
 
-  // Handle address selection
-  const handleAddressSelect = (addressId) => {
+  const handleAddressSelect = async (addressId) => {
+    setActionLoading(true);
     const selectedAddress = addresses.find((addr) => addr.addressId === addressId);
     if (selectedAddress) {
       setSelectedAddressId(addressId);
@@ -174,16 +203,16 @@ export default function CheckoutPage() {
         useCurrentLocation: false,
         currentLocation: selectedAddress.location || null,
       });
-      checkServiceAvailability(selectedAddress.zipCode);
+      await checkServiceAvailability(selectedAddress.zipCode);
       setIsAddingAddress(false);
     }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setActionLoading(false);
   };
 
-  // Save new address
   const handleSaveAddress = async () => {
     const { firstName, lastName, email, phone, address, city, state, zipCode, useCurrentLocation, currentLocation } = formData;
 
-    // Validate form
     if (!firstName || !lastName || !email || !phone || !address || !city || !state || !zipCode) {
       toast({
         title: "Invalid Input",
@@ -196,7 +225,7 @@ export default function CheckoutPage() {
     if (!/^(\+91[\-\s]?)?[6-9]\d{9}$/.test(phone)) {
       toast({
         title: "Invalid Phone",
-        description: "Phone number must be in indian format (e.g., +91 9234567890).",
+        description: "Phone number must be in Indian format (e.g., +91 9234567890).",
         variant: "destructive",
       });
       return;
@@ -220,6 +249,7 @@ export default function CheckoutPage() {
       return;
     }
 
+    setActionLoading(true);
     try {
       const addressData = {
         firstName,
@@ -230,7 +260,7 @@ export default function CheckoutPage() {
         city,
         state,
         zipCode,
-        isPrimary: true, // Set as primary since it's the first address
+        isPrimary: true,
         location: useCurrentLocation && currentLocation ? currentLocation : undefined,
       };
 
@@ -253,10 +283,12 @@ export default function CheckoutPage() {
         description: error.message || "Failed to save address.",
         variant: "destructive",
       });
+    } finally {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setActionLoading(false);
     }
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -279,7 +311,7 @@ export default function CheckoutPage() {
     }
 
     setIsProcessing(true);
-
+    setActionLoading(true);
     try {
       const orderData = {
         paymentMethod,
@@ -289,7 +321,6 @@ export default function CheckoutPage() {
 
       const response = await createOrder(orderData);
 
-      // Store order information
       sessionStorage.setItem("orderId", response.order.id);
       sessionStorage.setItem("id", response.order.globalId);
       sessionStorage.setItem("orderDate", response.order.orderDate);
@@ -315,8 +346,19 @@ export default function CheckoutPage() {
         description: error.message || "Failed to place order. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setActionLoading(false);
       setIsProcessing(false);
     }
+  };
+
+  const handleNavigation = async (e, href) => {
+    e.preventDefault();
+    setActionLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    router.push(href);
+    setActionLoading(false);
   };
 
   if (shouldRedirect) {
@@ -324,251 +366,269 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Link href="/cart" className="inline-flex items-center text-primary hover:underline">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to cart
-        </Link>
-      </div>
+    <>
+      {actionLoading && <LeafLoader />}
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <Link href="/cart" className="inline-flex items-center text-primary hover:underline" onClick={(e) => handleNavigation(e, "/cart")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to cart
+          </Link>
+        </div>
 
-      <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+        <h1 className="text-3xl font-bold mb-8">Checkout</h1>
 
-      <div className="grid md:grid-cols-3 gap-8">
-        <div className="md:col-span-2">
-          <form onSubmit={handleSubmit}>
-            <div className="bg-card rounded-lg border p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="md:col-span-2">
+            <form onSubmit={handleSubmit}>
+              <div className="bg-card rounded-lg border p-6 mb-6">
+                <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
 
-              <div className="mb-4">
-                <Label className="text-lg">Select Address</Label>
-                {addresses.length === 0 && !isAddingAddress ? (
-                  <p className="text-muted-foreground">No addresses found. Please add an address below.</p>
-                ) : (
-                  <RadioGroup value={selectedAddressId} onValueChange={handleAddressSelect}>
-                    {addresses.map((addr) => (
-                      <div key={addr.addressId} className="flex items-center space-x-2 p-3 border rounded-md">
-                        <RadioGroupItem value={addr.addressId} id={`address-${addr.addressId}`} />
-                        <Label htmlFor={`address-${addr.addressId}`} className="flex-1">
-                          <p className="font-medium">
-                            {addr.firstName} {addr.lastName}
-                            {addr.isPrimary && <span className="ml-2 text-primary">(Primary)</span>}
-                          </p>
-                          <p>{addr.address}</p>
-                          <p>
-                            {addr.city}, {addr.state} {addr.zipCode}
-                          </p>
-                        </Label>
+                <div className="mb-4">
+                  <Label className="text-lg">Select Address</Label>
+                  {addresses.length === 0 && !isAddingAddress ? (
+                    <p className="text-muted-foreground">No addresses found. Please add an address below.</p>
+                  ) : (
+                    <RadioGroup value={selectedAddressId} onValueChange={handleAddressSelect}>
+                      {addresses.map((addr) => (
+                        <div key={addr.addressId} className="flex items-center space-x-2 p-3 border rounded-md">
+                          <RadioGroupItem value={addr.addressId} id={`address-${addr.addressId}`} />
+                          <Label htmlFor={`address-${addr.addressId}`} className="flex-1">
+                            <p className="font-medium">
+                              {addr.firstName} {addr.lastName}
+                              {addr.isPrimary && <span className="ml-2 text-primary">(Primary)</span>}
+                            </p>
+                            <p>{addr.address}</p>
+                            <p>
+                              {addr.city}, {addr.state} {addr.zipCode}
+                            </p>
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  )}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mb-4"
+                  onClick={() => setIsAddingAddress(!isAddingAddress)}
+                >
+                  {isAddingAddress ? "Cancel" : "Add New Address"}
+                </Button>
+
+                {isAddingAddress && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name *</Label>
+                      <Input
+                        id="firstName"
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name *</Label>
+                      <Input
+                        id="lastName"
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone *</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        placeholder="+91 9234567890"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="address">Address *</Label>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="useCurrentLocation"
+                            checked={formData.useCurrentLocation}
+                            onCheckedChange={async (checked) => {
+                              setActionLoading(true);
+                              if (checked) {
+                                if (navigator.geolocation) {
+                                  navigator.geolocation.getCurrentPosition(
+                                    async (position) => {
+                                      setFormData({
+                                        ...formData,
+                                        useCurrentLocation: true,
+                                        currentLocation: {
+                                          latitude: position.coords.latitude,
+                                          longitude: position.coords.longitude,
+                                        },
+                                      });
+                                      toast({
+                                        title: "Location shared",
+                                        description: "Your current location has been added to help with delivery.",
+                                      });
+                                      await new Promise((resolve) => setTimeout(resolve, 1000));
+                                      setActionLoading(false);
+                                    },
+                                    async (error) => {
+                                      toast({
+                                        title: "Location error",
+                                        description: "Could not get your current location. Please check permissions.",
+                                        variant: "destructive",
+                                      });
+                                      await new Promise((resolve) => setTimeout(resolve, 1000));
+                                      setActionLoading(false);
+                                    }
+                                  );
+                                } else {
+                                  toast({
+                                    title: "Geolocation unavailable",
+                                    description: "Your browser does not support geolocation.",
+                                    variant: "destructive",
+                                  });
+                                  await new Promise((resolve) => setTimeout(resolve, 1000));
+                                  setActionLoading(false);
+                                }
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  useCurrentLocation: false,
+                                  currentLocation: null,
+                                });
+                                await new Promise((resolve) => setTimeout(resolve, 1000));
+                                setActionLoading(false);
+                              }
+                            }}
+                          />
+                          <Label htmlFor="useCurrentLocation" className="text-sm flex items-center">
+                            <MapPin className="h-3.5 w-3.5 text-primary mr-1" />
+                            Share location for precise delivery
+                          </Label>
+                        </div>
                       </div>
-                    ))}
-                  </RadioGroup>
+                      <Textarea
+                        id="address"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      {formData.useCurrentLocation && formData.currentLocation && (
+                        <div className="bg-primary/10 p-2 rounded-md text-sm flex items-center">
+                          <MapPin className="h-4 w-4 text-primary inline mr-2 flex-shrink-0" />
+                          <span>Location shared for precise delivery</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City *</Label>
+                      <Input
+                        id="city"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="state">State *</Label>
+                        <Input
+                          id="state"
+                          name="state"
+                          value={formData.state}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="zipCode">ZIP Code *</Label>
+                        <Input
+                          id="zipCode"
+                          name="zipCode"
+                          value={formData.zipCode}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <Button type="button" onClick={handleSaveAddress} className="md:col-span-2">
+                      Save Address
+                    </Button>
+                  </div>
                 )}
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                className="mb-4"
-                onClick={() => setIsAddingAddress(!isAddingAddress)}
-              >
-                {isAddingAddress ? "Cancel" : "Add New Address"}
-              </Button>
+              <div className="bg-card rounded-lg border p-6 mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <LockIcon className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-semibold">Payment Method</h2>
+                </div>
 
-              {isAddingAddress && (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div className="space-y-2">
-      <Label htmlFor="firstName">First Name *</Label>
-      <Input
-        id="firstName"
-        name="firstName"
-        value={formData.firstName}
-        onChange={handleInputChange}
-        required
-      />
-    </div>
-
-    <div className="space-y-2">
-      <Label htmlFor="lastName">Last Name *</Label>
-      <Input
-        id="lastName"
-        name="lastName"
-        value={formData.lastName}
-        onChange={handleInputChange}
-        required
-      />
-    </div>
-
-    <div className="space-y-2">
-      <Label htmlFor="email">Email *</Label>
-      <Input
-        id="email"
-        name="email"
-        type="email"
-        value={formData.email}
-        onChange={handleInputChange}
-        required
-      />
-    </div>
-
-    <div className="space-y-2">
-      <Label htmlFor="phone">Phone *</Label>
-      <Input
-        id="phone"
-        name="phone"
-        value={formData.phone}
-        onChange={handleInputChange}
-        placeholder="+91 92345678901"
-        required
-      />
-    </div>
-
-    <div className="space-y-2 md:col-span-2">
-      <div className="flex items-center justify-between">
-        <Label htmlFor="address">Address *</Label>
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="useCurrentLocation"
-            checked={formData.useCurrentLocation}
-            onCheckedChange={(checked) => {
-              if (checked) {
-                if (navigator.geolocation) {
-                  navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                      setFormData({
-                        ...formData,
-                        useCurrentLocation: true,
-                        currentLocation: {
-                          latitude: position.coords.latitude,
-                          longitude: position.coords.longitude,
-                        },
-                      });
-                      toast({
-                        title: "Location shared",
-                        description: "Your current location has been added to help with delivery.",
-                      });
-                    },
-                    (error) => {
-                      toast({
-                        title: "Location error",
-                        description: "Could not get your current location. Please check permissions.",
-                        variant: "destructive",
-                      });
-                    }
-                  );
-                }
-              } else {
-                setFormData({
-                  ...formData,
-                  useCurrentLocation: false,
-                  currentLocation: null,
-                });
-              }
-            }}
-          />
-          <Label htmlFor="useCurrentLocation" className="text-sm flex items-center">
-            <MapPin className="h-3.5 w-3.5 text-primary mr-1" />
-            Share location for precise delivery
-          </Label>
-        </div>
-      </div>
-      <Textarea
-        id="address"
-        name="address"
-        value={formData.address}
-        onChange={handleInputChange}
-        required
-      />
-      {formData.useCurrentLocation && formData.currentLocation && (
-        <div className="bg-primary/10 p-2 rounded-md text-sm flex items-center">
-          <MapPin className="h-4 w-4 text-primary inline mr-2 flex-shrink-0" />
-          <span>Location shared for precise delivery</span>
-        </div>
-      )}
-    </div>
-
-    <div className="space-y-2">
-      <Label htmlFor="city">City *</Label>
-      <Input
-        id="city"
-        name="city"
-        value={formData.city}
-        onChange={handleInputChange}
-        required
-      />
-    </div>
-
-    <div className="grid grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <Label htmlFor="state">State *</Label>
-        <Input
-          id="state"
-          name="state"
-          value={formData.state}
-          onChange={handleInputChange}
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="zipCode">ZIP Code *</Label>
-        <Input
-          id="zipCode"
-          name="zipCode"
-          value={formData.zipCode}
-          onChange={handleInputChange}
-          required
-        />
-      </div>
-    </div>
-
-    <Button type="button" onClick={handleSaveAddress} className="md:col-span-2">
-      Save Address
-    </Button>
-  </div>
-)}
-            </div>
-
-            <div className="bg-card rounded-lg border p-6 mb-6">
-              <div className="flex items-center gap-2 mb-4">
-                <LockIcon className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-semibold">Payment Method</h2>
-              </div>
-
-              <div className="bg-primary/5 p-4 rounded-md mb-6 flex items-start gap-3">
-                <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium">Cash on Delivery</p>
-                  <p className="text-xs text-muted-foreground">
-                    Pay when your order is delivered.
-                  </p>
+                <div className="bg-primary/5 p-4 rounded-md mb-6 flex items-start gap-3">
+                  <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Cash on Delivery</p>
+                    <p className="text-xs text-muted-foreground">
+                      Pay when your order is delivered.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="md:hidden">
-              <OrderSummary cart={cart} orderSummary={orderSummary} />
-            </div>
+              <div className="md:hidden">
+                <OrderSummary cart={cart} orderSummary={orderSummary} />
+              </div>
 
-            <div className="flex justify-between mt-6">
-              <Link href="/cart">
-                <Button variant="outline" type="button">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Cart
+              <div className="flex justify-between mt-6">
+                <Link href="/cart" onClick={(e) => handleNavigation(e, "/cart")}>
+                  <Button variant="outline" type="button">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Cart
+                  </Button>
+                </Link>
+
+                <Button type="submit" size="lg" disabled={isProcessing || !selectedAddressId || !isServiceAvailable}>
+                  {isProcessing ? "Processing..." : "Complete Order"}
                 </Button>
-              </Link>
+              </div>
+            </form>
+          </div>
 
-              <Button type="submit" size="lg" disabled={isProcessing || !selectedAddressId || !isServiceAvailable}>
-                {isProcessing ? "Processing..." : "Complete Order"}
-              </Button>
-            </div>
-          </form>
-        </div>
-
-        <div className="hidden md:block">
-          <OrderSummary cart={cart} orderSummary={orderSummary} />
+          <div className="hidden md:block">
+            <OrderSummary cart={cart} orderSummary={orderSummary} />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

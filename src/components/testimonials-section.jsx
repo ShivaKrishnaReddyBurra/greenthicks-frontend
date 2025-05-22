@@ -1,80 +1,218 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Star } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ShoppingCart, Heart, Plus, Minus } from "lucide-react";
+import { useCart } from "@/lib/cart-context";
+import { useFavorites } from "@/lib/favorites-context";
+import { useToast } from "@/hooks/use-toast";
+import { getAuthToken } from "@/lib/auth-utils";
 
-export function TestimonialsSection() {
-  const testimonials = [
-    {
-      id: 1,
-      name: "Priya Sharma",
-      role: "Health Enthusiast",
-      content:
-        "I've been ordering from Green Thicks for over a year now, and the quality is consistently excellent. The spinach and kale are always fresh and last much longer than store-bought greens.",
-      rating: 5,
-      image: "/placeholder.svg?height=80&width=80",
-    },
-    {
-      id: 2,
-      name: "Rahul Patel",
-      role: "Home Chef",
-      content:
-        "As someone who cooks daily, having access to truly fresh vegetables makes all the difference. Green Thicks delivers the best quality produce I've found anywhere in the city.",
-      rating: 5,
-      image: "/placeholder.svg?height=80&width=80",
-    },
-    {
-      id: 3,
-      name: "Anita Desai",
-      role: "Nutritionist",
-      content:
-        "I recommend Green Thicks to all my clients. Their organic vegetables are not only delicious but also retain more nutrients due to their farm-to-table approach.",
-      rating: 5,
-      image: "/placeholder.svg?height=80&width=80",
-    },
-  ];
-
+const LeafLoader = () => {
   return (
-    <section className="py-12 md:py-20">
-      <div className="container mx-auto px-4">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-3xl font-bold mb-4">What Our Customers Say</h2>
-          <p className="text-muted-foreground">
-            Don't just take our word for it. Here's what our happy customers have to say about Green Thicks.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {testimonials.map((testimonial) => (
-            <div key={testimonial.id} className="bg-card rounded-lg p-6 border shadow-sm">
-              <div className="flex items-center gap-4 mb-4">
-                <Image
-                  src={testimonial.image || "/placeholder.svg"}
-                  alt={testimonial.name}
-                  width={60}
-                  height={60}
-                  className="rounded-full"
-                />
-                <div>
-                  <h3 className="font-semibold">{testimonial.name}</h3>
-                  <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                </div>
-              </div>
-
-              <div className="flex mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`h-4 w-4 ${
-                      i < testimonial.rating ? "fill-primary text-primary" : "fill-muted text-muted"
-                    }`}
-                  />
-                ))}
-              </div>
-
-              <p className="text-muted-foreground">"{testimonial.content}"</p>
-            </div>
-          ))}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
         </div>
       </div>
-    </section>
+    </div>
+  );
+};
+
+export function ProductCard({ product }) {
+  const { addToCart } = useCart();
+  const { addToFavorites, removeFromFavorites, isFavorite } = useFavorites();
+  const { toast } = useToast();
+  const [quantity, setQuantity] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  const handleNavigation = async (e, href) => {
+    e.preventDefault();
+    setIsLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    router.push(href);
+    setIsLoading(false);
+  };
+
+  const handleAddToCart = async () => {
+    const token = getAuthToken();
+    if (!token) {
+      const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
+      setIsLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      router.push(`/login?returnUrl=${returnUrl}`);
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to add items to your cart.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    addToCart(product, quantity);
+    toast({
+      title: "Added to cart",
+      description: `${quantity} x ${product.name} has been added to your cart.`,
+    });
+    setQuantity(1);
+    setIsLoading(false);
+  };
+
+  const toggleFavorite = async () => {
+    const token = getAuthToken();
+    if (!token) {
+      const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
+      setIsLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      router.push(`/login?returnUrl=${returnUrl}`);
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to manage your favorites.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (isFavorite(product.globalId)) {
+      removeFromFavorites(product.globalId);
+    } else {
+      addToFavorites(product);
+    }
+    setIsLoading(false);
+  };
+
+  const incrementQuantity = () => {
+    if (quantity < product.stock) {
+      setQuantity(quantity + 1);
+    }
+  };
+
+  const decrementQuantity = () => {
+    if (quantity > 1) {
+      setQuantity(quantity - 1);
+    }
+  };
+
+  return (
+    <>
+      {isLoading && <LeafLoader />}
+      <div className="product-card group">
+        <div className="relative">
+          <Link
+            href={`/products/${product.globalId}`}
+            onClick={(e) => handleNavigation(e, `/products/${product.globalId}`)}
+          >
+            <div className="aspect-square overflow-hidden rounded-md bg-muted">
+              <Image
+                src={product.images[0] || "/placeholder.svg?height=300&width=300"}
+                alt={product.name}
+                width={300}
+                height={300}
+                className="h-full w-full object-cover transition-transform group-hover:scale-105"
+              />
+            </div>
+          </Link>
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm"
+            onClick={toggleFavorite}
+          >
+            <Heart className={`h-4 w-4 ${isFavorite(product.globalId) ? "fill-red-500 text-red-500" : ""}`} />
+            <span className="sr-only">{isFavorite(product.globalId) ? "Remove from favorites" : "Add to favorites"}</span>
+          </Button>
+          {product.discount > 0 && <Badge className="absolute top-2 left-2 bg-red-500">-{product.discount}%</Badge>}
+          {product.stock <= 5 && product.stock > 0 && (
+            <Badge variant="outline" className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm">
+              Only {product.stock} left
+            </Badge>
+          )}
+          {product.stock === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+              <Badge variant="outline" className="bg-background">
+                Out of Stock
+              </Badge>
+            </div>
+          )}
+        </div>
+        <div className="pt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <Link
+              href={`/products/${product.globalId}`}
+              onClick={(e) => handleNavigation(e, `/products/${product.globalId}`)}
+            >
+              <h3 className="font-medium">{product.name}</h3>
+            </Link>
+            <div className="text-sm font-medium">
+              {product.originalPrice && product.originalPrice > product.price ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground line-through">₹{product.originalPrice.toFixed(2)}</span>
+                  <span className="text-red-500">₹{product.price.toFixed(2)}</span>
+                </div>
+              ) : (
+                <span>₹{product.price.toFixed(2)}</span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <span className="text-sm text-muted-foreground mr-2">{product.unit}</span>
+              <Badge variant="outline" className="text-xs">
+                {product.stock} in stock
+              </Badge>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center justify-between">
+            <div className="flex items-center border rounded-md">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-r-none p-0"
+                onClick={decrementQuantity}
+                disabled={quantity <= 1}
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <span className="w-8 text-center text-sm">{quantity}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-l-none p-0"
+                onClick={incrementQuantity}
+                disabled={quantity >= product.stock}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+            <Button size="sm" className="h-8 gap-1" onClick={handleAddToCart} disabled={product.stock === 0}>
+              <ShoppingCart className="h-3.5 w-3.5" />
+              Add
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

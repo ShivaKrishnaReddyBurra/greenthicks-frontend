@@ -46,6 +46,8 @@ export default function AdminDashboard() {
   })
 
   useEffect(() => {
+    
+    setIsLoading(true)
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false)
@@ -146,7 +148,7 @@ export default function AdminDashboard() {
       </div>
     )
   }
-
+  
   return (
     <div className="p-4 md:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">

@@ -1,10 +1,13 @@
-import { Suspense } from 'react';
-import ClientLogin from './OrderVerifyPage';
-import OrderVerifyPage from './OrderVerifyPage';
 
-export default function LoginPage() {
+"use client";
+
+import { Suspense } from "react";
+import OrderVerifyPage from "./OrderVerifyPage";
+import LeafLoader from "@/components/LeafLoader";
+
+export default function OrderVerifyWrapper() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<LeafLoader />}>
       <OrderVerifyPage />
     </Suspense>
   );

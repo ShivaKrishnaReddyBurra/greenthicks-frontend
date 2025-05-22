@@ -1,37 +1,74 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Truck } from "lucide-react"
-import { checkAdminStatus, checkDeliveryStatus } from "@/lib/auth-utils"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { Truck } from "lucide-react";
+import { checkAdminStatus, checkDeliveryStatus } from "@/lib/auth-utils";
+
+const LeafLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function DeliveryReturnButton() {
-  const [isAuthorized, setIsAuthorized] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const pathname = usePathname()
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
 
-  // Don't show on admin or delivery pages
-  const isRestrictedPage = pathname.startsWith("/admin") || pathname.startsWith("/delivery")
+  const isRestrictedPage = pathname.startsWith("/admin") || pathname.startsWith("/delivery");
 
   useEffect(() => {
-    setMounted(true)
-    const isAdmin = checkAdminStatus()
-    const isDelivery = checkDeliveryStatus()
-    setIsAuthorized(isAdmin || isDelivery)
-  }, [])
+    setMounted(true);
+    const isAdmin = checkAdminStatus();
+    const isDelivery = checkDeliveryStatus();
+    setIsAuthorized(isAdmin || isDelivery);
+  }, []);
+
+  const handleNavigation = async (e, href) => {
+    e.preventDefault();
+    setIsLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    router.push(href);
+    setIsLoading(false);
+  };
 
   if (!mounted || !isAuthorized || isRestrictedPage) {
-    return null
+    return null;
   }
 
   return (
-    <Link
-      href="/delivery/dashboard"
-      className="fixed bottom-16 right-4 z-50 bg-green-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors px-4 py-2 mb-2"
-      aria-label="Return to Delivery Dashboard"
-    >
-      <Truck className="h-6 w-6" />
-    </Link>
-  )
+    <>
+      {isLoading && <LeafLoader />}
+      <Link
+        href="/delivery/dashboard"
+        onClick={(e) => handleNavigation(e, "/delivery/dashboard")}
+        className="fixed bottom-16 right-4 z-50 bg-green-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors px-4 py-2 mb-2"
+        aria-label="Return to Delivery Dashboard"
+      >
+        <Truck className="h-6 w-6" />
+      </Link>
+    </>
+  );
 }

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { fetchWithAuth } from "@/lib/api";
 import { getAuthToken, clearAuth } from "@/lib/auth-utils";
@@ -42,7 +42,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2 } from "lucide-react";
+import LeafLoader from "@/components/LeafLoader";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -65,9 +65,9 @@ export default function ProfilePage() {
     phone: "",
     isPrimary: false,
   });
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [actionLoading, setActionLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const actionTimeout = useRef(null);
 
   // Mobile detection
   useEffect(() => {
@@ -82,6 +82,7 @@ export default function ProfilePage() {
   }, []);
 
   const fetchUserData = async () => {
+    setActionLoading(true);
     try {
       const [profileData, addressesData] = await Promise.all([
         fetchWithAuth("/api/auth/profile"),
@@ -139,18 +140,23 @@ export default function ProfilePage() {
         variant: "destructive",
       });
       if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         clearAuth();
         router.push("/login");
       }
     } finally {
-      setIsLoading(false);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setActionLoading(false);
     }
   };
 
   useEffect(() => {
     const token = getAuthToken();
     if (!token) {
-      router.push("/login");
+      setActionLoading(true);
+      setTimeout(() => {
+        router.push("/login");
+      }, 1000);
       return;
     }
     fetchUserData();
@@ -163,118 +169,126 @@ export default function ProfilePage() {
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      await fetchWithAuth(`/api/auth/user/${user.globalId}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          username: formData.username,
-          email: formData.email,
-          phone: formData.phone,
-        }),
-      });
-      setUser((prev) => ({
-        ...prev,
-        name: `${formData.firstName} ${formData.lastName}`.trim(),
-        username: formData.username,
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-      }));
-      setIsEditingProfile(false);
-      toast({
-        title: "Success",
-        description: "Profile updated successfully.",
-      });
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update profile. Please try again.",
-        variant: "destructive",
-      });
-      if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
-        clearAuth();
-        router.push("/login");
-iatives      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleAddressSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      if (selectedAddressId) {
-        const updatedAddress = await fetchWithAuth(`/api/addresses/${selectedAddressId}`, {
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        await fetchWithAuth(`/api/auth/user/${user.globalId}`, {
           method: "PUT",
           body: JSON.stringify({
             firstName: formData.firstName,
             lastName: formData.lastName,
+            username: formData.username,
             email: formData.email,
             phone: formData.phone,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            zipCode: formData.zipCode,
-            isPrimary: formData.isPrimary,
           }),
         });
-        setAddresses((prev) =>
-          prev.map((addr) =>
-            addr.addressId === selectedAddressId
-              ? { ...updatedAddress.address, isPrimary: formData.isPrimary }
-              : { ...addr, isPrimary: formData.isPrimary ? false : addr.isPrimary }
-          )
-        );
-      } else {
-        const newAddress = await fetchWithAuth("/api/addresses", {
-          method: "POST",
-          body: JSON.stringify({
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            phone: formData.phone,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            zipCode: formData.zipCode,
-            isPrimary: formData.isPrimary,
-          }),
+        setUser((prev) => ({
+          ...prev,
+          name: `${formData.firstName} ${formData.lastName}`.trim(),
+          username: formData.username,
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+        }));
+        setIsEditingProfile(false);
+        toast({
+          title: "Success",
+          description: "Profile updated successfully.",
         });
-        setAddresses((prev) => [
-          ...prev.map((addr) => ({ ...addr, isPrimary: formData.isPrimary ? false : addr.isPrimary })),
-          { ...newAddress.address, isPrimary: formData.isPrimary }
-        ]);
-        setSelectedAddressId(newAddress.address.addressId);
+      } catch (error) {
+        console.error("Error updating profile:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to update profile. Please try again.",
+          variant: "destructive",
+        });
+        if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          clearAuth();
+          router.push("/login");
+        }
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
-      await fetchUserData();
-      setIsEditingAddress(false);
-      setShowAddressPrompt(false);
-      toast({
-        title: "Success",
-        description: selectedAddressId ? "Address updated successfully." : "Address added successfully.",
-      });
-    } catch (error) {
-      console.error("Error saving address:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save address. Please try again.",
-        variant: "destructive",
-      });
-      if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
-        clearAuth();
-        router.push("/login");
+    }, 500);
+  };
+
+  const handleAddressSubmit = async (e) => {
+    e.preventDefault();
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        if (selectedAddressId) {
+          const updatedAddress = await fetchWithAuth(`/api/addresses/${selectedAddressId}`, {
+            method: "PUT",
+            body: JSON.stringify({
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              email: formData.email,
+              phone: formData.phone,
+              address: formData.address,
+              city: formData.city,
+              state: formData.state,
+              zipCode: formData.zipCode,
+              isPrimary: formData.isPrimary,
+            }),
+          });
+          setAddresses((prev) =>
+            prev.map((addr) =>
+              addr.addressId === selectedAddressId
+                ? { ...updatedAddress.address, isPrimary: formData.isPrimary }
+                : { ...addr, isPrimary: formData.isPrimary ? false : addr.isPrimary }
+            )
+          );
+        } else {
+          const newAddress = await fetchWithAuth("/api/addresses", {
+            method: "POST",
+            body: JSON.stringify({
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              email: formData.email,
+              phone: formData.phone,
+              address: formData.address,
+              city: formData.city,
+              state: formData.state,
+              zipCode: formData.zipCode,
+              isPrimary: formData.isPrimary,
+            }),
+          });
+          setAddresses((prev) => [
+            ...prev.map((addr) => ({ ...addr, isPrimary: formData.isPrimary ? false : addr.isPrimary })),
+            { ...newAddress.address, isPrimary: formData.isPrimary }
+          ]);
+          setSelectedAddressId(newAddress.address.addressId);
+        }
+        await fetchUserData();
+        setIsEditingAddress(false);
+        setShowAddressPrompt(false);
+        toast({
+          title: "Success",
+          description: selectedAddressId ? "Address updated successfully." : "Address added successfully.",
+        });
+      } catch (error) {
+        console.error("Error saving address:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to save address. Please try again.",
+          variant: "destructive",
+        });
+        if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          clearAuth();
+          router.push("/login");
+        }
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, 500);
   };
 
   const handleCancelProfile = () => {
@@ -344,125 +358,140 @@ iatives      }
   };
 
   const handleSetPrimary = async (addressId) => {
-    setIsSubmitting(true);
-    try {
-      const addressToUpdate = addresses.find((addr) => addr.addressId === addressId);
-      if (!addressToUpdate) {
-        throw new Error("Address not found");
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        const addressToUpdate = addresses.find((addr) => addr.addressId === addressId);
+        if (!addressToUpdate) {
+          throw new Error("Address not found");
+        }
+        const updatedAddress = await fetchWithAuth(`/api/addresses/${addressId}`, {
+          method: "PUT",
+          body: JSON.stringify({ ...addressToUpdate, isPrimary: true }),
+        });
+        setAddresses((prev) =>
+          prev.map((addr) =>
+            addr.addressId === addressId
+              ? { ...updatedAddress.address, isPrimary: true }
+              : { ...addr, isPrimary: false }
+          )
+        );
+        setSelectedAddressId(addressId);
+        setFormData({
+          firstName: updatedAddress.address.firstName,
+          lastName: updatedAddress.address.lastName,
+          email: updatedAddress.address.email,
+          address: updatedAddress.address.address,
+          city: updatedAddress.address.city,
+          state: updatedAddress.address.state,
+          zipCode: updatedAddress.address.zipCode,
+          phone: updatedAddress.address.phone,
+          isPrimary: true,
+          username: user?.username || "",
+        });
+        await fetchUserData();
+        toast({
+          title: "Success",
+          description: "Primary address updated successfully.",
+        });
+      } catch (error) {
+        console.error("Error setting primary address:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to set primary address. Please try again.",
+          variant: "destructive",
+        });
+        if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          clearAuth();
+          router.push("/login");
+        }
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
-      const updatedAddress = await fetchWithAuth(`/api/addresses/${addressId}`, {
-        method: "PUT",
-        body: JSON.stringify({ ...addressToUpdate, isPrimary: true }),
-      });
-      setAddresses((prev) =>
-        prev.map((addr) =>
-          addr.addressId === addressId
-            ? { ...updatedAddress.address, isPrimary: true }
-            : { ...addr, isPrimary: false }
-        )
-      );
-      setSelectedAddressId(addressId);
-      setFormData({
-        firstName: updatedAddress.address.firstName,
-        lastName: updatedAddress.address.lastName,
-        email: updatedAddress.address.email,
-        address: updatedAddress.address.address,
-        city: updatedAddress.address.city,
-        state: updatedAddress.address.state,
-        zipCode: updatedAddress.address.zipCode,
-        phone: updatedAddress.address.phone,
-        isPrimary: true,
-        username: user?.username || "",
-      });
-      await fetchUserData();
-      toast({
-        title: "Success",
-        description: "Primary address updated successfully.",
-      });
-    } catch (error) {
-      console.error("Error setting primary address:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to set primary address. Please try again.",
-        variant: "destructive",
-      });
-      if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
-        clearAuth();
-        router.push("/login");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, 500);
   };
 
   const handleDeleteAddress = async (addressId) => {
-    setIsSubmitting(true);
-    try {
-      await fetchWithAuth(`/api/addresses/${addressId}`, {
-        method: "DELETE",
-      });
-      setAddresses((prev) => prev.filter((addr) => addr.addressId !== addressId));
-      if (selectedAddressId === addressId) {
-        const primaryAddress = addresses.find((addr) => addr.isPrimary && addr.addressId !== addressId) || addresses[0];
-        if (primaryAddress) {
-          setSelectedAddressId(primaryAddress.addressId);
-          setFormData({
-            firstName: primaryAddress.firstName,
-            lastName: primaryAddress.lastName,
-            email: primaryAddress.email,
-            address: primaryAddress.address,
-            city: primaryAddress.city,
-            state: primaryAddress.state,
-            zipCode: primaryAddress.zipCode,
-            phone: primaryAddress.phone,
-            isPrimary: primaryAddress.isPrimary,
-            username: user?.username || "",
-          });
-        } else {
-          setSelectedAddressId(null);
-          setFormData((prev) => ({
-            ...prev,
-            firstName: user?.firstName || user?.name?.split(" ")[0] || "",
-            lastName: user?.lastName || user?.name?.split(" ")[1] || "",
-            username: user?.username || "",
-            email: user?.email || "",
-            address: "",
-            city: "",
-            state: "",
-            zipCode: "",
-            phone: user?.phone || "",
-            isPrimary: false,
-          }));
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        await fetchWithAuth(`/api/addresses/${addressId}`, {
+          method: "DELETE",
+        });
+        setAddresses((prev) => prev.filter((addr) => addr.addressId !== addressId));
+        if (selectedAddressId === addressId) {
+          const primaryAddress = addresses.find((addr) => addr.isPrimary && addr.addressId !== addressId) || addresses[0];
+          if (primaryAddress) {
+            setSelectedAddressId(primaryAddress.addressId);
+            setFormData({
+              firstName: primaryAddress.firstName,
+              lastName: primaryAddress.lastName,
+              email: primaryAddress.email,
+              address: primaryAddress.address,
+              city: primaryAddress.city,
+              state: primaryAddress.state,
+              zipCode: primaryAddress.zipCode,
+              phone: primaryAddress.phone,
+              isPrimary: primaryAddress.isPrimary,
+              username: user?.username || "",
+            });
+          } else {
+            setSelectedAddressId(null);
+            setFormData((prev) => ({
+              ...prev,
+              firstName: user?.firstName || user?.name?.split(" ")[0] || "",
+              lastName: user?.lastName || user?.name?.split(" ")[1] || "",
+              username: user?.username || "",
+              email: user?.email || "",
+              address: "",
+              city: "",
+              state: "",
+              zipCode: "",
+              phone: user?.phone || "",
+              isPrimary: false,
+            }));
+          }
         }
+        await fetchUserData();
+        setShowAddressPrompt(addresses.length === 1);
+        toast({
+          title: "Success",
+          description: "Address deleted successfully.",
+        });
+      } catch (error) {
+        console.error("Error deleting address:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to delete address. Please try again.",
+          variant: "destructive",
+        });
+        if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          clearAuth();
+          router.push("/login");
+        }
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
-      await fetchUserData();
-      setShowAddressPrompt(addresses.length === 1);
-      toast({
-        title: "Success",
-        description: "Address deleted successfully.",
-      });
-    } catch (error) {
-      console.error("Error deleting address:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete address. Please try again.",
-        variant: "destructive",
-      });
-      if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
-        clearAuth();
-        router.push("/login");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, 500);
   };
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+  const handleNavigation = async (callback) => {
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      callback();
+    }, 500);
+  };
+
+  if (actionLoading) {
+    return <LeafLoader />;
   }
 
   if (!user) {
@@ -477,10 +506,12 @@ iatives      }
           <p className="text-sm">Adding an address will help us serve you better.</p>
           <Button
             className="mt-2"
-            onClick={() => {
-              setActiveTab("addresses");
-              handleAddNewAddress();
-            }}
+            onClick={() =>
+              handleNavigation(() => {
+                setActiveTab("addresses");
+                handleAddNewAddress();
+              })
+            }
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Address Now
@@ -623,7 +654,7 @@ iatives      }
                           onChange={handleInputChange}
                           placeholder="+91 912345678901"
                           pattern="/^(?:\+91\s?)?\d{10}$/"
-                          title="Phone number must be in indian format (e.g., +91 92345678901)"
+                          title="Phone number must be in Indian format (e.g., +91 92345678901)"
                           required
                         />
                         <p className="text-xs text-muted-foreground">
@@ -635,17 +666,13 @@ iatives      }
                           variant="outline"
                           type="button"
                           onClick={handleCancelProfile}
-                          disabled={isSubmitting}
+                          disabled={actionLoading}
                         >
                           <X className="h-4 w-4 mr-2" />
                           Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                          {isSubmitting ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <Save className="h-4 w-4 mr-2" />
-                          )}
+                        <Button type="submit" disabled={actionLoading}>
+                          <Save className="h-4 w-4 mr-2" />
                           Save Changes
                         </Button>
                       </div>
@@ -715,10 +742,13 @@ iatives      }
                   <Button
                     variant="outline"
                     className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => {
-                      clearAuth();
-                      router.push("/login");
-                    }}
+                    onClick={() =>
+                      handleNavigation(() => {
+                        clearAuth();
+                        router.push("/login");
+                      })
+                    }
+                    disabled={actionLoading}
                   >
                     <Bell className="h-4 w-4 mr-2" />
                     Sign Out
@@ -734,7 +764,7 @@ iatives      }
               <h2 className="text-xl font-semibold">Your Addresses</h2>
               <Dialog open={isEditingAddress} onOpenChange={setIsEditingAddress}>
                 <DialogTrigger asChild>
-                  <Button onClick={handleAddNewAddress}>
+                  <Button onClick={handleAddNewAddress} disabled={actionLoading}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add New Address
                   </Button>
@@ -790,7 +820,7 @@ iatives      }
                         onChange={handleInputChange}
                         placeholder="+91 92345678901"
                         pattern="/^(?:\+91\s?)?\d{10}$/"
-                        title="Phone number must be in indian format (e.g., +91 92345678901)"
+                        title="Phone number must be in Indian format (e.g., +91 92345678901)"
                         required
                       />
                       <p className="text-xs text-muted-foreground">
@@ -850,17 +880,13 @@ iatives      }
                         type="button"
                         variant="outline"
                         onClick={handleCancelAddress}
-                        disabled={isSubmitting}
+                        disabled={actionLoading}
                       >
                         <X className="h-4 w-4 mr-2" />
                         Cancel
                       </Button>
-                      <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Save className="h-4 w-4 mr-2" />
-                        )}
+                      <Button type="submit" disabled={actionLoading}>
+                        <Save className="h-4 w-4 mr-2" />
                         {selectedAddressId ? "Save Changes" : "Add Address"}
                       </Button>
                     </DialogFooter>
@@ -898,6 +924,7 @@ iatives      }
                               username: user?.username || "",
                             });
                           }}
+                          disabled={actionLoading}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -906,7 +933,7 @@ iatives      }
                           size="icon"
                           className="h-8 w-8 text-destructive"
                           onClick={() => handleDeleteAddress(address.addressId)}
-                          disabled={isSubmitting}
+                          disabled={actionLoading}
                         >
                           <Trash className="h-4 w-4" />
                         </Button>
@@ -931,7 +958,7 @@ iatives      }
                         size="sm"
                         className="w-full"
                         onClick={() => handleSetPrimary(address.addressId)}
-                        disabled={isSubmitting}
+                        disabled={actionLoading}
                       >
                         Set as Primary
                       </Button>
@@ -945,7 +972,7 @@ iatives      }
                     <MapPin className="h-12 w-12 mx-auto text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium">No addresses added</h3>
                     <p className="mt-1 text-muted-foreground">Add an address to get started</p>
-                    <Button className="mt-4" onClick={handleAddNewAddress}>
+                    <Button onClick={handleAddNewAddress} disabled={actionLoading}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Address
                     </Button>

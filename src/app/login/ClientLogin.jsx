@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -13,72 +13,93 @@ import { fetchWithoutAuth } from "@/lib/api";
 import { checkAdminStatus, setAuthToken } from "@/lib/auth-utils";
 import LogOut from "@/public/logo.png";
 import { useToast } from "@/hooks/use-toast";
+import LeafLoader from "@/components/LeafLoader";
 
 export default function ClientLogin() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const returnUrl = searchParams.get("returnUrl") || "/products";
+  const actionTimeout = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      setError("");
+      try {
+        const data = await fetchWithoutAuth("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify({ identifier, password }),
+        });
 
-    try {
-      const data = await fetchWithoutAuth("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ identifier, password }),
-      });
-
-      setAuthToken(data.token);
-      const isAdmin = checkAdminStatus();
-      if (isAdmin) {
-        router.push("/admin/dashboard");
-      } else {
-        router.push(decodeURIComponent(returnUrl));
+        setAuthToken(data.token);
+        const isAdmin = checkAdminStatus();
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (isAdmin) {
+          router.push("/admin/dashboard?refresh=true");
+        } else {
+          router.push(`${decodeURIComponent(returnUrl)}?refresh=true`);
+        }
+        toast({
+          title: "Login successful",
+          description: "You are now logged in.",
+        });
+      } catch (err) {
+        let errorMessage = err.message;
+        if (err.message === "Invalid credentials") {
+          errorMessage = "Invalid username or password";
+        } else if (err.message.includes("is required")) {
+          errorMessage = "Please fill in all fields";
+        } else if (err.message === "Please verify your email before logging in.") {
+          errorMessage = (
+            <>
+              Please verify your email to log in.{" "}
+              <Link
+                href={`/resend-verification?email=${encodeURIComponent(identifier)}`}
+                className="text-primary font-medium hover:underline"
+                onClick={(e) => handleNavigation(e, `/resend-verification?email=${encodeURIComponent(identifier)}`)}
+              >
+                Resend verification email
+              </Link>
+            </>
+          );
+        } else {
+          errorMessage = "Login failed. Please try again.";
+        }
+        setError(errorMessage);
+        console.error(err);
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
-      toast({
-        title: "Login successful",
-        description: "You are now logged in.",
-      });
-    } catch (err) {
-      let errorMessage = err.message;
-      if (err.message === "Invalid credentials") {
-        errorMessage = "Invalid username or password";
-      } else if (err.message.includes("is required")) {
-        errorMessage = "Please fill in all fields";
-      } else if (err.message === "Please verify your email before logging in.") {
-        errorMessage = (
-          <>
-            Please verify your email to log in.{" "}
-            <Link
-              href={`/resend-verification?email=${encodeURIComponent(identifier)}`}
-              className="text-primary font-medium hover:underline"
-            >
-              Resend verification email
-            </Link>
-          </>
-        );
-      } else {
-        errorMessage = "Login failed. Please try again.";
-      }
-      setError(errorMessage);
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    }, 500);
   };
+
+  const handleNavigation = async (e, href) => {
+    e.preventDefault();
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      router.push(href);
+    }, 500);
+  };
+
+  if (actionLoading) {
+    return <LeafLoader />;
+  }
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       <div className="absolute top-6 left-6 z-10">
-        <Link href="/">
+        <Link href="/" onClick={(e) => handleNavigation(e, "/")}>
           <Image
             src={LogOut}
             alt="GreenThicks Logo"
@@ -153,9 +174,9 @@ export default function ClientLogin() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-greenthicks-dark to-greenthicks hover:from-greenthicks hover:to-greenthicks-light transition-all duration-300 border-none mt-4"
-                disabled={loading}
+                disabled={actionLoading}
               >
-                {loading ? "Logging in..." : "Sign In"}
+                Sign In
               </Button>
             </form>
           </CardContent>
@@ -164,6 +185,7 @@ export default function ClientLogin() {
               Don't have an account?{" "}
               <Link
                 href="/register"
+                onClick={(e) => handleNavigation(e, "/register")}
                 className="text-primary font-medium hover:underline"
               >
                 Create Account

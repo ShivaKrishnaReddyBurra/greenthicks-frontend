@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -25,9 +25,33 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import QRCode from 'react-qr-code';
+import QRCode from "react-qr-code";
 import { getOrder, getAllUsers, getUserProfile, assignDeliveryBoy, updateDeliveryStatus } from "@/lib/api";
 import { formatCurrency } from "@/lib/currency";
+
+const LeafLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function DeliveryOrderDetailPage() {
   const params = useParams();
@@ -37,17 +61,19 @@ export default function DeliveryOrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [deliveryBoys, setDeliveryBoys] = useState([]);
   const [selectedDeliveryBoy, setSelectedDeliveryBoy] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [qrPaymentGenerated, setQrPaymentGenerated] = useState(false);
   const [orderIdInput, setOrderIdInput] = useState("");
   const [showOrderIdForm, setShowOrderIdForm] = useState(false);
+  const actionTimeout = useRef(null);
+  const selectTimeout = useRef(null);
 
   useEffect(() => {
     const fetchOrderAndUser = async () => {
-      setLoading(true);
+      setActionLoading(true);
       try {
         // Fetch order details
         const orderData = await getOrder(id);
@@ -65,9 +91,13 @@ export default function DeliveryOrderDetailPage() {
         }
       } catch (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
-        if (error.message.includes("Token expired")) router.push("/delivery/login");
+        if (error.message.includes("Token expired")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          router.push("/delivery/login");
+        }
       } finally {
-        setLoading(false);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
     };
     fetchOrderAndUser();
@@ -78,47 +108,75 @@ export default function DeliveryOrderDetailPage() {
       toast({ title: "Error", description: "Please select a delivery boy", variant: "destructive" });
       return;
     }
-    try {
-      const updatedOrder = await assignDeliveryBoy(id, parseInt(selectedDeliveryBoy));
-      setOrder(updatedOrder.order);
-      toast({ title: "Success", description: "Delivery boy assigned successfully" });
-    } catch (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        const updatedOrder = await assignDeliveryBoy(id, parseInt(selectedDeliveryBoy));
+        setOrder(updatedOrder.order);
+        toast({ title: "Success", description: "Delivery boy assigned successfully" });
+      } catch (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+      }
+    }, 500);
+  };
+
+  const handleDeliveryBoyChange = (value) => {
+    clearTimeout(selectTimeout.current);
+    selectTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      setSelectedDeliveryBoy(value);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setActionLoading(false);
+    }, 500);
   };
 
   const generateUPIQR = () => {
-  // Encode a URL that points to a route for handling role-based redirection
-  const orderId = order.id
-  const orderIdNumbers = orderId.split('-')[1];
-  const verificationUrl = `upi://pay?pa=funnygn156@oksbi&pn=Greenthicks&am=${order.total}&cu=INR&tn=Order-${order.id}`;
-  return verificationUrl;
-};
+    const orderId = order.id;
+    const orderIdNumbers = orderId.split("-")[1];
+    const verificationUrl = `upi://pay?pa=funnygn156@oksbi&pn=Greenthicks&am=${order.total}&cu=INR&tn=Order-${order.id}`;
+    return verificationUrl;
+  };
 
   const handleStatusUpdate = async (newStatus) => {
-    if (newStatus === "delivered" && order.paymentMethod !== "cash-on-delivery") {
-      setShowOrderIdForm(true);
-      return;
-    }
-    try {
-      const updatedOrder = await updateDeliveryStatus(id, newStatus);
-      setOrder(updatedOrder.order);
-      toast({
-        title: "Status updated",
-        description: `Order ${id} has been updated to ${newStatus}.`,
-      });
-      if (newStatus === "delivered") {
-        setTimeout(() => router.push("/delivery/dashboard"), 2000);
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      if (newStatus === "delivered" && order.paymentMethod !== "cash-on-delivery") {
+        setShowOrderIdForm(true);
+        return;
       }
-    } catch (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
+      setActionLoading(true);
+      try {
+        const updatedOrder = await updateDeliveryStatus(id, newStatus);
+        setOrder(updatedOrder.order);
+        toast({
+          title: "Status updated",
+          description: `Order ${id} has been updated to ${newStatus}.`,
+        });
+        if (newStatus === "delivered") {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          router.push("/delivery/dashboard");
+        }
+      } catch (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+      }
+    }, 500);
   };
 
   const handleCashPaymentDone = async () => {
-    setPaymentConfirmed(true);
-    toast({ title: "Payment Confirmed", description: "Cash payment has been received." });
-    await handleStatusUpdate("delivered");
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      setPaymentConfirmed(true);
+      toast({ title: "Payment Confirmed", description: "Cash payment has been received." });
+      await handleStatusUpdate("delivered");
+    }, 500);
   };
 
   const handleOrderIdSubmit = async () => {
@@ -126,23 +184,51 @@ export default function DeliveryOrderDetailPage() {
       toast({ title: "Error", description: "Invalid Order ID", variant: "destructive" });
       return;
     }
-    try {
-      const updatedOrder = await updateDeliveryStatus(id, "delivered");
-      setOrder(updatedOrder.order);
-      setShowOrderIdForm(false);
-      setOrderIdInput("");
-      toast({
-        title: "Status updated",
-        description: `Order ${id} has been updated to delivered.`,
-      });
-      setTimeout(() => router.push("/delivery/dashboard"), 2000);
-    } catch (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        const updatedOrder = await updateDeliveryStatus(id, "delivered");
+        setOrder(updatedOrder.order);
+        setShowOrderIdForm(false);
+        setOrderIdInput("");
+        toast({
+          title: "Status updated",
+          description: `Order ${id} has been updated to delivered.`,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        router.push("/delivery/dashboard");
+      } catch (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+      }
+    }, 500);
   };
 
   const generatePaymentQR = () => {
-    setQrPaymentGenerated(true);
+    setActionLoading(true);
+    setTimeout(() => {
+      setQrPaymentGenerated(true);
+      setActionLoading(false);
+    }, 1000);
+  };
+
+  const handleShowScanner = () => {
+    setActionLoading(true);
+    setTimeout(() => {
+      setShowScanner(true);
+      setActionLoading(false);
+    }, 1000);
+  };
+
+  const handleNavigation = async (e, href) => {
+    e.preventDefault();
+    setActionLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    router.push(href);
+    setActionLoading(false);
   };
 
   const getStatusBadge = (status) => {
@@ -184,14 +270,8 @@ export default function DeliveryOrderDetailPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <DeliveryLayout>
-        <div className="flex items-center justify-center h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      </DeliveryLayout>
-    );
+  if (actionLoading) {
+    return <LeafLoader />;
   }
 
   if (!order) {
@@ -201,7 +281,7 @@ export default function DeliveryOrderDetailPage() {
           <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Order not found</h2>
           <p className="text-muted-foreground mb-6">The order you're looking for doesn't exist.</p>
-          <Link href="/delivery/dashboard">
+          <Link href="/delivery/dashboard" onClick={(e) => handleNavigation(e, "/delivery/dashboard")}>
             <Button>Return to Dashboard</Button>
           </Link>
         </div>
@@ -212,7 +292,11 @@ export default function DeliveryOrderDetailPage() {
   return (
     <DeliveryLayout>
       <div className="mb-6">
-        <Link href="/delivery/dashboard" className="inline-flex items-center text-primary hover:underline">
+        <Link
+          href="/delivery/dashboard"
+          onClick={(e) => handleNavigation(e, "/delivery/dashboard")}
+          className="inline-flex items-center text-primary hover:underline"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to dashboard
         </Link>
       </div>
@@ -223,7 +307,8 @@ export default function DeliveryOrderDetailPage() {
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
-              Ordered at {new Date(order.orderDate).toLocaleString("en-IN", {
+              Ordered at{" "}
+              {new Date(order.orderDate).toLocaleString("en-IN", {
                 day: "numeric",
                 month: "short",
                 hour: "2-digit",
@@ -253,7 +338,7 @@ export default function DeliveryOrderDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">
-                  <Select value={selectedDeliveryBoy} onValueChange={setSelectedDeliveryBoy}>
+                  <Select value={selectedDeliveryBoy} onValueChange={handleDeliveryBoyChange}>
                     <SelectTrigger className="w-full md:w-1/2">
                       <SelectValue placeholder="Select a delivery boy" />
                     </SelectTrigger>
@@ -325,7 +410,12 @@ export default function DeliveryOrderDetailPage() {
                 {order.items.map((item) => (
                   <div key={item._id} className="flex items-center gap-4">
                     <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                      <Image src={item.image || "/placeholder.svg?height=64&width=64"} alt={item.name} fill className="object-cover" />
+                      <Image
+                        src={item.image || "/placeholder.svg?height=64&width=64"}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                      />
                     </div>
                     <div className="flex-1">
                       <h4 className="font-medium">{item.name}</h4>
@@ -387,10 +477,12 @@ export default function DeliveryOrderDetailPage() {
                   <div className="space-y-4">
                     {/* QR Scanner Trigger */}
                     {!showScanner && (
-                      <Button className="w-full" onClick={() => setShowScanner(true)}>Scan Invoice QR Code</Button>
+                      <Button className="w-full" onClick={handleShowScanner}>
+                        Scan Invoice QR Code
+                      </Button>
                     )}
 
-                    {/* QR Reader */}
+                    {/* QR Reader Placeholder */}
                     {showScanner && <div id="qr-reader" className="mt-4" />}
 
                     {/* COD payment options */}
@@ -398,17 +490,10 @@ export default function DeliveryOrderDetailPage() {
                       <>
                         <p className="text-muted-foreground">This is a COD order. Choose how payment was made:</p>
                         <div className="flex flex-col gap-4">
-                          <Button
-                            onClick={handleCashPaymentDone}
-                            className="w-full"
-                          >
+                          <Button onClick={handleCashPaymentDone} className="w-full">
                             <IndianRupeeIcon className="mr-2 h-4 w-4" /> Confirm Cash Payment
                           </Button>
-                          <Button
-                            variant="secondary"
-                            onClick={generatePaymentQR}
-                            className="w-full"
-                          >
+                          <Button variant="secondary" onClick={generatePaymentQR} className="w-full">
                             <QrCode className="mr-2 h-4 w-4" /> Generate QR Code for Customer
                           </Button>
                         </div>
@@ -416,8 +501,14 @@ export default function DeliveryOrderDetailPage() {
                         {qrPaymentGenerated && (
                           <div className="mt-4">
                             <p className="mb-2">Customer can scan this to pay {formatCurrency(order.total)}:</p>
-                            <QRCode value={generateUPIQR()} className="mx-auto p-4 bg-white rounded-xl shadow-md" level="H" includeMargin={true} // Adds spacing around QR
-  renderAs="canvas"  size={200} />
+                            <QRCode
+                              value={generateUPIQR()}
+                              className="mx-auto p-4 bg-white rounded-xl shadow-md"
+                              level="H"
+                              includeMargin={true}
+                              renderAs="canvas"
+                              size={200}
+                            />
                           </div>
                         )}
                       </>
@@ -464,7 +555,7 @@ export default function DeliveryOrderDetailPage() {
                   <p className="text-sm text-muted-foreground mb-4">
                     You've earned {formatCurrency(order.total * 0.1)} for this delivery.
                   </p>
-                  <Link href="/delivery/dashboard">
+                  <Link href="/delivery/dashboard" onClick={(e) => handleNavigation(e, "/delivery/dashboard")}>
                     <Button className="w-full">Return to Dashboard</Button>
                   </Link>
                 </div>
@@ -496,7 +587,15 @@ const SummaryRow = ({ label, value, isTotal }) => (
 );
 
 const InfoIcon = () => (
-  <svg className="h-5 w-5 text-primary mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    className="h-5 w-5 text-primary mt-0.5"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M12 8h.01" />
     <path d="M11 12h1v4h1" />
     <circle cx="12" cy="12" r="10" />
@@ -504,7 +603,15 @@ const InfoIcon = () => (
 );
 
 const PaymentIcon = () => (
-  <svg className="h-5 w-5 text-primary mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    className="h-5 w-5 text-primary mt-0.5"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    viewBox="0 0 24 24"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
   </svg>
 );

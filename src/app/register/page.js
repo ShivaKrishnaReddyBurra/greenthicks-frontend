@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Lock, Mail, User, UserPlus, Phone } from "lucide-react";
@@ -11,6 +12,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox";
 import { fetchWithoutAuth } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import LeafLoader from "@/components/LeafLoader";
 import LogOut from "@/public/logo.png";
 
 export default function RegisterPage() {
@@ -27,60 +29,108 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const actionTimeout = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
     setSuccess("");
 
+    // Enhanced client-side validation
+    if (!firstName || !lastName || !username || !email || !phone || !password || !confirmPassword) {
+      setError("Please fill in all required fields");
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
-      setLoading(false);
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
       return;
     }
 
     if (!termsAccepted) {
       setError("You must accept the Terms of Service and Privacy Policy");
-      setLoading(false);
+      toast({
+        title: "Error",
+        description: "You must accept the Terms of Service and Privacy Policy",
+        variant: "destructive",
+      });
       return;
     }
 
-    // Basic client-side phone number validation
     const phoneRegex = /^\+\d{10,12}$/;
     if (!phoneRegex.test(phone)) {
       setError("Phone number must be in international format (e.g., +12345678901)");
-      setLoading(false);
+      toast({
+        title: "Error",
+        description: "Phone number must be in international format (e.g., +12345678901)",
+        variant: "destructive",
+      });
       return;
     }
 
-    try {
-      await fetchWithoutAuth("/api/auth/signup", {
-        method: "POST",
-        body: JSON.stringify({ email, password, isAdmin, firstName, lastName, username, phone }),
-      });
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        await fetchWithoutAuth("/api/auth/signup", {
+          method: "POST",
+          body: JSON.stringify({ email, password, isAdmin, firstName, lastName, username, phone }),
+        });
 
-      setSuccess("Registration successful! Please check your email to verify your account.");
-      toast({
-        title: "Registration Successful",
-        description: "Please verify your email to activate your account.",
-      });
-      setTimeout(() => router.push("/login"), 3000);
-    } catch (err) {
-      setError(err.message || "Registration failed. Please try again.");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+        setSuccess("Registration successful! Please check your email to verify your account.");
+        toast({
+          title: "Registration Successful",
+          description: "Please verify your email to activate your account.",
+        });
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // Loader for redirect
+        router.push("/login");
+      } catch (err) {
+        const errorMessage = err.response?.data?.message || err.message || "Registration failed. Please try again.";
+        setError(errorMessage);
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        console.error(err);
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+      }
+    }, 500);
   };
+
+  const handleNavigation = async (callback) => {
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      callback();
+    }, 500);
+  };
+
+  if (actionLoading) {
+    return <LeafLoader />;
+  }
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       <div className="absolute top-6 left-6 z-10">
-        <Link href="/">
+        <Link href="/" onClick={(e) => { e.preventDefault(); handleNavigation(() => router.push("/")); }}>
           <img
             src={LogOut.src}
             alt="GreenThicks Logo"
@@ -128,6 +178,7 @@ export default function RegisterPage() {
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       required
+                      disabled={actionLoading}
                     />
                   </div>
                 </div>
@@ -140,6 +191,7 @@ export default function RegisterPage() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
+                    disabled={actionLoading}
                   />
                 </div>
               </div>
@@ -158,6 +210,7 @@ export default function RegisterPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
+                    disabled={actionLoading}
                   />
                 </div>
               </div>
@@ -176,6 +229,7 @@ export default function RegisterPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    disabled={actionLoading}
                   />
                 </div>
               </div>
@@ -196,6 +250,7 @@ export default function RegisterPage() {
                     pattern="^\+\d{10,12}$"
                     title="Phone number must be in international format (e.g., +12345678901)"
                     required
+                    disabled={actionLoading}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -217,6 +272,7 @@ export default function RegisterPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    disabled={actionLoading}
                   />
                   <div
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground cursor-pointer hover:text-foreground"
@@ -241,6 +297,7 @@ export default function RegisterPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
+                    disabled={actionLoading}
                   />
                   <div
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground cursor-pointer hover:text-foreground"
@@ -256,6 +313,7 @@ export default function RegisterPage() {
                   id="terms"
                   checked={termsAccepted}
                   onCheckedChange={(checked) => setTermsAccepted(checked)}
+                  disabled={actionLoading}
                 />
                 <label
                   htmlFor="terms"
@@ -275,9 +333,9 @@ export default function RegisterPage() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-greenthicks-dark to-greenthicks hover:from-greenthicks hover:to-greenthicks-light transition-all duration-300 border-none mt-4"
-                disabled={loading}
+                disabled={actionLoading}
               >
-                {loading ? "Registering..." : "Create Account"}
+                Create Account
               </Button>
             </form>
           </CardContent>
@@ -287,6 +345,7 @@ export default function RegisterPage() {
               <Link
                 href="/login"
                 className="text-primary font-medium hover:underline"
+                onClick={(e) => { e.preventDefault(); handleNavigation(() => router.push("/login")); }}
               >
                 Sign in
               </Link>

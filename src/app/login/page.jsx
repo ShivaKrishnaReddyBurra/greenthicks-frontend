@@ -1,9 +1,12 @@
-import { Suspense } from 'react';
-import ClientLogin from './ClientLogin';
+"use client";
+
+import { Suspense } from "react";
+import ClientLogin from "./ClientLogin";
+import LeafLoader from "@/components/LeafLoader";
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<LeafLoader />}>
       <ClientLogin />
     </Suspense>
   );

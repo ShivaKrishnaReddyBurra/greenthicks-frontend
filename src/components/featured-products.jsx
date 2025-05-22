@@ -1,15 +1,42 @@
 "use client";
-import React from "react";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
 import { getProducts } from "@/lib/api";
+
+const LeafLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export function FeaturedProducts() {
   const [activeTab, setActiveTab] = useState("featured");
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isTabLoading, setIsTabLoading] = useState(false);
+  const router = useRouter();
 
   const tabs = [
     { id: "featured", label: "Featured" },
@@ -18,7 +45,6 @@ export function FeaturedProducts() {
     { id: "seasonal", label: "Seasonal" },
   ];
 
-  // Fetch products from the backend
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -30,11 +56,24 @@ export function FeaturedProducts() {
         setLoading(false);
       }
     };
-
     fetchProducts();
   }, []);
 
-  // Filter products based on active tab
+  const handleTabChange = async (tabId) => {
+    setIsTabLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setActiveTab(tabId);
+    setIsTabLoading(false);
+  };
+
+  const handleNavigation = async (e, href) => {
+    e.preventDefault();
+    setIsTabLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    router.push(href);
+    setIsTabLoading(false);
+  };
+
   const filteredProducts = products
     .filter((product) => {
       if (activeTab === "featured") return product.featured;
@@ -49,51 +88,51 @@ export function FeaturedProducts() {
     return (
       <section className="py-12 md:py-20">
         <div className="container mx-auto px-4 flex justify-center items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <LeafLoader />
         </div>
       </section>
     );
   }
 
   return (
-    <section className="py-12 md:py-20">
-      <div className="container mx-auto px-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
-          <h2 className="text-3xl font-bold">Our Products</h2>
-
-          <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  activeTab === tab.id ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+    <>
+      {(isTabLoading) && <LeafLoader />}
+      <section className="py-12 md:py-20">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold">Our Products</h2>
+            <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    activeTab === tab.id ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.globalId} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No products found for this category.</p>
+            </div>
+          )}
+          <div className="mt-12 text-center">
+            <Link href="/products" onClick={(e) => handleNavigation(e, "/products")}>
+              <Button size="lg">View All Products</Button>
+            </Link>
           </div>
         </div>
-
-        {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.globalId} product={product} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No products found for this category.</p>
-          </div>
-        )}
-
-        <div className="mt-12 text-center">
-          <Link href="/products">
-            <Button size="lg">View All Products</Button>
-          </Link>
-        </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,21 +13,51 @@ import { getAuthToken } from "@/lib/auth-utils";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useParams } from "next/navigation";
 
+const LeafLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function OrderDetailPage() {
   const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
   const params = useParams();
   const id = params.id;
+  const actionTimeout = useRef(null);
 
   useEffect(() => {
     if (!getAuthToken()) {
-      router.push("/login");
+      setActionLoading(true);
+      setTimeout(() => {
+        router.push("/login");
+        setActionLoading(false);
+      }, 1000);
       return;
     }
 
     async function fetchOrder() {
+      setActionLoading(true);
       try {
         const fetchedOrder = await getOrder(id);
         setOrder({
@@ -51,7 +81,6 @@ export default function OrderDetailPage() {
           shipping: fetchedOrder.shipping || 0,
           discount: fetchedOrder.discount || 0,
         });
-        setLoading(false);
       } catch (error) {
         toast({
           title: "Error fetching order",
@@ -59,29 +88,119 @@ export default function OrderDetailPage() {
           variant: "destructive",
         });
         if (error.message.includes("Token expired") || error.message.includes("Order not found")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
           router.push("/my-orders");
         }
-        setLoading(false);
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
     }
     fetchOrder();
   }, [id, toast, router]);
 
   const handleCancelOrder = async () => {
-    try {
-      await cancelOrder(id);
-      setOrder((prev) => ({ ...prev, status: "cancelled" }));
-      toast({
-        title: "Order cancelled",
-        description: "Your order has been successfully cancelled.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error cancelling order",
-        description: error.message || "An error occurred while cancelling the order.",
-        variant: "destructive",
-      });
-    }
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        await cancelOrder(id);
+        setOrder((prev) => ({ ...prev, status: "cancelled" }));
+        toast({
+          title: "Order cancelled",
+          description: "Your order has been successfully cancelled.",
+        });
+      } catch (error) {
+        toast({
+          title: "Error cancelling order",
+          description: error.message || "An error occurred while cancelling the order.",
+          variant: "destructive",
+        });
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+      }
+    }, 500);
+  };
+
+  const handleContactSupport = () => {
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        // Placeholder for future API call
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        toast({
+          title: "Support contacted",
+          description: "Our support team will reach out to you soon.",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to contact support. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+      }
+    }, 500);
+  };
+
+  const handleReturnItems = () => {
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        // Placeholder for future API call
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        toast({
+          title: "Return initiated",
+          description: "Your return request has been submitted.",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to initiate return. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+      }
+    }, 500);
+  };
+
+  const handleWriteReview = (productId) => {
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        // Placeholder for future API call
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        toast({
+          title: "Review submitted",
+          description: "Thank you for your review!",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to submit review. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+      }
+    }, 500);
+  };
+
+  const handleNavigation = async (e, href) => {
+    e.preventDefault();
+    setActionLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    router.push(href);
+    setActionLoading(false);
   };
 
   const formatCurrency = (amount) => {
@@ -125,12 +244,8 @@ export default function OrderDetailPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+  if (actionLoading) {
+    return <LeafLoader />;
   }
 
   if (!order) {
@@ -138,7 +253,7 @@ export default function OrderDetailPage() {
       <div className="container mx-auto px-4 py-8 text-center">
         <h1 className="text-2xl font-bold mb-4">Order Not Found</h1>
         <p className="text-muted-foreground mb-6">The order you're looking for doesn't exist or has been removed.</p>
-        <Link href="/my-orders">
+        <Link href="/my-orders" onClick={(e) => handleNavigation(e, "/my-orders")}>
           <Button>View All Orders</Button>
         </Link>
       </div>
@@ -148,7 +263,11 @@ export default function OrderDetailPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <Link href="/my-orders" className="inline-flex items-center text-primary hover:underline">
+        <Link
+          href="/my-orders"
+          onClick={(e) => handleNavigation(e, "/my-orders")}
+          className="inline-flex items-center text-primary hover:underline"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to my orders
         </Link>
@@ -163,7 +282,7 @@ export default function OrderDetailPage() {
           </div>
         </div>
         <div className="mt-4 md:mt-0">
-          <Link href={`/tracking/${order.id}`}>
+          <Link href={`/tracking/${order.id}`} onClick={(e) => handleNavigation(e, `/tracking/${order.id}`)}>
             <Button>
               <Truck className="mr-2 h-4 w-4" />
               Track Order
@@ -197,7 +316,14 @@ export default function OrderDetailPage() {
                     <div className="text-right">
                       <p className="font-medium">{formatCurrency(item.quantity * item.price)}</p>
                       {order.status === "delivered" && (
-                        <Button variant="ghost" size="sm" className="text-xs">Write Review</Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => handleWriteReview(item.productId)}
+                        >
+                          Write Review
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -370,7 +496,11 @@ export default function OrderDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <Button variant="outline" className="w-full justify-start">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={handleContactSupport}
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
@@ -396,7 +526,11 @@ export default function OrderDetailPage() {
                   </Button>
                 )}
                 {order.status === "delivered" && (
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={handleReturnItems}
+                  >
                     <RotateCcw className="mr-2 h-4 w-4" />
                     Return Items
                   </Button>

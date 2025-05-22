@@ -1,7 +1,7 @@
 "use client";
 
 import { DeliveryLayout } from "@/components/delivery-layout";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -26,12 +26,36 @@ import { useToast } from "@/hooks/use-toast";
 import QRCode from "qrcode.react";
 import { getOrder, updateDeliveryStatus, fetchWithAuthFormData } from "@/lib/api";
 
+const LeafLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function DeliveryDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
   const [delivery, setDelivery] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(true);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationAction, setConfirmationAction] = useState(null);
   const [processingAction, setProcessingAction] = useState(false);
@@ -43,9 +67,13 @@ export default function DeliveryDetailsPage() {
   const [deliveryPhotos, setDeliveryPhotos] = useState([]);
   const [orderIdInput, setOrderIdInput] = useState("");
   const [showOrderIdForm, setShowOrderIdForm] = useState(false);
+  const actionTimeout = useRef(null);
+  const noteTimeout = useRef(null);
+  const imageTimeout = useRef(null);
 
   useEffect(() => {
     const fetchDelivery = async () => {
+      setActionLoading(true);
       try {
         const data = await getOrder(params.id);
         setDelivery({
@@ -77,17 +105,19 @@ export default function DeliveryDetailsPage() {
           paymentMethod: data.paymentMethod || "Online Payment (Completed)",
           photos: data.photos || [],
         });
-        setLoading(false);
       } catch (error) {
         toast({
           title: "Error",
           description: error.message || "Failed to fetch delivery details",
           variant: "destructive",
         });
-        setLoading(false);
         if (error.message.includes("Token expired")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
           router.push("/delivery/login");
         }
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
     };
     fetchDelivery();
@@ -185,40 +215,46 @@ export default function DeliveryDetailsPage() {
   };
 
   const handleCashPayment = async () => {
-    setProcessingAction(true);
-    try {
-      const updatedOrder = await updateDeliveryStatus(delivery.globalId, "delivered");
-      const updatedDelivery = {
-        ...delivery,
-        deliveryStatus: "delivered",
-        updatedAt: new Date().toISOString(),
-        photos: deliveryPhotos,
-        timeline: [
-          ...delivery.timeline,
-          {
-            status: "Delivered",
-            time: new Date().toISOString(),
-            description: deliveryNote
-              ? `Delivery completed. Note: ${deliveryNote}`
-              : "Delivery completed successfully (Cash Payment)",
-          },
-        ],
-      };
-      setDelivery(updatedDelivery);
-      setProcessingAction(false);
-      setNotificationType("success");
-      setNotificationMessage("Delivery marked as completed with cash payment!");
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 3000);
-      setDeliveryNote("");
-    } catch (error) {
-      setProcessingAction(false);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process cash payment",
-        variant: "destructive",
-      });
-    }
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      setProcessingAction(true);
+      try {
+        const updatedOrder = await updateDeliveryStatus(delivery.globalId, "delivered");
+        const updatedDelivery = {
+          ...delivery,
+          deliveryStatus: "delivered",
+          updatedAt: new Date().toISOString(),
+          photos: deliveryPhotos,
+          timeline: [
+            ...delivery.timeline,
+            {
+              status: "Delivered",
+              time: new Date().toISOString(),
+              description: deliveryNote
+                ? `Delivery completed. Note: ${deliveryNote}`
+                : "Delivery completed successfully (Cash Payment)",
+            },
+          ],
+        };
+        setDelivery(updatedDelivery);
+        setNotificationType("success");
+        setNotificationMessage("Delivery marked as completed with cash payment!");
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+        setDeliveryNote("");
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to process cash payment",
+          variant: "destructive",
+        });
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+        setProcessingAction(false);
+      }
+    }, 500);
   };
 
   const handleOrderIdSubmit = async () => {
@@ -231,71 +267,11 @@ export default function DeliveryDetailsPage() {
       return;
     }
 
-    setProcessingAction(true);
-    try {
-      const formData = new FormData();
-      for (const photo of deliveryPhotos) {
-        const response = await fetch(photo);
-        const blob = await response.blob();
-        formData.append("photos", blob, `photo-${Date.now()}.jpg`);
-      }
-      formData.append("note", deliveryNote);
-      await fetchWithAuthFormData(`/api/delivery/${delivery.globalId}/photos`, formData, "POST");
-
-      const updatedOrder = await updateDeliveryStatus(delivery.globalId, "delivered");
-      const updatedDelivery = {
-        ...delivery,
-        deliveryStatus: "delivered",
-        updatedAt: new Date().toISOString(),
-        photos: [...deliveryPhotos],
-        timeline: [
-          ...delivery.timeline,
-          {
-            status: "Delivered",
-            time: new Date().toISOString(),
-            description: deliveryNote
-              ? `Delivery completed. Note: ${deliveryNote}`
-              : "Delivery completed successfully",
-          },
-        ],
-      };
-      setDelivery(updatedDelivery);
-      setProcessingAction(false);
-      setShowOrderIdForm(false);
-      setOrderIdInput("");
-      setNotificationType("success");
-      setNotificationMessage("Delivery marked as completed!");
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 3000);
-      setDeliveryNote("");
-    } catch (error) {
-      setProcessingAction(false);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process action",
-        variant: "destructive",
-      });
-      if (error.message.includes("Token expired")) {
-        router.push("/delivery/login");
-      }
-    }
-  };
-
-  const confirmAction = async () => {
-    setProcessingAction(true);
-    setShowConfirmation(false);
-
-    try {
-      let newStatus;
-      if (confirmationAction === "accept") {
-        newStatus = "out-for-delivery";
-      } else if (confirmationAction === "decline") {
-        newStatus = "cancelled";
-      } else if (confirmationAction === "complete") {
-        newStatus = "delivered";
-      }
-
-      if (confirmationAction === "complete" && deliveryPhotos.length > 0) {
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      setProcessingAction(true);
+      try {
         const formData = new FormData();
         for (const photo of deliveryPhotos) {
           const response = await fetch(photo);
@@ -304,110 +280,199 @@ export default function DeliveryDetailsPage() {
         }
         formData.append("note", deliveryNote);
         await fetchWithAuthFormData(`/api/delivery/${delivery.globalId}/photos`, formData, "POST");
-      }
 
-      const updatedOrder = await updateDeliveryStatus(delivery.globalId, newStatus);
-
-      const updatedDelivery = {
-        ...delivery,
-        deliveryStatus: newStatus,
-        updatedAt: new Date().toISOString(),
-        photos: confirmationAction === "complete" ? [...deliveryPhotos] : delivery.photos,
-        timeline: [
-          ...delivery.timeline,
-          {
-            status: newStatus === "out-for-delivery" ? "Out for Delivery" : newStatus.charAt(0).toUpperCase() + newStatus.slice(1),
-            time: new Date().toISOString(),
-            description:
-              confirmationAction === "accept"
-                ? "Delivery accepted by you"
-                : confirmationAction === "decline"
-                ? "Delivery declined by you"
-                : deliveryNote
+        const updatedOrder = await updateDeliveryStatus(delivery.globalId, "delivered");
+        const updatedDelivery = {
+          ...delivery,
+          deliveryStatus: "delivered",
+          updatedAt: new Date().toISOString(),
+          photos: [...deliveryPhotos],
+          timeline: [
+            ...delivery.timeline,
+            {
+              status: "Delivered",
+              time: new Date().toISOString(),
+              description: deliveryNote
                 ? `Delivery completed. Note: ${deliveryNote}`
                 : "Delivery completed successfully",
-          },
-        ],
-      };
-
-      setDelivery(updatedDelivery);
-      setProcessingAction(false);
-      setNotificationType(confirmationAction === "decline" ? "info" : "success");
-      setNotificationMessage(
-        confirmationAction === "accept"
-          ? "Delivery accepted successfully!"
-          : confirmationAction === "decline"
-          ? "Delivery declined"
-          : "Delivery marked as completed!"
-      );
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 3000);
-      setDeliveryNote("");
-    } catch (error) {
-      setProcessingAction(false);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process action",
-        variant: "destructive",
-      });
-      if (error.message.includes("Token expired")) {
-        router.push("/delivery/login");
+            },
+          ],
+        };
+        setDelivery(updatedDelivery);
+        setShowOrderIdForm(false);
+        setOrderIdInput("");
+        setNotificationType("success");
+        setNotificationMessage("Delivery marked as completed!");
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+        setDeliveryNote("");
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to process action",
+          variant: "destructive",
+        });
+        if (error.message.includes("Token expired")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          router.push("/delivery/login");
+        }
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+        setProcessingAction(false);
       }
-    }
+    }, 500);
+  };
+
+  const confirmAction = async () => {
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      setProcessingAction(true);
+      setShowConfirmation(false);
+      try {
+        let newStatus;
+        if (confirmationAction === "accept") {
+          newStatus = "out-for-delivery";
+        } else if (confirmationAction === "decline") {
+          newStatus = "cancelled";
+        } else if (confirmationAction === "complete") {
+          newStatus = "delivered";
+        }
+
+        if (confirmationAction === "complete" && deliveryPhotos.length > 0) {
+          const formData = new FormData();
+          for (const photo of deliveryPhotos) {
+            const response = await fetch(photo);
+            const blob = await response.blob();
+            formData.append("photos", blob, `photo-${Date.now()}.jpg`);
+          }
+          formData.append("note", deliveryNote);
+          await fetchWithAuthFormData(`/api/delivery/${delivery.globalId}/photos`, formData, "POST");
+        }
+
+        const updatedOrder = await updateDeliveryStatus(delivery.globalId, newStatus);
+        const updatedDelivery = {
+          ...delivery,
+          deliveryStatus: newStatus,
+          updatedAt: new Date().toISOString(),
+          photos: confirmationAction === "complete" ? [...deliveryPhotos] : delivery.photos,
+          timeline: [
+            ...delivery.timeline,
+            {
+              status: newStatus === "out-for-delivery" ? "Out for Delivery" : newStatus.charAt(0).toUpperCase() + newStatus.slice(1),
+              time: new Date().toISOString(),
+              description:
+                confirmationAction === "accept"
+                  ? "Delivery accepted by you"
+                  : confirmationAction === "decline"
+                  ? "Delivery declined by you"
+                  : deliveryNote
+                  ? `Delivery completed. Note: ${deliveryNote}`
+                  : "Delivery completed successfully",
+            },
+          ],
+        };
+
+        setDelivery(updatedDelivery);
+        setNotificationType(confirmationAction === "decline" ? "info" : "success");
+        setNotificationMessage(
+          confirmationAction === "accept"
+            ? "Delivery accepted successfully!"
+            : confirmationAction === "decline"
+            ? "Delivery declined"
+            : "Delivery marked as completed!"
+        );
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+        setDeliveryNote("");
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to process action",
+          variant: "destructive",
+        });
+        if (error.message.includes("Token expired")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          router.push("/delivery/login");
+        }
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+        setProcessingAction(false);
+      }
+    }, 500);
   };
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setDeliveryPhotos([...deliveryPhotos, event.target.result]);
-      };
-      reader.readAsDataURL(file);
+      clearTimeout(imageTimeout.current);
+      imageTimeout.current = setTimeout(async () => {
+        setActionLoading(true);
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setDeliveryPhotos([...deliveryPhotos, event.target.result]);
+        };
+        reader.readAsDataURL(file);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+      }, 500);
     }
   };
 
   const removeImage = (index) => {
-    const updatedPhotos = [...deliveryPhotos];
-    updatedPhotos.splice(index, 1);
-    setDeliveryPhotos(updatedPhotos);
+    setActionLoading(true);
+    setTimeout(() => {
+      const updatedPhotos = [...deliveryPhotos];
+      updatedPhotos.splice(index, 1);
+      setDeliveryPhotos(updatedPhotos);
+      setActionLoading(false);
+    }, 1000);
   };
 
-  if (loading) {
-    return (
-      <div className="p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
-              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            </div>
-            <div className="h-60 bg-gray-200 dark:bg-gray-700 rounded mt-6"></div>
-            <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded mt-6"></div>
-          </div>
-        </div>
-      </div>
-    );
+  const handleDeliveryNoteChange = (e) => {
+    clearTimeout(noteTimeout.current);
+    noteTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      setDeliveryNote(e.target.value);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setActionLoading(false);
+    }, 500);
+  };
+
+  const handleNavigation = async (e, href) => {
+    e.preventDefault();
+    setActionLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    router.push(href);
+    setActionLoading(false);
+  };
+
+  if (actionLoading) {
+    return <LeafLoader />;
   }
 
   if (!delivery) {
     return (
-      <div className="p-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Delivery Not Found</h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
-            The delivery you are looking for does not exist or has been removed.
-          </p>
-          <Link
-            href="/delivery/my-deliveries"
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to My Deliveries
-          </Link>
+      <DeliveryLayout>
+        <div className="p-8">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Delivery Not Found</h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              The delivery you are looking for does not exist or has been removed.
+            </p>
+            <Link
+              href="/delivery/my-deliveries"
+              onClick={(e) => handleNavigation(e, "/delivery/my-deliveries")}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to My Deliveries
+            </Link>
+          </div>
         </div>
-      </div>
+      </DeliveryLayout>
     );
   }
 
@@ -434,6 +499,7 @@ export default function DeliveryDetailsPage() {
             <div className="flex items-center">
               <Link
                 href="/delivery/my-deliveries"
+                onClick={(e) => handleNavigation(e, "/delivery/my-deliveries")}
                 className="mr-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
@@ -521,7 +587,7 @@ export default function DeliveryDetailsPage() {
                 </div>
               )}
 
-              {delivery.paymentMethod === "Cash on Delivery" && (
+              {delivery.paymentMethod === "cash-on-delivery" && (
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Payment Options
@@ -547,7 +613,7 @@ export default function DeliveryDetailsPage() {
                 </div>
               )}
 
-              {delivery.paymentMethod !== "Cash on Delivery" && showOrderIdForm && (
+              {delivery.paymentMethod !== "cash-on-delivery" && showOrderIdForm && (
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Verify Order ID
@@ -579,7 +645,7 @@ export default function DeliveryDetailsPage() {
                 <textarea
                   id="deliveryNote"
                   value={deliveryNote}
-                  onChange={(e) => setDeliveryNote(e.target.value)}
+                  onChange={handleDeliveryNoteChange}
                   placeholder="Add any notes about the delivery"
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
@@ -639,6 +705,7 @@ export default function DeliveryDetailsPage() {
                       </a>
                       <Link
                         href="/delivery/map"
+                        onClick={(e) => handleNavigation(e, "/delivery/map")}
                         className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                       >
                         View in App Map
@@ -685,7 +752,7 @@ export default function DeliveryDetailsPage() {
                   </div>
                 </div>
               </div>
-            </div>
+           </div>
           </div>
 
           {/* Order Items */}

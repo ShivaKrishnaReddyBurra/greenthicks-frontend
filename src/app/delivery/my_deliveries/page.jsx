@@ -1,7 +1,7 @@
 "use client";
 
 import { DeliveryLayout } from "@/components/delivery-layout";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -20,11 +20,35 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { getDeliveryOrders, updateDeliveryStatus } from "@/lib/api";
 
+const LeafLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function MyDeliveriesPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [deliveries, setDeliveries] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(true); // Renamed from 'loading' to avoid confusion
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
@@ -33,24 +57,30 @@ export default function MyDeliveriesPage() {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationType, setNotificationType] = useState("success");
+  const searchTimeout = useRef(null);
+  const actionTimeout = useRef(null);
 
   useEffect(() => {
     const fetchDeliveries = async () => {
+      setActionLoading(true);
       try {
         const data = await getDeliveryOrders(currentPage, 10);
         setDeliveries(data.orders);
         setTotalPages(Math.ceil(data.total / 10));
-        setLoading(false);
       } catch (error) {
         toast({
           title: "Error",
           description: error.message || "Failed to fetch deliveries",
           variant: "destructive",
         });
-        setLoading(false);
         if (error.message.includes("Token expired")) {
+          setActionLoading(true);
+          await new Promise((resolve) => setTimeout(resolve, 1000));
           router.push("/delivery/login");
         }
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
     };
     fetchDeliveries();
@@ -121,77 +151,140 @@ export default function MyDeliveriesPage() {
   };
 
   const handleAcceptDelivery = async (globalId) => {
-    try {
-      await updateDeliveryStatus(globalId, "out-for-delivery");
-      setDeliveries((prevDeliveries) =>
-        prevDeliveries.map((delivery) =>
-          delivery.globalId === globalId ? { ...delivery, deliveryStatus: "out-for-delivery" } : delivery
-        )
-      );
-      setNotificationType("success");
-      setNotificationMessage("Delivery accepted successfully!");
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 3000);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to accept delivery",
-        variant: "destructive",
-      });
-      if (error.message.includes("Token expired")) {
-        router.push("/delivery/login");
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        await updateDeliveryStatus(globalId, "out-for-delivery");
+        setDeliveries((prevDeliveries) =>
+          prevDeliveries.map((delivery) =>
+            delivery.globalId === globalId ? { ...delivery, deliveryStatus: "out-for-delivery" } : delivery
+          )
+        );
+        setNotificationType("success");
+        setNotificationMessage("Delivery accepted successfully!");
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to accept delivery",
+          variant: "destructive",
+        });
+        if (error.message.includes("Token expired")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          router.push("/delivery/login");
+        }
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
-    }
+    }, 500);
   };
 
   const handleDeclineDelivery = async (globalId) => {
-    try {
-      await updateDeliveryStatus(globalId, "cancelled");
-      setDeliveries((prevDeliveries) =>
-        prevDeliveries.map((delivery) =>
-          delivery.globalId === globalId ? { ...delivery, deliveryStatus: "cancelled" } : delivery
-        )
-      );
-      setNotificationType("info");
-      setNotificationMessage("Delivery declined");
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 3000);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to decline delivery",
-        variant: "destructive",
-      });
-      if (error.message.includes("Token expired")) {
-        router.push("/delivery/login");
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        await updateDeliveryStatus(globalId, "cancelled");
+        setDeliveries((prevDeliveries) =>
+          prevDeliveries.map((delivery) =>
+            delivery.globalId === globalId ? { ...delivery, deliveryStatus: "cancelled" } : delivery
+          )
+        );
+        setNotificationType("info");
+        setNotificationMessage("Delivery declined");
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to decline delivery",
+          variant: "destructive",
+        });
+        if (error.message.includes("Token expired")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          router.push("/delivery/login");
+        }
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
-    }
+    }, 500);
   };
 
   const handleCompleteDelivery = async (globalId) => {
-    try {
-      await updateDeliveryStatus(globalId, "delivered");
-      setDeliveries((prevDeliveries) =>
-        prevDeliveries.map((delivery) =>
-          delivery.globalId === globalId
-            ? { ...delivery, deliveryStatus: "delivered", updatedAt: new Date().toISOString() }
-            : delivery
-        )
-      );
-      setNotificationType("success");
-      setNotificationMessage("Delivery marked as completed!");
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 3000);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to complete delivery",
-        variant: "destructive",
-      });
-      if (error.message.includes("Token expired")) {
-        router.push("/delivery/login");
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        await updateDeliveryStatus(globalId, "delivered");
+        setDeliveries((prevDeliveries) =>
+          prevDeliveries.map((delivery) =>
+            delivery.globalId === globalId
+              ? { ...delivery, deliveryStatus: "delivered", updatedAt: new Date().toISOString() }
+              : delivery
+          )
+        );
+        setNotificationType("success");
+        setNotificationMessage("Delivery marked as completed!");
+        setShowNotification(true);
+        setTimeout(() => setShowNotification(false), 3000);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to complete delivery",
+          variant: "destructive",
+        });
+        if (error.message.includes("Token expired")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          router.push("/delivery/login");
+        }
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
       }
-    }
+    }, 500);
+  };
+
+  const handleSearchChange = (e) => {
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      setSearchTerm(e.target.value);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setActionLoading(false);
+    }, 500);
+  };
+
+  const handleFilterStatusChange = async (e) => {
+    setActionLoading(true);
+    setFilterStatus(e.target.value);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setActionLoading(false);
+  };
+
+  const handleFilterTypeChange = async (e) => {
+    setActionLoading(true);
+    setFilterType(e.target.value);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setActionLoading(false);
+  };
+
+  const handlePageChange = async (newPage) => {
+    setActionLoading(true);
+    setCurrentPage(newPage);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setActionLoading(false);
+  };
+
+  const handleNavigation = async (e, href) => {
+    e.preventDefault();
+    setActionLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    router.push(href);
+    setActionLoading(false);
   };
 
   const filteredDeliveries = deliveries.filter((delivery) => {
@@ -207,12 +300,8 @@ export default function MyDeliveriesPage() {
     return matchesSearch && matchesStatus && matchesType;
   });
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
-      </div>
-    );
+  if (actionLoading) {
+    return <LeafLoader />;
   }
 
   return (
@@ -249,7 +338,7 @@ export default function MyDeliveriesPage() {
                 placeholder="Search deliveries..."
                 className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchChange}
               />
             </div>
 
@@ -258,7 +347,7 @@ export default function MyDeliveriesPage() {
               <select
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3"
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                onChange={handleFilterStatusChange}
               >
                 <option value="all">All Statuses</option>
                 <option value="assigned">Assigned</option>
@@ -273,7 +362,7 @@ export default function MyDeliveriesPage() {
               <select
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3"
                 value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
+                onChange={handleFilterTypeChange}
               >
                 <option value="all">All Types</option>
                 <option value="order">Orders</option>
@@ -391,6 +480,7 @@ export default function MyDeliveriesPage() {
                       )}
                       <Link
                         href={`/delivery/my_deliveries/${delivery.globalId}`}
+                        onClick={(e) => handleNavigation(e, `/delivery/my_deliveries/${delivery.globalId}`)}
                         className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                       >
                         View Details
@@ -415,14 +505,14 @@ export default function MyDeliveriesPage() {
               <Button
                 className="px-3 py-1 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50"
                 disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage - 1)}
+                onClick={() => handlePageChange(currentPage - 1)}
               >
                 <ChevronLeft size={16} />
               </Button>
               <Button
                 className="px-3 py-1 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50"
                 disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(currentPage + 1)}
+                onClick={() => handlePageChange(currentPage + 1)}
               >
                 <ChevronRight size={16} />
               </Button>
