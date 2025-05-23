@@ -70,12 +70,12 @@ export default function RegisterPage() {
       return;
     }
 
-    const phoneRegex = /^\+\d{10,12}$/;
+    const phoneRegex = /^(?:\+91\s?)?\d{10}$/;
     if (!phoneRegex.test(phone)) {
-      setError("Phone number must be in international format (e.g., +12345678901)");
+      setError("Phone number must be in indian format (e.g., +91 92345678901)");
       toast({
         title: "Error",
-        description: "Phone number must be in international format (e.g., +12345678901)",
+        description: "Phone number must be in Indian format (e.g., +91 92345678901)",
         variant: "destructive",
       });
       return;
@@ -243,18 +243,18 @@ export default function RegisterPage() {
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="+12345678901"
+                    placeholder="+91 92345678901"
                     className="pl-10 bg-white/50 focus:bg-white/80 transition-colors"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    pattern="^\+\d{10,12}$"
-                    title="Phone number must be in international format (e.g., +12345678901)"
+                    pattern="^(?:\+91\s?)?\d{10}$"
+                    title="Phone number must be in indian format (e.g., +91 92345678901)"
                     required
                     disabled={actionLoading}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Use international format (e.g., +12345678901)
+                  Use Indian format (e.g., +91 9245678901)
                 </p>
               </div>
 

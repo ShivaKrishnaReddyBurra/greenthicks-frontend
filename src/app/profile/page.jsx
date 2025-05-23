@@ -21,6 +21,7 @@ import coverPhoto1 from "@/public/coverpage1.png";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -64,6 +65,7 @@ export default function ProfilePage() {
     zipCode: "",
     phone: "",
     isPrimary: false,
+    currentLocation: "",
   });
   const [actionLoading, setActionLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
@@ -117,6 +119,7 @@ export default function ProfilePage() {
           zipCode: primaryAddress.zipCode || "",
           phone: primaryAddress.phone || "",
           isPrimary: primaryAddress.isPrimary || false,
+          currentLocation: primaryAddress.location || null,
         });
       } else {
         setFormData({
@@ -130,6 +133,7 @@ export default function ProfilePage() {
           zipCode: "",
           phone: profileData.phone || "",
           isPrimary: false,
+          currentLocation: selectedAddress.location || null,
         });
       }
     } catch (error) {
@@ -653,7 +657,7 @@ export default function ProfilePage() {
                           value={formData.phone}
                           onChange={handleInputChange}
                           placeholder="+91 912345678901"
-                          pattern="/^(?:\+91\s?)?\d{10}$/"
+                          pattern="^(?:\+91\s?)?\d{10}$"
                           title="Phone number must be in Indian format (e.g., +91 92345678901)"
                           required
                         />
@@ -819,7 +823,7 @@ export default function ProfilePage() {
                         value={formData.phone}
                         onChange={handleInputChange}
                         placeholder="+91 92345678901"
-                        pattern="/^(?:\+91\s?)?\d{10}$/"
+                        pattern="^(?:\+91\s?)?\d{10}$"
                         title="Phone number must be in Indian format (e.g., +91 92345678901)"
                         required
                       />
@@ -838,6 +842,66 @@ export default function ProfilePage() {
                         required
                       />
                     </div>
+                    <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="useCurrentLocation"
+                            checked={formData.useCurrentLocation}
+                            onCheckedChange={async (checked) => {
+                              setActionLoading(true);
+                              if (checked) {
+                                if (navigator.geolocation) {
+                                  navigator.geolocation.getCurrentPosition(
+                                    async (position) => {
+                                      setFormData({
+                                        ...formData,
+                                        useCurrentLocation: true,
+                                        currentLocation: {
+                                          latitude: position.coords.latitude,
+                                          longitude: position.coords.longitude,
+                                        },
+                                      });
+                                      toast({
+                                        title: "Location shared",
+                                        description: "Your current location has been added to help with delivery.",
+                                      });
+                                      await new Promise((resolve) => setTimeout(resolve, 1000));
+                                      setActionLoading(false);
+                                    },
+                                    async (error) => {
+                                      toast({
+                                        title: "Location error",
+                                        description: "Could not get your current location. Please check permissions.",
+                                        variant: "destructive",
+                                      });
+                                      await new Promise((resolve) => setTimeout(resolve, 1000));
+                                      setActionLoading(false);
+                                    }
+                                  );
+                                } else {
+                                  toast({
+                                    title: "Geolocation unavailable",
+                                    description: "Your browser does not support geolocation.",
+                                    variant: "destructive",
+                                  });
+                                  await new Promise((resolve) => setTimeout(resolve, 1000));
+                                  setActionLoading(false);
+                                }
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  useCurrentLocation: false,
+                                  currentLocation: null,
+                                });
+                                await new Promise((resolve) => setTimeout(resolve, 1000));
+                                setActionLoading(false);
+                              }
+                            }}
+                          />
+                          <Label htmlFor="useCurrentLocation" className="text-sm flex items-center">
+                            <MapPin className="h-3.5 w-3.5 text-primary mr-1" />
+                            Share location for precise delivery
+                          </Label>
+                        </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="city">City</Label>
