@@ -1,11 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import img from "@/public/hero.jpg";
+import bnimg1 from "@/public/hero.jpg";
+import bnimg2 from "@/public/hero.jpg";
+import bnimg3 from "@/public/hero.jpg";
+import bnimg4 from "@/public/hero.jpg";
 
 const LeafLoader = () => {
   return (
@@ -31,6 +35,74 @@ const LeafLoader = () => {
   );
 };
 
+const ImageBanner = () => {
+  // Sample banner images - replace with your actual image paths
+  const bannerImages = [
+    bnimg1, // Replace with your image paths
+    bnimg2,
+    bnimg3,
+    bnimg4,
+  ];
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) => 
+        prevIndex === bannerImages.length - 1 ? 0 : prevIndex + 1
+      );
+    }, 3000); // Change image every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [bannerImages.length]);
+
+  return (
+    <div className="relative w-full h-16 mb-6 overflow-hidden rounded-lg bg-gradient-to-r from-primary/10 to-primary/5">
+      <div 
+        className="flex h-full transition-transform duration-500 ease-in-out"
+        style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+      >
+        {bannerImages.map((image, index) => (
+          <div key={index} className="flex-shrink-0 w-full h-full relative">
+            <Image
+              src={image}
+              alt={`Banner ${index + 1}`}
+              fill
+              className="object-cover"
+              onError={(e) => {
+                // Fallback to a gradient background if image fails to load
+                e.target.style.display = 'none';
+                e.target.parentElement.style.background = 
+                  `linear-gradient(45deg, hsl(var(--primary)) ${index * 25}%, hsl(var(--primary)) ${(index + 1) * 25}%)`;
+              }}
+            />
+          </div>
+        ))}
+      </div>
+      
+      {/* Slide indicators */}
+      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-2">
+        {bannerImages.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              index === currentIndex 
+                ? 'bg-white shadow-lg' 
+                : 'bg-white/50 hover:bg-white/70'
+            }`}
+            aria-label={`Go to slide ${index + 1}`}
+          />
+        ))}
+      </div>
+      {/* Optional: Image counter */}
+      <div className="absolute top-2 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+        {currentIndex + 1} / {bannerImages.length}
+      </div>
+    </div>
+  );
+};
+
 export function HeroSection() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -50,6 +122,8 @@ export function HeroSection() {
         <div className="container mx-auto px-4 py-12 md:py-24">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="space-y-6">
+              {/* Image Banner */}
+              <ImageBanner />
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
                 Fresh Organic <span className="text-primary">Vegetables</span> Delivered to Your Door
               </h1>

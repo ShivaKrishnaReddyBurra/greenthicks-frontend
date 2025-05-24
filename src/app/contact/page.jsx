@@ -70,7 +70,7 @@ export default function ContactPage() {
             <h3 className="font-semibold text-lg mb-2">Our Location</h3>
             <p className="text-muted-foreground">
               Warangal District
-              Telengana State
+              Telangana State
               <br />
                India
             </p>
@@ -96,7 +96,7 @@ export default function ContactPage() {
             <p className="text-muted-foreground">
               infogreenthicks@gmail.com
               <br />
-              greenthickss@gmailcom.com
+              greenthickss@gmail.com
             </p>
           </div>
         </div>
