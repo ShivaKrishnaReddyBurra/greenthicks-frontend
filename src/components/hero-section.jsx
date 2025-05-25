@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import img from "@/public/hero.jpg";
-import bnimg1 from "@/public/hero.jpg";
-import bnimg2 from "@/public/hero.jpg";
-import bnimg3 from "@/public/hero.jpg";
-import bnimg4 from "@/public/hero.jpg";
+import bnimg1 from "@/public/Free delivery.png";
+import bnimg2 from "@/public/Free delivery 1.png";
+import bnimg3 from "@/public/Free delivery.png";
+import bnimg4 from "@/public/Free delivery 1.png";
 
 const LeafLoader = () => {
   return (
@@ -51,7 +51,7 @@ const ImageBanner = () => {
       setCurrentIndex((prevIndex) => 
         prevIndex === bannerImages.length - 1 ? 0 : prevIndex + 1
       );
-    }, 3000); // Change image every 3 seconds
+    }, 5000); // Change image every 5 seconds
 
     return () => clearInterval(interval);
   }, [bannerImages.length]);
@@ -119,7 +119,7 @@ export function HeroSection() {
     <>
       {isLoading && <LeafLoader />}
       <section className="relative overflow-hidden">
-        <div className="container mx-auto px-4 py-12 md:py-24">
+        <div className="container mx-auto px-4 py-12 md:py-20">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="space-y-6">
               {/* Image Banner */}

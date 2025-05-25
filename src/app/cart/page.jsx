@@ -47,7 +47,7 @@ export default function CartPage() {
   const debounceTimeout = useRef(null);
 
   const subtotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
-  const shipping = subtotal > 500 ? 0 : 25.99;
+  const shipping = subtotal > 200 ? 0 : 25.99;
   const total = subtotal + shipping - discount;
 
   const handleApplyCoupon = async () => {
@@ -309,7 +309,7 @@ export default function CartPage() {
 
                   <div className="bg-primary/10 rounded-md p-3 text-sm flex items-start gap-2">
                     <Truck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                    <p>Free shipping on orders over ₹500</p>
+                    <p>Free shipping on orders over ₹200</p>
                   </div>
 
                   <Button className="w-full" size="lg" onClick={handleCheckout}>
