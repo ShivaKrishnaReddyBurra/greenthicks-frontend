@@ -184,30 +184,34 @@ export function ProductCard({ product }) {
               </Badge>
             </div>
           </div>
-          <div className="mt-3 flex items-center justify-between">
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="flex items-center border rounded-md">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-r-none p-0"
+                className="h-7 w-7 sm:h-8 sm:w-8 rounded-r-none p-0"
                 onClick={decrementQuantity}
                 disabled={quantity <= 1}
               >
-                <Minus className="h-3 w-3" />
+                <Minus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
               </Button>
-              <span className="w-8 text-center text-sm">{quantity}</span>
+              <span className="w-8 text-center text-xs sm:text-sm">{quantity}</span>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-l-none p-0"
+                className="h-7 w-7 sm:h-8 sm:w-8 rounded-l-none p-0"
                 onClick={incrementQuantity}
                 disabled={quantity >= product.stock}
               >
-                <Plus className="h-3 w-3" />
+                <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
               </Button>
             </div>
-            <Button size="sm" className="h-8 gap-1" onClick={handleAddToCart} disabled={product.stock === 0}>
-              <ShoppingCart className="h-3.5 w-3.5" />
+            <Button
+              className="h-7 text-xs px-2 sm:h-8 sm:text-sm sm:px-4 gap-1"
+              onClick={handleAddToCart}
+              disabled={product.stock === 0}
+            >
+              <ShoppingCart className="h-3.5 w-3.5 sm:h-3.5 sm:w-3.5" />
               Add
             </Button>
           </div>
