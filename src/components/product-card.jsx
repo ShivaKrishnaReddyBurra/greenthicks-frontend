@@ -185,25 +185,25 @@ export function ProductCard({ product }) {
             </div>
           </div>
           <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div className="flex items-center border rounded-md">
+            <div className="flex items-center justify-center border-[1px] rounded-md overflow-hidden">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 sm:h-8 sm:w-8 rounded-r-none p-0"
+                className="h-7 w-7 sm:h-8 sm:w-8 border-r-0 rounded-none p-0 m-0 hover:bg-primary/10"
                 onClick={decrementQuantity}
                 disabled={quantity <= 1}
               >
-                <Minus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                <Minus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </Button>
-              <span className="w-8 text-center text-xs sm:text-sm">{quantity}</span>
+              <span className="w-5 sm:w-8 text-center text-xs sm:text-sm bg-background px-1">{quantity}</span>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 sm:h-8 sm:w-8 rounded-l-none p-0"
+                className="h-7 w-7 sm:h-8 sm:w-8 border-l-0 rounded-none p-0 m-0 hover:bg-primary/10"
                 onClick={incrementQuantity}
                 disabled={quantity >= product.stock}
               >
-                <Plus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </Button>
             </div>
             <Button

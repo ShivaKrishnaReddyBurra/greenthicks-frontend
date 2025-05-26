@@ -85,11 +85,11 @@ export default function ProductsPage() {
 
   const categories = [
     { id: "all", name: "All Vegetables" },
+    { id: "milk", name: "Milk" },
     { id: "leafy", name: "Leafy Greens" },
     { id: "root", name: "Root Vegetables" },
     { id: "fruit", name: "Fruit Vegetables" },
     { id: "herbs", name: "Herbs & Aromatics" },
-    { id: "milk", name: "Milk" },
     { id: "pulses", name: "Pulses" },
     { id: "grains", name: "Grains" },
     { id: "spices", name: "Spices" },

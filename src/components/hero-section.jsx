@@ -10,6 +10,10 @@ import bnimg1 from "@/public/Free delivery.png";
 import bnimg2 from "@/public/Free delivery 1.png";
 import bnimg3 from "@/public/Free delivery.png";
 import bnimg4 from "@/public/Free delivery 1.png";
+import mobilebnimg1 from "@/public/mobile Free delivery .png";
+import mobilebnimg2 from "@/public/mobile Free delivery 1.png";
+import mobilebnimg3 from "@/public/mobile Free delivery .png";
+import mobilebnimg4 from "@/public/mobile Free delivery 1.png";
 
 const LeafLoader = () => {
   return (
@@ -35,14 +39,11 @@ const LeafLoader = () => {
   );
 };
 
-const ImageBanner = () => {
-  // Sample banner images - replace with your actual image paths
-  const bannerImages = [
-    bnimg1, // Replace with your image paths
-    bnimg2,
-    bnimg3,
-    bnimg4,
-  ];
+const ImageBanner = ({ isMobile }) => {
+  // Select banner images based on device type
+  const bannerImages = isMobile
+    ? [mobilebnimg1, mobilebnimg2, mobilebnimg3, mobilebnimg4]
+    : [bnimg1, bnimg2, bnimg3, bnimg4];
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -95,7 +96,7 @@ const ImageBanner = () => {
           />
         ))}
       </div>
-      {/* Optional: Image counter */}
+      {/* Image counter */}
       <div className="absolute top-2 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
         {currentIndex + 1} / {bannerImages.length}
       </div>
@@ -105,7 +106,20 @@ const ImageBanner = () => {
 
 export function HeroSection() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
+
+  // Detect mobile device based on window width
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640); // Tailwind's 'sm' breakpoint
+    };
+
+    checkMobile(); // Initial check
+    window.addEventListener('resize', checkMobile);
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleNavigation = async (e, href) => {
     e.preventDefault();
@@ -119,11 +133,11 @@ export function HeroSection() {
     <>
       {isLoading && <LeafLoader />}
       <section className="relative overflow-hidden">
-        <div className="container mx-auto px-4 py-12 md:py-20">
+        <div className="container mx-auto px-4 py-2 md:py-10">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="space-y-6">
               {/* Image Banner */}
-              <ImageBanner />
+              <ImageBanner isMobile={isMobile} />
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
                 Fresh Organic <span className="text-primary">Vegetables</span> Delivered to Your Door
               </h1>
