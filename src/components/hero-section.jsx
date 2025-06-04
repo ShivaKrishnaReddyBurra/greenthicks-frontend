@@ -15,6 +15,7 @@ import mobilebnimg2 from "@/public/mobile Free delivery 1.png";
 import mobilebnimg3 from "@/public/mobile Free delivery .png";
 import mobilebnimg4 from "@/public/mobile Free delivery 1.png";
 
+// LeafLoader component (used only for button actions)
 const LeafLoader = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -39,8 +40,61 @@ const LeafLoader = () => {
   );
 };
 
+// Skeleton Loader component for HeroSection
+const SkeletonLoader = () => {
+  return (
+    <div className="container mx-auto px-4 py-2 md:py-10 animate-pulse">
+      <div className="grid md:grid-cols-2 gap-8 items-center">
+        <div className="space-y-6">
+          {/* Skeleton for ImageBanner */}
+          <div className="w-full h-16 bg-gray-200 rounded-lg"></div>
+          {/* Skeleton for heading */}
+          <div className="h-10 bg-gray-200 rounded w-3/4"></div>
+          <div className="h-10 bg-gray-200 rounded w-1/2"></div>
+          {/* Skeleton for paragraph */}
+          <div className="h-6 bg-gray-200 rounded w-5/6"></div>
+          <div className="h-6 bg-gray-200 rounded w-4/6"></div>
+          {/* Skeleton for buttons */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="h-12 bg-gray-200 rounded w-32"></div>
+            <div className="h-12 bg-gray-200 rounded w-32"></div>
+          </div>
+          {/* Skeleton for feature list */}
+          <div className="flex items-center gap-6 pt-4">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+              <div className="h-4 bg-gray-200 rounded w-20"></div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+              <div className="h-4 bg-gray-200 rounded w-20"></div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+              <div className="h-4 bg-gray-200 rounded w-20"></div>
+            </div>
+          </div>
+        </div>
+        <div className="relative">
+          {/* Skeleton for image */}
+          <div className="bg-gray-200 rounded-lg aspect-square"></div>
+          {/* Skeleton for badge */}
+          <div className="fixed -bottom-0 -right-0 bg-gray-200 rounded-full p-6">
+            <div className="bg-gray-300 rounded-full p-4">
+              <div className="text-center">
+                <div className="h-8 bg-gray-200 rounded w-12 mx-auto"></div>
+                <div className="h-4 bg-gray-200 rounded w-16 mx-auto mt-2"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ImageBanner component (unchanged)
 const ImageBanner = ({ isMobile }) => {
-  // Select banner images based on device type
   const bannerImages = isMobile
     ? [mobilebnimg1, mobilebnimg2, mobilebnimg3, mobilebnimg4]
     : [bnimg1, bnimg2, bnimg3, bnimg4];
@@ -49,17 +103,17 @@ const ImageBanner = ({ isMobile }) => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => 
+      setCurrentIndex((prevIndex) =>
         prevIndex === bannerImages.length - 1 ? 0 : prevIndex + 1
       );
-    }, 5000); // Change image every 5 seconds
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [bannerImages.length]);
 
   return (
     <div className="relative w-full h-16 mb-6 overflow-hidden rounded-lg bg-gradient-to-r from-primary/10 to-primary/5">
-      <div 
+      <div
         className="flex h-full transition-transform duration-500 ease-in-out"
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
       >
@@ -71,7 +125,6 @@ const ImageBanner = ({ isMobile }) => {
               fill
               className="object-cover"
               onError={(e) => {
-                // Fallback to a gradient background if image fails to load
                 e.target.style.display = 'none';
                 e.target.parentElement.style.background = 
                   `linear-gradient(45deg, hsl(var(--primary)) ${index * 25}%, hsl(var(--primary)) ${(index + 1) * 25}%)`;
@@ -80,8 +133,6 @@ const ImageBanner = ({ isMobile }) => {
           </div>
         ))}
       </div>
-      
-      {/* Slide indicators */}
       <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-2">
         {bannerImages.map((_, index) => (
           <button
@@ -96,7 +147,6 @@ const ImageBanner = ({ isMobile }) => {
           />
         ))}
       </div>
-      {/* Image counter */}
       <div className="absolute top-2 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
         {currentIndex + 1} / {bannerImages.length}
       </div>
@@ -105,17 +155,27 @@ const ImageBanner = ({ isMobile }) => {
 };
 
 export function HeroSection() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // For button actions
+  const [isContentLoading, setIsContentLoading] = useState(true); // For page content
   const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
 
-  // Detect mobile device based on window width
+  // Simulate content loading (replace with actual data fetching if needed)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsContentLoading(false);
+    }, 2000); // Simulate 2-second loading
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Detect mobile device
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640); // Tailwind's 'sm' breakpoint
+      setIsMobile(window.innerWidth < 640);
     };
 
-    checkMobile(); // Initial check
+    checkMobile();
     window.addEventListener('resize', checkMobile);
 
     return () => window.removeEventListener('resize', checkMobile);
@@ -124,10 +184,14 @@ export function HeroSection() {
   const handleNavigation = async (e, href) => {
     e.preventDefault();
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate async action
     router.push(href);
     setIsLoading(false);
   };
+
+  if (isContentLoading) {
+    return <SkeletonLoader />;
+  }
 
   return (
     <>
@@ -136,7 +200,6 @@ export function HeroSection() {
         <div className="container mx-auto px-4 py-2 md:py-10">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div className="space-y-6">
-              {/* Image Banner */}
               <ImageBanner isMobile={isMobile} />
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
                 Fresh Organic <span className="text-primary">Vegetables</span> Delivered to Your Door

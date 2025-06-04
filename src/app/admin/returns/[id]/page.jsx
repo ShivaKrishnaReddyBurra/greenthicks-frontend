@@ -26,74 +26,14 @@ import {
   Smartphone,
   CreditCardIcon as CardIcon,
 } from "lucide-react"
-
-// Mock data for the return
-const getReturnData = (id) => {
-  return {
-    id: id,
-    orderId: "ORD-9876",
-    date: "2023-05-01T14:30:00",
-    requestDate: "2023-05-01T10:30:00",
-    status: "Pending", // Changed to Pending to show controls
-    reason: "Damaged product",
-    explanation: "The product arrived with visible damage to the packaging and the contents were partially crushed.",
-    refundAmount: 450,
-    paymentMethod: "UPI",
-    paymentDetails: {
-      type: "UPI",
-      upiId: "customer@okaxis",
-      name: "Rahul Sharma",
-      phone: "+91 9876543210",
-      originalTransactionId: "UPI123456789",
-      transactionDate: "2023-04-28T10:15:00",
-    },
-    refundPreference: "original", // 'original', 'cash', 'store_credit'
-    customer: {
-      name: "Rahul Sharma",
-      email: "rahul.sharma@example.com",
-      phone: "+91 9876543210",
-      address: "123 Main Street, Bangalore, Karnataka, 560001",
-    },
-    items: [
-      {
-        id: "1",
-        name: "Organic Tomatoes",
-        price: 80,
-        quantity: 5,
-        total: 400,
-        image: "/placeholder.svg?height=80&width=80",
-      },
-      {
-        id: "2",
-        name: "Fresh Spinach Bundle",
-        price: 60,
-        quantity: 2,
-        total: 120,
-        image: "/placeholder.svg?height=80&width=80",
-      },
-    ],
-    photos: [
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-    ],
-    timeline: [
-      {
-        status: "Return Requested",
-        date: "2023-05-01T10:30:00",
-        description: "Customer requested return",
-      },
-    ],
-    feedback:
-      "The customer service was excellent in handling my return request. Very satisfied with the quick resolution.",
-  }
-}
+import { getReturnById, updateReturnStatus, processReturnRefund } from "@/lib/fetch-without-auth" // Updated import path
 
 export default function ReturnDetails() {
   const params = useParams()
   const router = useRouter()
   const [returnData, setReturnData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [showRefundOptions, setShowRefundOptions] = useState(false)
   const [processingAction, setProcessingAction] = useState(false)
@@ -113,11 +53,22 @@ export default function ReturnDetails() {
   ]
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setReturnData(getReturnData(params.id))
-      setLoading(false)
-    }, 500)
+    const fetchReturn = async () => {
+      try {
+        setError(null)
+        const data = await getReturnById(params.id)
+        setReturnData(data)
+      } catch (error) {
+        console.error("Error fetching return:", error)
+        setError(error.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (params.id) {
+      fetchReturn()
+    }
   }, [params.id])
 
   const formatDate = (dateString) => {
@@ -178,58 +129,51 @@ export default function ReturnDetails() {
     setShowConfirmation(true)
   }
 
-  const confirmAction = () => {
+  const confirmAction = async () => {
     setProcessingAction(true)
     setShowConfirmation(false)
 
-    // Simulate API call
-    setTimeout(() => {
-      const updatedReturnData = { ...returnData }
-
+    try {
       if (confirmationAction === "approve") {
-        updatedReturnData.status = "Approved"
-        updatedReturnData.timeline.push({
-          status: "Return Approved",
-          date: new Date().toISOString(),
-          description: "Return request approved by admin",
-        })
+        await updateReturnStatus(returnData._id, "Approved")
+        setReturnData((prev) => ({ ...prev, status: "Approved" }))
       } else if (confirmationAction === "reject") {
-        updatedReturnData.status = "Rejected"
-        updatedReturnData.timeline.push({
-          status: "Return Rejected",
-          date: new Date().toISOString(),
-          description: "Return request rejected by admin",
-        })
+        await updateReturnStatus(returnData._id, "Rejected")
+        setReturnData((prev) => ({ ...prev, status: "Rejected" }))
       } else if (confirmationAction === "process_refund") {
-        updatedReturnData.timeline.push({
-          status: "Refund Initiated",
-          date: new Date().toISOString(),
-          description: `Refund of ${formatCurrency(returnData.refundAmount)} initiated to ${refundMethod === "original" ? "original payment method" : refundMethod === "cash" ? "cash via delivery" : "store credit"}`,
-        })
-
-        if (refundMethod === "original") {
-          updatedReturnData.timeline.push({
-            status: "Refund Completed",
-            date: new Date().toISOString(),
-            description: `Refund successfully processed with transaction ID: ${bankTransactionId}`,
-          })
-        } else if (refundMethod === "cash") {
-          updatedReturnData.timeline.push({
-            status: "Cash Refund Assigned",
-            date: new Date().toISOString(),
-            description: `Cash refund assigned to delivery personnel: ${selectedDeliveryPerson}`,
-          })
+        const refundData = {
+          refundMethod,
+          bankTransactionId: refundMethod === "original" ? bankTransactionId : undefined,
+          deliveryPerson: refundMethod === "cash" ? selectedDeliveryPerson : undefined,
+          deliveryNote: refundMethod === "cash" ? deliveryNote : undefined,
         }
-      }
 
-      setReturnData(updatedReturnData)
+        await processReturnRefund(returnData._id, refundData)
+
+        // Update the return data to reflect the refund processing
+        setReturnData((prev) => ({
+          ...prev,
+          timeline: [
+            ...prev.timeline,
+            {
+              status: "Refund Initiated",
+              date: new Date().toISOString(),
+              description: `Refund of ${formatCurrency(returnData.refundAmount)} initiated to ${refundMethod === "original" ? "original payment method" : refundMethod === "cash" ? "cash via delivery" : "store credit"}`,
+            },
+          ],
+        }))
+      }
+    } catch (error) {
+      console.error("Error processing action:", error)
+      setError(error.message)
+    } finally {
       setProcessingAction(false)
       setShowRefundOptions(false)
       setShowDeliveryForm(false)
       setBankTransactionId("")
       setSelectedDeliveryPerson("")
       setDeliveryNote("")
-    }, 1500)
+    }
   }
 
   const handleProcessRefund = () => {
@@ -282,6 +226,24 @@ export default function ReturnDetails() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="max-w-6xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Error Loading Return</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
+          <Link
+            href="/admin/returns"
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Returns
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   if (!returnData) {
     return (
       <div className="p-8">
@@ -314,9 +276,9 @@ export default function ReturnDetails() {
               <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Return #{returnData.id}</h1>
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Return #{returnData._id}</h1>
               <p className="text-gray-500 dark:text-gray-400">
-                for Order #{returnData.orderId} • {formatDate(returnData.date)}
+                for Order #{returnData.orderId} • {formatDate(returnData.createdAt)}
               </p>
             </div>
           </div>
@@ -349,7 +311,7 @@ export default function ReturnDetails() {
         )}
 
         {/* Refund Processing Section - Only show for Approved returns */}
-        {returnData.status === "Approved" && !returnData.timeline.some((event) => event.status.includes("Refund")) && (
+        {returnData.status === "Approved" && !returnData.timeline?.some((event) => event.status.includes("Refund")) && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Process Refund</h2>
@@ -536,7 +498,7 @@ export default function ReturnDetails() {
 
                       <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-900/30 rounded-md">
                         <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                          <strong>Delivery Address:</strong> {returnData.customer.address}
+                          <strong>Delivery Address:</strong> {returnData.customer?.address}
                         </p>
                       </div>
                     </div>
@@ -567,7 +529,7 @@ export default function ReturnDetails() {
                 <span className="text-gray-600 dark:text-gray-400">Request Date:</span>
                 <span className="font-medium text-gray-800 dark:text-white flex items-center">
                   <Calendar className="h-4 w-4 mr-1 text-gray-500 dark:text-gray-400" />
-                  {formatDate(returnData.requestDate)}
+                  {formatDate(returnData.requestDate || returnData.createdAt)}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -607,21 +569,21 @@ export default function ReturnDetails() {
               <div className="flex items-start">
                 <User className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-gray-800 dark:text-white">{returnData.customer.name}</h3>
+                  <h3 className="font-medium text-gray-800 dark:text-white">{returnData.customer?.name}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Customer</p>
                 </div>
               </div>
               <div className="flex items-start">
                 <Mail className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-gray-800 dark:text-white">{returnData.customer.email}</h3>
+                  <h3 className="font-medium text-gray-800 dark:text-white">{returnData.customer?.email}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
                 </div>
               </div>
               <div className="flex items-start">
                 <Phone className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-gray-800 dark:text-white">{returnData.customer.phone}</h3>
+                  <h3 className="font-medium text-gray-800 dark:text-white">{returnData.customer?.phone}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Phone</p>
                 </div>
               </div>
@@ -643,11 +605,11 @@ export default function ReturnDetails() {
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Returned Items</h2>
           </div>
           <div className="divide-y divide-gray-100 dark:divide-gray-700">
-            {returnData.items.map((item) => (
-              <div key={item.id} className="p-6 flex items-center">
+            {returnData.items?.map((item, index) => (
+              <div key={index} className="p-6 flex items-center">
                 <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
                   <img
-                    src={item.image || "/placeholder.svg"}
+                    src={item.image || "/placeholder.svg?height=80&width=80"}
                     alt={item.name}
                     className="h-full w-full object-cover object-center"
                   />
@@ -689,7 +651,7 @@ export default function ReturnDetails() {
                     onClick={() => setSelectedPhoto(photo)}
                   >
                     <img
-                      src={photo || "/placeholder.svg"}
+                      src={photo || "/placeholder.svg?height=300&width=400"}
                       alt={`Return photo ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
@@ -724,7 +686,7 @@ export default function ReturnDetails() {
           </div>
           <div className="p-6">
             <ol className="relative border-l border-gray-200 dark:border-gray-700">
-              {returnData.timeline.map((event, index) => (
+              {returnData.timeline?.map((event, index) => (
                 <li key={index} className="mb-10 ml-6">
                   <span className="absolute flex items-center justify-center w-6 h-6 bg-green-100 rounded-full -left-3 ring-8 ring-white dark:ring-gray-800 dark:bg-green-900">
                     {event.status === "Return Requested" && (
@@ -768,7 +730,7 @@ export default function ReturnDetails() {
         >
           <div className="max-w-4xl max-h-full">
             <img
-              src={selectedPhoto || "/placeholder.svg"}
+              src={selectedPhoto || "/placeholder.svg?height=600&width=800"}
               alt="Return photo"
               className="max-w-full max-h-[90vh] object-contain"
             />

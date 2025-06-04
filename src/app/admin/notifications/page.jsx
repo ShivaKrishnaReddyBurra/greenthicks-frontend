@@ -1,97 +1,137 @@
 "use client"
 
-import { useState, useEffect } from "react";
-import { Bell, ShoppingBag, AlertTriangle, CheckCircle, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react"
+import { Bell, ShoppingBag, AlertTriangle, CheckCircle, Trash2 } from "lucide-react"
 import {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
   clearAllNotifications,
-} from "@/lib/api"; // Adjust path to your api.js
+} from "@/lib/fetch-without-auth" // Updated import path
 
 export default function AdminNotifications() {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState("all")
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const data = await getNotifications();
-        setNotifications(data);
+        setError(null)
+        const data = await getNotifications()
+        setNotifications(data.notifications || data)
       } catch (error) {
-        console.error("Error fetching notifications:", error);
+        console.error("Error fetching notifications:", error)
+        setError(error.message)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchNotifications();
-  }, []);
+    fetchNotifications()
+  }, [])
 
   const markAsRead = async (id) => {
     try {
-      await markNotificationAsRead(id);
+      await markNotificationAsRead(id)
       setNotifications(
-        notifications.map((notification) =>
-          notification._id === id ? { ...notification, read: true } : notification
-        )
-      );
+        notifications.map((notification) => (notification._id === id ? { ...notification, read: true } : notification)),
+      )
     } catch (error) {
-      console.error("Error marking notification as read:", error);
+      console.error("Error marking notification as read:", error)
+      setError(error.message)
     }
-  };
+  }
 
   const markAllAsRead = async () => {
     try {
-      await markAllNotificationsAsRead();
-      setNotifications(
-        notifications.map((notification) => ({ ...notification, read: true }))
-      );
+      await markAllNotificationsAsRead()
+      setNotifications(notifications.map((notification) => ({ ...notification, read: true })))
     } catch (error) {
-      console.error("Error marking all notifications as read:", error);
+      console.error("Error marking all notifications as read:", error)
+      setError(error.message)
     }
-  };
+  }
 
   const deleteSingleNotification = async (id) => {
     try {
-      await deleteNotification(id);
-      setNotifications(notifications.filter((notification) => notification._id !== id));
+      await deleteNotification(id)
+      setNotifications(notifications.filter((notification) => notification._id !== id))
     } catch (error) {
-      console.error("Error deleting notification:", error);
+      console.error("Error deleting notification:", error)
+      setError(error.message)
     }
-  };
+  }
 
   const clearNotifications = async () => {
     if (window.confirm("Are you sure you want to clear all notifications?")) {
       try {
-        await clearAllNotifications();
-        setNotifications([]);
+        await clearAllNotifications()
+        setNotifications([])
       } catch (error) {
-        console.error("Error clearing all notifications:", error);
+        console.error("Error clearing all notifications:", error)
+        setError(error.message)
       }
     }
-  };
+  }
 
   const filteredNotifications = notifications.filter((notification) => {
-    if (filter === "all") return true;
-    if (filter === "unread") return !notification.read;
-    return notification.type === filter;
-  });
+    if (filter === "all") return true
+    if (filter === "unread") return !notification.read
+    return notification.type === filter
+  })
 
   const getNotificationIcon = (type) => {
     switch (type) {
       case "order":
-        return <ShoppingBag size={20} className="text-blue-500" />;
+        return <ShoppingBag size={20} className="text-blue-500" />
       case "stock":
-        return <AlertTriangle size={20} className="text-amber-500" />;
+        return <AlertTriangle size={20} className="text-amber-500" />
       case "seller":
-        return <CheckCircle size={20} className="text-green-500" />;
+        return <CheckCircle size={20} className="text-green-500" />
       default:
-        return <Bell size={20} className="text-gray-500" />;
+        return <Bell size={20} className="text-gray-500" />
     }
-  };
+  }
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="p-8 text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-4">Loading notifications...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <div className="text-red-500 mb-4">
+          <AlertTriangle size={48} className="mx-auto mb-2" />
+          <p className="text-lg font-medium">Error loading notifications</p>
+          <p className="text-sm">{error}</p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -137,12 +177,7 @@ export default function AdminNotifications() {
 
       {/* Notifications List */}
       <div className="bg-card rounded-lg shadow-md overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4">Loading notifications...</p>
-          </div>
-        ) : filteredNotifications.length === 0 ? (
+        {filteredNotifications.length === 0 ? (
           <div className="p-8 text-center">
             <Bell size={48} className="mx-auto text-muted-foreground mb-4" />
             <p className="text-lg font-medium">No notifications found</p>
@@ -165,7 +200,7 @@ export default function AdminNotifications() {
                       <h3 className={`font-medium ${!notification.read ? "font-semibold" : ""}`}>
                         {notification.title}
                       </h3>
-                      <span className="text-xs text-muted-foreground">{notification.time}</span>
+                      <span className="text-xs text-muted-foreground">{formatDate(notification.createdAt)}</span>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
                   </div>
@@ -195,5 +230,5 @@ export default function AdminNotifications() {
         )}
       </div>
     </div>
-  );
+  )
 }

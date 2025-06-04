@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Search, Filter, ChevronRight, ChevronLeft, Eye, Download, Calendar } from "lucide-react"
+import { getCancellations } from "@/lib/fetch-without-auth" // Updated import path
 
 export default function CancellationsPage() {
   const [cancellations, setCancellations] = useState([])
@@ -12,78 +13,25 @@ export default function CancellationsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [dateRange, setDateRange] = useState("all")
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockCancellations = [
-        {
-          id: "CAN-1001",
-          orderId: "ORD-9876",
-          customer: "Rahul Sharma",
-          amount: 1250,
-          paymentMethod: "UPI",
-          paymentStatus: "Refunded",
-          date: "2023-05-01",
-          reason: "Changed mind",
-          products: ["Organic Tomatoes (1kg)", "Fresh Spinach (500g)"],
-          notes: "Customer requested immediate refund",
-        },
-        {
-          id: "CAN-1002",
-          orderId: "ORD-9865",
-          customer: "Priya Patel",
-          amount: 890,
-          paymentMethod: "Credit Card",
-          paymentStatus: "Pending Refund",
-          date: "2023-05-01",
-          reason: "Found better price",
-          products: ["Organic Brown Rice (5kg)"],
-          notes: "Customer mentioned finding 15% lower price elsewhere",
-        },
-        {
-          id: "CAN-1003",
-          orderId: "ORD-9854",
-          customer: "Amit Kumar",
-          amount: 2340,
-          paymentMethod: "Debit Card",
-          paymentStatus: "Refunded",
-          date: "2023-04-30",
-          reason: "Delivery too slow",
-          products: ["Organic Apples (2kg)", "Organic Milk (1L)", "Honey (500g)"],
-          notes: "Customer was upset about 2-day delivery estimate",
-        },
-        {
-          id: "CAN-1004",
-          orderId: "ORD-9843",
-          customer: "Neha Singh",
-          amount: 760,
-          paymentMethod: "UPI",
-          paymentStatus: "Refunded",
-          date: "2023-04-29",
-          reason: "Ordered by mistake",
-          products: ["Fresh Spinach (500g)", "Organic Carrots (1kg)"],
-          notes: "Customer placed order accidentally",
-        },
-        {
-          id: "CAN-1005",
-          orderId: "ORD-9832",
-          customer: "Vikram Reddy",
-          amount: 1890,
-          paymentMethod: "Cash on Delivery",
-          paymentStatus: "Not Applicable",
-          date: "2023-04-28",
-          reason: "Changed mind",
-          products: ["Organic Potatoes (2kg)", "Fresh Ginger (250g)", "Turmeric Powder (100g)"],
-          notes: "Cancelled before dispatch",
-        },
-      ]
+    const fetchCancellations = async () => {
+      try {
+        setError(null)
+        const data = await getCancellations(currentPage, 10)
+        setCancellations(data.cancellations || data)
+        setTotalPages(data.totalPages || Math.ceil((data.cancellations || data).length / 10))
+      } catch (error) {
+        console.error("Error fetching cancellations:", error)
+        setError(error.message)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-      setCancellations(mockCancellations)
-      setTotalPages(Math.ceil(mockCancellations.length / 10))
-      setLoading(false)
-    }, 1000)
-  }, [])
+    fetchCancellations()
+  }, [currentPage])
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
@@ -91,6 +39,14 @@ export default function CancellationsPage() {
       currency: "INR",
       maximumFractionDigits: 0,
     }).format(amount)
+  }
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })
   }
 
   const getPaymentStatusBadge = (status) => {
@@ -124,17 +80,21 @@ export default function CancellationsPage() {
 
   const filteredCancellations = cancellations.filter((cancellation) => {
     const matchesSearch =
-      cancellation.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cancellation.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cancellation.customer.toLowerCase().includes(searchTerm.toLowerCase())
+      cancellation._id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cancellation.orderId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cancellation.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesReason = filterReason === "all" || cancellation.reason.toLowerCase() === filterReason.toLowerCase()
+    const matchesReason = filterReason === "all" || cancellation.reason?.toLowerCase() === filterReason.toLowerCase()
 
-    const matchesDate = dateRange === "all" || 
-      (dateRange === "today" && cancellation.date === new Date().toISOString().split("T")[0]) ||
-      (dateRange === "week" && new Date(cancellation.date) >= new Date(new Date().setDate(new Date().getDate() - 7))) ||
-      (dateRange === "month" && new Date(cancellation.date) >= new Date(new Date().setMonth(new Date().getMonth() - 1))) ||
-      (dateRange === "quarter" && new Date(cancellation.date) >= new Date(new Date().setMonth(new Date().getMonth() - 3)))
+    const matchesDate =
+      dateRange === "all" ||
+      (dateRange === "today" && new Date(cancellation.createdAt).toDateString() === new Date().toDateString()) ||
+      (dateRange === "week" &&
+        new Date(cancellation.createdAt) >= new Date(new Date().setDate(new Date().getDate() - 7))) ||
+      (dateRange === "month" &&
+        new Date(cancellation.createdAt) >= new Date(new Date().setMonth(new Date().getMonth() - 1))) ||
+      (dateRange === "quarter" &&
+        new Date(cancellation.createdAt) >= new Date(new Date().setMonth(new Date().getMonth() - 3)))
 
     return matchesSearch && matchesReason && matchesDate
   })
@@ -143,6 +103,23 @@ export default function CancellationsPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <div className="text-red-500 mb-4">
+          <p className="text-lg font-medium">Error loading cancellations</p>
+          <p className="text-sm">{error}</p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+        >
+          Retry
+        </button>
       </div>
     )
   }
@@ -248,32 +225,34 @@ export default function CancellationsPage() {
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredCancellations.map((cancellation) => (
-                <tr key={cancellation.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <tr key={cancellation._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                    {cancellation.id}
+                    {cancellation._id}
                   </td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {cancellation.orderId}
                   </td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                    {cancellation.customer}
+                    {cancellation.customer?.name}
                   </td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                    {cancellation.date}
+                    {formatDate(cancellation.createdAt)}
                   </td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                    {formatCurrency(cancellation.amount)}
+                    {formatCurrency(cancellation.refundAmount)}
                   </td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {cancellation.paymentMethod}
                   </td>
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">{getPaymentStatusBadge(cancellation.paymentStatus)}</td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                    {getPaymentStatusBadge(cancellation.refundStatus)}
+                  </td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {cancellation.reason}
                   </td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <Link
-                      href={`/admin/cancellations/${cancellation.id}`}
+                      href={`/admin/cancellations/${cancellation._id}`}
                       className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
                     >
                       <Eye size={16} />
@@ -314,21 +293,28 @@ export default function CancellationsPage() {
       {/* Mobile Card View */}
       <div className="sm:hidden space-y-4">
         {filteredCancellations.map((cancellation) => (
-          <div key={cancellation.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-700">
+          <div
+            key={cancellation._id}
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-gray-700"
+          >
             <div className="flex flex-col space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-900 dark:text-white">ID: {cancellation.id}</span>
-                {getPaymentStatusBadge(cancellation.paymentStatus)}
+                <span className="text-sm font-medium text-gray-900 dark:text-white">ID: {cancellation._id}</span>
+                {getPaymentStatusBadge(cancellation.refundStatus)}
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-300">Order ID: {cancellation.orderId}</div>
-              <div className="text-sm text-gray-500 dark:text-gray-300">Customer: {cancellation.customer}</div>
-              <div className="text-sm text-gray-500 dark:text-gray-300">Date: {cancellation.date}</div>
-              <div className="text-sm text-gray-500 dark:text-gray-300">Amount: {formatCurrency(cancellation.amount)}</div>
-              <div className="text-sm text-gray-500 dark:text-gray-300">Payment Method: {cancellation.paymentMethod}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-300">Customer: {cancellation.customer?.name}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-300">Date: {formatDate(cancellation.createdAt)}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-300">
+                Amount: {formatCurrency(cancellation.refundAmount)}
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-300">
+                Payment Method: {cancellation.paymentMethod}
+              </div>
               <div className="text-sm text-gray-500 dark:text-gray-300">Reason: {cancellation.reason}</div>
               <div className="flex justify-end">
                 <Link
-                  href={`/admin/cancellations/${cancellation.id}`}
+                  href={`/admin/cancellations/${cancellation._id}`}
                   className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
                 >
                   <Eye size={16} />

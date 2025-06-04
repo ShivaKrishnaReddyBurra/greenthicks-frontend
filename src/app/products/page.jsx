@@ -18,6 +18,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { getProducts } from "@/lib/api";
+import Link from "next/link";
 
 const LeafLoader = () => {
   return (
@@ -43,6 +44,20 @@ const LeafLoader = () => {
   );
 };
 
+const SkeletonLoader = () => {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {[...Array(8)].map((_, index) => (
+        <div key={index} className="animate-pulse">
+          <div className="bg-gray-200 h-48 w-full rounded-lg mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function ProductsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -63,7 +78,7 @@ export default function ProductsPage() {
       try {
         setLoading(true);
         const data = await getProducts();
-        setProducts(data);
+        setProducts(data.filter(product => product.inStock)); // Filter in-stock products
       } catch (error) {
         console.error("Error fetching products:", error);
       } finally {
@@ -102,7 +117,6 @@ export default function ProductsPage() {
   const handleCategoryChange = (categoryId) => {
     setActionLoading(true);
     setSelectedCategory(categoryId);
-    // Update URL with category
     const params = new URLSearchParams(searchParams);
     if (categoryId === "all") {
       params.delete("category");
@@ -154,17 +168,9 @@ export default function ProductsPage() {
     return true;
   });
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[60vh]">
-        <LeafLoader />
-      </div>
-    );
-  }
-
   return (
     <>
-      {(actionLoading || loading) && <LeafLoader />}
+      {actionLoading && <LeafLoader />}
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8">
           <div>
@@ -306,7 +312,9 @@ export default function ProductsPage() {
               ))}
             </div>
 
-            {filteredProducts.length > 0 ? (
+            {loading ? (
+              <SkeletonLoader />
+            ) : filteredProducts.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredProducts.map((product) => (
                   <ProductCard key={product.globalId} product={product} />

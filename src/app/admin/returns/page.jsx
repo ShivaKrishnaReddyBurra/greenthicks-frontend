@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Search, Filter, ChevronRight, ChevronLeft, Eye, Download, Calendar, CheckCircle, XCircle } from "lucide-react"
+import { Search, Filter, Eye, Download, Calendar, CheckCircle, XCircle } from "lucide-react"
+import { ChevronLeft } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { getReturns, updateReturnStatus } from "@/lib/fetch-without-auth" // Updated import path
 
 export default function ReturnsPage() {
   const [returns, setReturns] = useState([])
@@ -12,73 +15,25 @@ export default function ReturnsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [dateRange, setDateRange] = useState("all")
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const mockReturns = [
-        {
-          id: "RET-1001",
-          orderId: "ORD-9876",
-          customer: "Rahul Sharma",
-          amount: 450,
-          date: "2023-05-01",
-          reason: "Damaged product",
-          status: "Approved",
-          products: ["Organic Tomatoes (1kg)"],
-          hasPhotos: true,
-        },
-        {
-          id: "RET-1002",
-          orderId: "ORD-9865",
-          customer: "Priya Patel",
-          amount: 890,
-          date: "2023-05-01",
-          reason: "Wrong item received",
-          status: "Pending",
-          products: ["Organic Brown Rice (5kg)"],
-          hasPhotos: true,
-        },
-        {
-          id: "RET-1003",
-          orderId: "ORD-9854",
-          customer: "Amit Kumar",
-          amount: 350,
-          date: "2023-04-30",
-          reason: "Quality issues",
-          status: "Approved",
-          products: ["Organic Milk (1L)"],
-          hasPhotos: true,
-        },
-        {
-          id: "RET-1004",
-          orderId: "ORD-9843",
-          customer: "Neha Singh",
-          amount: 760,
-          date: "2023-04-29",
-          reason: "Expired product",
-          status: "Rejected",
-          products: ["Fresh Spinach (500g)", "Organic Carrots (1kg)"],
-          hasPhotos: true,
-        },
-        {
-          id: "RET-1005",
-          orderId: "ORD-9832",
-          customer: "Vikram Reddy",
-          amount: 315,
-          date: "2023-04-28",
-          reason: "Not as described",
-          status: "Approved",
-          products: ["Organic Honey (500g)"],
-          hasPhotos: false,
-        },
-      ]
+    const fetchReturns = async () => {
+      try {
+        setError(null);
+        const data = await getReturns(currentPage, 10);
+        setReturns(data.returns || data);
+        setTotalPages(data.totalPages || Math.ceil((data.returns || data).length / 10));
+      } catch (error) {
+        console.error("Error fetching returns:", error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      setReturns(mockReturns)
-      setTotalPages(Math.ceil(mockReturns.length / 10))
-      setLoading(false)
-    }, 1000)
-  }, [])
+    fetchReturns();
+  }, [currentPage])
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {

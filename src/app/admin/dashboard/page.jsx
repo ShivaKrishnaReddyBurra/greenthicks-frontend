@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Store,
 } from "lucide-react"
+import { getAdminStats, getRecentOrders, getTopProducts, getSalesTrend } from "@/lib/fetch-without-auth" // Updated import
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -40,51 +41,36 @@ export default function AdminDashboard() {
   const [topProducts, setTopProducts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [salesTrend, setSalesTrend] = useState({
-    todayChange: 12.5,
-    monthChange: 8.3,
-    yearChange: 24.7,
+    todayChange: 0,
+    monthChange: 0,
+    yearChange: 0,
   })
 
   useEffect(() => {
-    
-    setIsLoading(true)
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
-    // Fetch stats data
-    const fetchStats = async () => {
-      // Simulate fetching data from an API
-      const response = await fetch("/api/stats")
-      const data = await response.json()
-      setStats(data)
+    const fetchDashboardData = async () => {
+      setIsLoading(true)
+      try {
+        // Fetch all dashboard data using the new API functions
+        const [statsData, ordersData, productsData, trendData] = await Promise.all([
+          getAdminStats(),
+          getRecentOrders(),
+          getTopProducts(),
+          getSalesTrend(),
+        ])
+
+        setStats(statsData)
+        setRecentOrders(ordersData)
+        setTopProducts(productsData)
+        setSalesTrend(trendData)
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error)
+        // You might want to show an error message to the user here
+      } finally {
+        setIsLoading(false)
+      }
     }
-    fetchStats()
-    // Fetch recent orders
-    const fetchRecentOrders = async () => {
-      // Simulate fetching data from an API
-      const response = await fetch("/api/recent-orders")
-      const data = await response.json()
-      setRecentOrders(data)
-    }
-    fetchRecentOrders()
-    // Fetch top products
-    const fetchTopProducts = async () => {
-      // Simulate fetching data from an API
-      const response = await fetch("/api/top-products")
-      const data = await response.json()
-      setTopProducts(data)
-    }
-    fetchTopProducts()
-    // Fetch sales trend data
-    const fetchSalesTrend = async () => {
-      // Simulate fetching data from an API
-      const response = await fetch("/api/sales-trend")
-      const data = await response.json()    
-      setSalesTrend(data) 
-    }
-    fetchSalesTrend()
-    
+
+    fetchDashboardData()
   }, [])
 
   const formatCurrency = (amount) => {
@@ -148,7 +134,7 @@ export default function AdminDashboard() {
       </div>
     )
   }
-  
+
   return (
     <div className="p-4 md:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">

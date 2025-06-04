@@ -4,97 +4,31 @@ import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Calendar, CreditCard, User, Mail, Phone, AlertTriangle, CheckCircle, XCircle } from "lucide-react"
-
-// Mock data for the cancellation
-const getCancellationData = (id) => {
-  return {
-    id: id,
-    orderId: "ORD-9876",
-    date: "2023-05-01T14:30:00",
-    requestDate: "2023-05-01T10:30:00",
-    status: "Completed",
-    reason: "Changed mind",
-    explanation: "I found a better deal elsewhere and no longer need these items.",
-    paymentMethod: "UPI",
-    paymentId: "UPI-REF-123456789",
-    paymentStatus: "Refunded",
-    refundDate: "2023-05-02T09:15:00",
-    refundAmount: 1250,
-    customer: {
-      name: "Rahul Sharma",
-      email: "rahul.sharma@example.com",
-      phone: "+91 9876543210",
-    },
-    items: [
-      {
-        id: "1",
-        name: "Organic Tomatoes",
-        price: 80,
-        quantity: 5,
-        total: 400,
-        image: "/placeholder.svg?height=80&width=80",
-      },
-      {
-        id: "2",
-        name: "Fresh Spinach Bundle",
-        price: 60,
-        quantity: 2,
-        total: 120,
-        image: "/placeholder.svg?height=80&width=80",
-      },
-      {
-        id: "3",
-        name: "Organic Brown Rice (5kg)",
-        price: 450,
-        quantity: 1,
-        total: 450,
-        image: "/placeholder.svg?height=80&width=80",
-      },
-      {
-        id: "4",
-        name: "Cold-Pressed Coconut Oil",
-        price: 350,
-        quantity: 1,
-        total: 350,
-        image: "/placeholder.svg?height=80&width=80",
-      },
-    ],
-    timeline: [
-      {
-        status: "Cancellation Requested",
-        date: "2023-05-01T10:30:00",
-        description: "Customer requested cancellation",
-      },
-      {
-        status: "Cancellation Approved",
-        date: "2023-05-01T14:30:00",
-        description: "Cancellation request approved by admin",
-      },
-      {
-        status: "Refund Initiated",
-        date: "2023-05-01T15:45:00",
-        description: "Refund of ₹1,250 initiated to original payment method",
-      },
-      {
-        status: "Refund Completed",
-        date: "2023-05-02T09:15:00",
-        description: "Refund successfully processed",
-      },
-    ],
-  }
-}
+import { getCancellationById } from "@/lib/fetch-without-auth" // Updated import path
 
 export default function CancellationDetails() {
   const params = useParams()
   const [cancellation, setCancellation] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setCancellation(getCancellationData(params.id))
-      setLoading(false)
-    }, 500)
+    const fetchCancellation = async () => {
+      try {
+        setError(null)
+        const data = await getCancellationById(params.id)
+        setCancellation(data)
+      } catch (error) {
+        console.error("Error fetching cancellation:", error)
+        setError(error.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (params.id) {
+      fetchCancellation()
+    }
   }, [params.id])
 
   const formatDate = (dateString) => {
@@ -164,6 +98,24 @@ export default function CancellationDetails() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="max-w-6xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Error Loading Cancellation</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
+          <Link
+            href="/admin/cancellations"
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Cancellations
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   if (!cancellation) {
     return (
       <div className="p-8">
@@ -196,9 +148,9 @@ export default function CancellationDetails() {
               <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Cancellation #{cancellation.id}</h1>
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Cancellation #{cancellation._id}</h1>
               <p className="text-gray-500 dark:text-gray-400">
-                for Order #{cancellation.orderId} • {formatDate(cancellation.date)}
+                for Order #{cancellation.orderId} • {formatDate(cancellation.createdAt)}
               </p>
             </div>
           </div>
@@ -228,18 +180,20 @@ export default function CancellationDetails() {
                   {cancellation.paymentMethod}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Payment ID:</span>
-                <span className="font-medium text-gray-800 dark:text-white">{cancellation.paymentId}</span>
-              </div>
+              {cancellation.paymentId && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Payment ID:</span>
+                  <span className="font-medium text-gray-800 dark:text-white">{cancellation.paymentId}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Refund Status:</span>
                 <span
                   className={`font-medium ${
-                    cancellation.paymentStatus === "Refunded" ? "text-green-600" : "text-yellow-600"
+                    cancellation.refundStatus === "Refunded" ? "text-green-600" : "text-yellow-600"
                   }`}
                 >
-                  {cancellation.paymentStatus}
+                  {cancellation.refundStatus}
                 </span>
               </div>
               {cancellation.refundDate && (
@@ -266,21 +220,21 @@ export default function CancellationDetails() {
               <div className="flex items-start">
                 <User className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-gray-800 dark:text-white">{cancellation.customer.name}</h3>
+                  <h3 className="font-medium text-gray-800 dark:text-white">{cancellation.customer?.name}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Customer</p>
                 </div>
               </div>
               <div className="flex items-start">
                 <Mail className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-gray-800 dark:text-white">{cancellation.customer.email}</h3>
+                  <h3 className="font-medium text-gray-800 dark:text-white">{cancellation.customer?.email}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
                 </div>
               </div>
               <div className="flex items-start">
                 <Phone className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-gray-800 dark:text-white">{cancellation.customer.phone}</h3>
+                  <h3 className="font-medium text-gray-800 dark:text-white">{cancellation.customer?.phone}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Phone</p>
                 </div>
               </div>
@@ -302,11 +256,11 @@ export default function CancellationDetails() {
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Cancelled Items</h2>
           </div>
           <div className="divide-y divide-gray-100 dark:divide-gray-700">
-            {cancellation.items.map((item) => (
-              <div key={item.id} className="p-6 flex items-center">
+            {cancellation.items?.map((item, index) => (
+              <div key={index} className="p-6 flex items-center">
                 <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
                   <img
-                    src={item.image || "/placeholder.svg"}
+                    src={item.image || "/placeholder.svg?height=80&width=80"}
                     alt={item.name}
                     className="h-full w-full object-cover object-center"
                   />
@@ -336,7 +290,7 @@ export default function CancellationDetails() {
           </div>
           <div className="p-6">
             <ol className="relative border-l border-gray-200 dark:border-gray-700">
-              {cancellation.timeline.map((event, index) => (
+              {cancellation.timeline?.map((event, index) => (
                 <li key={index} className="mb-10 ml-6">
                   <span className="absolute flex items-center justify-center w-6 h-6 bg-green-100 rounded-full -left-3 ring-8 ring-white dark:ring-gray-800 dark:bg-green-900">
                     {event.status === "Cancellation Requested" && (

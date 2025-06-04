@@ -1,19 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Save, RefreshCw } from "lucide-react"
-import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { useTheme } from "next-themes"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select"; // Adjust the path if needed
-
-
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { getAdminSettings, updateAdminSettings } from "@/lib/fetch-without-auth" // Updated import path
 
 export default function AdminSettings() {
   const [generalSettings, setGeneralSettings] = useState({
@@ -24,8 +16,7 @@ export default function AdminSettings() {
     address: "123 Main St, Hyderabad, 500001",
   })
 
-  
-const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(false)
 
   const [paymentSettings, setPaymentSettings] = useState({
     enableCashOnDelivery: true,
@@ -54,6 +45,48 @@ const [darkMode, setDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState("general")
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  const [emailNotifications, setEmailNotifications] = useState(false)
+  const [pushNotifications, setPushNotifications] = useState(false)
+  const [smsNotifications, setSmsNotifications] = useState(false)
+  const [soundAlerts, setSoundAlerts] = useState(false)
+  const [selectedRingtone, setSelectedRingtone] = useState("default")
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        setError(null)
+        const data = await getAdminSettings()
+
+        if (data.general) {
+          setGeneralSettings(data.general)
+        }
+        if (data.payment) {
+          setPaymentSettings(data.payment)
+        }
+        if (data.delivery) {
+          setDeliverySettings(data.delivery)
+        }
+        if (data.notification) {
+          setNotificationSettings(data.notification)
+          setEmailNotifications(data.notification.emailNotifications || false)
+          setPushNotifications(data.notification.pushNotifications || false)
+          setSmsNotifications(data.notification.smsNotifications || false)
+          setSoundAlerts(data.notification.soundAlerts || false)
+          setSelectedRingtone(data.notification.selectedRingtone || "default")
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error)
+        setError(error.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSettings()
+  }, [])
 
   const handleGeneralChange = (e) => {
     const { name, value } = e.target
@@ -87,35 +120,65 @@ const [darkMode, setDarkMode] = useState(false);
     })
   }
 
-  const [emailNotifications, setEmailNotifications] = useState(false);
-  const [pushNotifications, setPushNotifications] = useState(false);
-  const [smsNotifications, setSmsNotifications] = useState(false);
-  const [soundAlerts, setSoundAlerts] = useState(false);
-  const [selectedRingtone, setSelectedRingtone] = useState("default");
-  const [selectedVibration, setSelectedVibration] = useState("default");
-  
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSaving(true)
     setSuccess(false)
+    setError(null)
 
     try {
-      // In a real app, this would be an API call to save settings
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      let settingsData
 
+      switch (activeTab) {
+        case "general":
+          settingsData = generalSettings
+          break
+        case "payment":
+          settingsData = paymentSettings
+          break
+        case "delivery":
+          settingsData = deliverySettings
+          break
+        case "notification":
+          settingsData = {
+            ...notificationSettings,
+            emailNotifications,
+            pushNotifications,
+            smsNotifications,
+            soundAlerts,
+            selectedRingtone,
+          }
+          break
+        default:
+          throw new Error("Invalid settings category")
+      }
+
+      await updateAdminSettings(activeTab, settingsData)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (error) {
       console.error("Error saving settings:", error)
+      setError(error.message)
     } finally {
       setSaving(false)
     }
   }
 
+  if (loading) {
+    return (
+      <div className="p-8 text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-4">Loading settings...</p>
+      </div>
+    )
+  }
+
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Admin Settings</h1>
+
+      {/* Error Message */}
+      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
 
       {/* Tabs */}
       <div className="flex border-b mb-6 overflow-x-auto">
@@ -174,15 +237,14 @@ const [darkMode, setDarkMode] = useState(false);
         {/* General Settings */}
         {activeTab === "general" && (
           <div>
-            
-              <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-               <Label className="text-base ">Dark Mode</Label>
-                  <p className="text-sm text-muted-foreground pb-9">Toggle dark theme</p>
-               </div>
+                <Label className="text-base">Dark Mode</Label>
+                <p className="text-sm text-muted-foreground pb-9">Toggle dark theme</p>
+              </div>
               <Switch checked={darkMode} onCheckedChange={setDarkMode} />
-             </div>
-             <h2 className="text-xl font-bold mb-4">General Settings</h2>
+            </div>
+            <h2 className="text-xl font-bold mb-4">General Settings</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="mb-4">
                 <label htmlFor="siteName" className="block text-sm font-medium mb-2">
@@ -254,7 +316,6 @@ const [darkMode, setDarkMode] = useState(false);
                 onChange={handleGeneralChange}
               ></textarea>
             </div>
-
           </div>
         )}
 
@@ -494,55 +555,55 @@ const [darkMode, setDarkMode] = useState(false);
               </div>
             </div>
 
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5 mt-5">
+                <h3 className="text-base">Email Notifications</h3>
+                <p className="text-sm text-muted-foreground">Receive emails for updates</p>
+              </div>
+              <Switch
+                className="space-y-0.5 mt-5"
+                checked={emailNotifications}
+                onCheckedChange={setEmailNotifications}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5 mt-5">
+                <h3 className="text-base">Push Notifications</h3>
+                <p className="text-sm text-muted-foreground">Receive push alerts on device</p>
+              </div>
+              <Switch className="space-y-0.5 mt-5" checked={pushNotifications} onCheckedChange={setPushNotifications} />
+            </div>
+            <div className="flex items-center justify-between ">
+              <div className="space-y-0.5 mt-5">
+                <h3 className="text-base">SMS Notifications</h3>
+                <p className="text-sm text-muted-foreground">Receive SMS updates</p>
+              </div>
+              <Switch className="space-y-0.5 mt-5" checked={smsNotifications} onCheckedChange={setSmsNotifications} />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5 mt-5">
+                <h3 className="text-base">Sound Alerts</h3>
+                <p className="text-sm text-muted-foreground space-y-9">Enable sound for notifications</p>
+              </div>
+              <Switch className="space-y-0.5 mt-5" checked={soundAlerts} onCheckedChange={setSoundAlerts} />
+            </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5 mt-5">
-                    <h3 className="text-base">Email Notifications</h3>
-                    <p className="text-sm text-muted-foreground">Receive emails for updates</p>
-                  </div>
-                  <Switch className="space-y-0.5 mt-5" checked={emailNotifications} onCheckedChange={setEmailNotifications} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5 mt-5">
-                    <h3 className="text-base">Push Notifications</h3>
-                    <p className="text-sm text-muted-foreground">Receive push alerts on device</p>
-                  </div>
-                  <Switch className="space-y-0.5 mt-5" checked={pushNotifications} onCheckedChange={setPushNotifications} />
-                </div>
-                <div className="flex items-center justify-between ">
-                  <div className="space-y-0.5 mt-5">
-                    <h3 className="text-base">SMS Notifications</h3>
-                    <p className="text-sm text-muted-foreground">Receive SMS updates</p>
-                  </div>
-                  <Switch className="space-y-0.5 mt-5" checked={smsNotifications} onCheckedChange={setSmsNotifications} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5 mt-5">
-                    <h3 className="text-base">Sound Alerts</h3>
-                    <p className="text-sm text-muted-foreground space-y-9">Enable sound for notifications</p>
-                  </div>
-                  <Switch className="space-y-0.5 mt-5" checked={soundAlerts} onCheckedChange={setSoundAlerts} />
-                </div>
-
-                {/* NEW: Ringtone Select */}
-                <div className="space-y-2 mt-5">
-                  <h3 htmlFor="ringtone">Notification Ringtone</h3>
-                  <Select className="space-y-0.5 mt-5" value={selectedRingtone} onValueChange={setSelectedRingtone}>
-                    <SelectTrigger id="ringtone" className="w-[200px]">
-                      <SelectValue placeholder="Select ringtone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="default">Default</SelectItem>
-                      <SelectItem value="chime">Chime</SelectItem>
-                      <SelectItem value="ping">Ping</SelectItem>
-                      <SelectItem value="alert">Alert</SelectItem>
-                      <SelectItem value="beep">Beep</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-
-
+            {/* NEW: Ringtone Select */}
+            <div className="space-y-2 mt-5">
+              <h3 htmlFor="ringtone">Notification Ringtone</h3>
+              <Select className="space-y-0.5 mt-5" value={selectedRingtone} onValueChange={setSelectedRingtone}>
+                <SelectTrigger id="ringtone" className="w-[200px]">
+                  <SelectValue placeholder="Select ringtone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Default</SelectItem>
+                  <SelectItem value="chime">Chime</SelectItem>
+                  <SelectItem value="ping">Ping</SelectItem>
+                  <SelectItem value="alert">Alert</SelectItem>
+                  <SelectItem value="beep">Beep</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         )}
 
