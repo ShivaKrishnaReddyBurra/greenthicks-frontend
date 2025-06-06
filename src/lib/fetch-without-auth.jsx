@@ -2,6 +2,7 @@ import { getAuthToken } from "@/lib/auth-utils";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
+// Fetch without authentication
 export const fetchWithoutAuth = async (url, options = {}) => {
   const headers = {
     ...options.headers,
@@ -14,25 +15,27 @@ export const fetchWithoutAuth = async (url, options = {}) => {
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error = await response.json().catch(() => ({}));
     if (error.errors) {
       const errorMessages = error.errors.map((err) => err.msg).join("; ");
-      throw new Error(errorMessages || "Something went wrong");
+      throw new Error(errorMessages || `Request failed with status ${response.status}`);
     }
-    throw new Error(error.message || "Something went wrong");
+    throw new Error(error.message || `Request failed with status ${response.status}`);
   }
 
   return response.json();
 };
 
+// Fetch with JWT authentication
 export const fetchWithAuth = async (url, options = {}) => {
   const token = getAuthToken();
 
   if (!token) {
     if (typeof window !== "undefined") {
+      localStorage.removeItem("authToken");
       window.location.href = "/login";
     }
-    throw new Error("You are not logged in, please login");
+    throw new Error("Not authenticated. Please log in.");
   }
 
   const headers = {
@@ -47,21 +50,17 @@ export const fetchWithAuth = async (url, options = {}) => {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    let errorMessage = error.message || "Something went wrong";
-    if (error.error) {
-      errorMessage = `${errorMessage}; ${error.error}`;
+    const error = await response.json().catch(() => ({}));
+    let errorMessage = error.message || `Request failed with status ${response.status}`;
+    if (error.errors) {
+      errorMessage = error.errors.map((err) => err.msg).join("; ");
     }
     if (response.status === 401) {
       if (typeof window !== "undefined") {
         localStorage.removeItem("authToken");
         window.location.href = "/login";
       }
-      throw new Error("Token expired or invalid");
-    }
-    if (error.errors) {
-      const errorMessages = error.errors.map((err) => err.msg).join("; ");
-      throw new Error(errorMessages || "Something went wrong");
+      throw new Error("Session expired. Please log in again.");
     }
     throw new Error(errorMessage);
   }
@@ -69,14 +68,16 @@ export const fetchWithAuth = async (url, options = {}) => {
   return response.json();
 };
 
+// Fetch with authentication for FormData (e.g., file uploads)
 export const fetchWithAuthFormData = async (url, formData, method = "POST") => {
   const token = getAuthToken();
 
   if (!token) {
     if (typeof window !== "undefined") {
+      localStorage.removeItem("authToken");
       window.location.href = "/login";
     }
-    throw new Error("You are not logged in, please login");
+    throw new Error("Not authenticated. Please log in.");
   }
 
   const headers = {
@@ -90,32 +91,34 @@ export const fetchWithAuthFormData = async (url, formData, method = "POST") => {
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error = await response.json().catch(() => ({}));
     if (response.status === 401) {
       if (typeof window !== "undefined") {
         localStorage.removeItem("authToken");
         window.location.href = "/login";
       }
-      throw new Error("Token expired or invalid");
+      throw new Error("Session expired. Please log in again.");
     }
     if (error.errors) {
       const errorMessages = error.errors.map((err) => err.msg).join("; ");
-      throw new Error(errorMessages || "Something went wrong");
+      throw new Error(errorMessages || `Request failed with status ${response.status}`);
     }
-    throw new Error(error.message || "Something went wrong");
+    throw new Error(error.message || `Request failed with status ${response.status}`);
   }
 
   return response.json();
 };
 
+// Fetch with authentication for file downloads
 export const fetchWithAuthFile = async (url, options = {}) => {
   const token = getAuthToken();
 
   if (!token) {
     if (typeof window !== "undefined") {
+      localStorage.removeItem("authToken");
       window.location.href = "/login";
     }
-    throw new Error("You are not logged in, please login");
+    throw new Error("Not authenticated. Please log in.");
   }
 
   const headers = {
@@ -129,19 +132,19 @@ export const fetchWithAuthFile = async (url, options = {}) => {
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error = await response.json().catch(() => ({}));
     if (response.status === 401) {
       if (typeof window !== "undefined") {
         localStorage.removeItem("authToken");
         window.location.href = "/login";
       }
-      throw new Error("Token expired or invalid");
+      throw new Error("Session expired. Please log in again.");
     }
     if (error.errors) {
       const errorMessages = error.errors.map((err) => err.msg).join("; ");
-      throw new Error(errorMessages || "Something went wrong");
+      throw new Error(errorMessages || `Request failed with status ${response.status}`);
     }
-    throw new Error(error.message || "Something went wrong");
+    throw new Error(error.message || `Request failed with status ${response.status}`);
   }
 
   return response;
@@ -319,7 +322,7 @@ export const getDeliveryBoyById = async (globalId) => {
 };
 
 export const getDeliveryBoys = async () => {
-  const users = await fetchWithAuth("/api/users"); // Updated to use /api/users
+  const users = await fetchWithAuth("/api/auth/users");
   return users.filter((user) => user.isDeliveryBoy);
 };
 
@@ -332,32 +335,93 @@ export const getProductById = async (globalId) => {
   return fetchWithoutAuth(`/api/products/${globalId}`);
 };
 
-export const createProduct = async (productData, images) => {
+export const createProduct = async (productData, images, imageData) => {
   const formData = new FormData();
-  Object.keys(productData).forEach((key) => {
-    formData.append(key, productData[key]);
-  });
-  images.forEach((image) => {
-    formData.append("images", image);
-  });
-  return fetchWithAuthFormData("/api/products", formData, "POST");
-};
 
-export const updateProduct = async (globalId, productData, images) => {
-  const formData = new FormData();
+  const complexFields = ["nutrition", "policies", "tags"];
   Object.keys(productData).forEach((key) => {
-    formData.append(key, productData[key]);
+    if (complexFields.includes(key) && productData[key] != null) {
+      formData.append(key, JSON.stringify(productData[key]));
+    } else if (productData[key] != null) {
+      formData.append(key, productData[key]);
+    }
   });
+
+  formData.append("imageData", JSON.stringify(imageData));
+
   if (images && images.length > 0) {
     images.forEach((image) => {
       formData.append("images", image);
     });
   }
+
+  return fetchWithAuthFormData("/api/products", formData, "POST");
+};
+
+export const updateProduct = async (globalId, productData, images = [], imageData = [], keepImages = true) => {
+  const formData = new FormData();
+
+  const complexFields = ["nutrition", "policies", "tags"];
+  Object.keys(productData).forEach((key) => {
+    if (complexFields.includes(key) && productData[key] != null) {
+      formData.append(key, JSON.stringify(productData[key]));
+    } else if (productData[key] != null) {
+      formData.append(key, productData[key]);
+    }
+  });
+
+  if (imageData && imageData.length > 0) {
+    formData.append("imageData", JSON.stringify(imageData));
+  }
+
+  formData.append("keepImages", keepImages.toString());
+
+  if (images && images.length > 0) {
+    images.forEach((image) => {
+      formData.append("images", image);
+    });
+  }
+
   return fetchWithAuthFormData(`/api/products/${globalId}`, formData, "PUT");
+};
+
+export const setPrimaryImage = async (globalId, imageUrl) => {
+  return fetchWithAuth(`/api/products/${globalId}/set-primary-image`, {
+    method: "PUT",
+    body: JSON.stringify({ imageUrl }),
+  });
+};
+
+export const deleteImage = async (globalId, imageUrl) => {
+  return fetchWithAuth(`/api/products/${globalId}/image`, {
+    method: "DELETE",
+    body: JSON.stringify({ imageUrl }),
+  });
 };
 
 export const deleteProduct = async (globalId) => {
   return fetchWithAuth(`/api/products/${globalId}`, { method: "DELETE" });
+};
+
+// Product Review API functions
+export const addProductReview = async (globalId, reviewData) => {
+  return fetchWithAuth(`/api/products/${globalId}/reviews`, {
+    method: "POST",
+    body: JSON.stringify(reviewData),
+  });
+};
+
+export const updateReviewStatus = async (globalId, reviewId, approved) => {
+  return fetchWithAuth(`/api/products/${globalId}/reviews/${reviewId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ approved }),
+  });
+};
+
+export const deleteReview = async (globalId, reviewId) => {
+  return fetchWithAuth(`/api/products/${globalId}/reviews/${reviewId}`, {
+    method: "DELETE",
+  });
 };
 
 // Order API functions
@@ -383,14 +447,12 @@ export const getOrder = async (globalId) => {
 export const cancelOrder = async (globalId) => {
   return fetchWithAuth(`/api/orders/${globalId}/cancel`, {
     method: "PUT",
-    body: JSON.stringify({ status: "cancelled" }),
+    body: JSON.stringify({}),
   });
 };
 
 export const exportOrders = async () => {
-  return fetchWithAuthFile("/api/orders/export", {
-    method: "GET",
-  });
+  return fetchWithAuthFile("/api/orders/export", { method: "GET" });
 };
 
 // Cart API functions
@@ -406,7 +468,7 @@ export const getCart = async () => {
 };
 
 export const removeFromCart = async (productId) => {
-  return fetchWithAuth(`/api/cart/item/${productId}`, {
+  return fetchWithAuth(`/api/cart/${productId}`, {
     method: "DELETE",
   });
 };
@@ -419,12 +481,12 @@ export const clearCart = async () => {
 
 // User Profile API function
 export const getUserProfile = async () => {
-  return fetchWithAuth("/api/auth/profile");
+  return fetchWithAuth("/api/users/profile");
 };
 
 // User Management API functions
-export const getAllUsers = async () => {
-  return fetchWithAuth("/api/users"); // Updated to use /api/users
+export const getUsers = async () => {
+  return fetchWithAuth("/api/users");
 };
 
 export const updateUser = async (globalId, userData) => {
@@ -452,6 +514,7 @@ export const validateCoupon = async (couponCode, subtotal) => {
   });
 };
 
+// Invoices API functions
 export const getInvoices = async (page = 1, limit = 10) => {
   return fetchWithAuth(`/api/invoices?page=${page}&limit=${limit}`);
 };
@@ -464,7 +527,7 @@ export const getInvoiceData = async (globalId) => {
   return fetchWithAuth(`/api/invoices/${globalId}`);
 };
 
-// Delivery Partner Login with role validation
+// Delivery Login API function
 export const deliveryLogin = async (identifier, password) => {
   const loginData = await fetchWithoutAuth("/api/auth/login", {
     method: "POST",
@@ -472,7 +535,7 @@ export const deliveryLogin = async (identifier, password) => {
   });
 
   if (!loginData.user.isDeliveryBoy && !loginData.user.isAdmin) {
-    throw new Error("Access restricted: Only delivery partners or admins can log in");
+    throw new Error("Access restricted: Only delivery partners or admins can log in.");
   }
 
   return loginData;
@@ -482,14 +545,12 @@ export const deliveryLogin = async (identifier, password) => {
 export const verifyEmail = async (email, token) => {
   return fetchWithoutAuth(
     `/api/auth/verify-email?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`,
-    {
-      method: "GET",
-    }
+    { method: "GET" },
   );
 };
 
 export const resendVerificationEmail = async (email) => {
-  return fetchWithoutAuth("/api/auth/resend-verification", {
+  return fetchWithoutAuth("/api/auth/resend-verification-email", {
     method: "POST",
     body: JSON.stringify({ email }),
   });
@@ -497,57 +558,57 @@ export const resendVerificationEmail = async (email) => {
 
 // Delivery Map API functions
 export const getDeliveryLocations = async () => {
-  return fetchWithAuth("/api/delivery-map/locations");
+  return fetchWithAuth("/api/delivery/locations");
 };
 
 export const updateDeliveryLocation = async (latitude, longitude, address) => {
-  return fetchWithAuth("/api/delivery-map/update-location", {
-    method: "POST",
+  return fetchWithAuth("/api/delivery/locations", {
+    method: "PUT",
     body: JSON.stringify({ latitude, longitude, address }),
   });
 };
 
 export const getCurrentLocation = async () => {
-  return fetchWithAuth("/api/delivery-map/current-location");
+  return fetchWithAuth("/api/delivery/location");
 };
 
 // Delivery Dashboard API functions
 export const getDeliveryStats = async () => {
-  return fetchWithAuth("/api/delivery-dashboard/stats");
+  return fetchWithAuth("/api/delivery/stats");
 };
 
 export const getDeliveryEarnings = async (period = "month") => {
-  return fetchWithAuth(`/api/delivery-dashboard/earnings?period=${period}`);
+  return fetchWithAuth(`/api/delivery/earnings?period=${period}`);
 };
 
 // Delivery Profile API functions
 export const getDeliveryProfile = async () => {
-  return fetchWithAuth("/api/delivery-profile");
+  return fetchWithAuth("/api/delivery/profile");
 };
 
 export const updateDeliveryPersonalInfo = async (personalData) => {
-  return fetchWithAuth("/api/delivery-profile/personal", {
+  return fetchWithAuth("/api/delivery/profile/personal", {
     method: "PUT",
     body: JSON.stringify(personalData),
   });
 };
 
 export const updateDeliveryVehicleInfo = async (vehicleData) => {
-  return fetchWithAuth("/api/delivery-profile/vehicle", {
+  return fetchWithAuth("/api/delivery/profile/vehicle", {
     method: "PUT",
     body: JSON.stringify(vehicleData),
   });
 };
 
 export const updateDeliveryBankDetails = async (bankData) => {
-  return fetchWithAuth("/api/delivery-profile/bank", {
+  return fetchWithAuth("/api/delivery/profile/bank", {
     method: "PUT",
     body: JSON.stringify(bankData),
   });
 };
 
 export const changeDeliveryPassword = async (currentPassword, newPassword) => {
-  return fetchWithAuth("/api/delivery-profile/password", {
+  return fetchWithAuth("/api/delivery/profile/password", {
     method: "PUT",
     body: JSON.stringify({ currentPassword, newPassword }),
   });
@@ -555,25 +616,25 @@ export const changeDeliveryPassword = async (currentPassword, newPassword) => {
 
 // Delivery Settings API functions
 export const getDeliverySettings = async () => {
-  return fetchWithAuth("/api/delivery-settings");
+  return fetchWithAuth("/api/delivery/settings");
 };
 
 export const updateDeliveryNotificationSettings = async (notificationData) => {
-  return fetchWithAuth("/api/delivery-settings/notifications", {
+  return fetchWithAuth("/api/delivery/settings/notifications", {
     method: "PUT",
     body: JSON.stringify(notificationData),
   });
 };
 
 export const updateDeliveryAppSettings = async (appData) => {
-  return fetchWithAuth("/api/delivery-settings/app", {
+  return fetchWithAuth("/api/delivery/settings/app", {
     method: "PUT",
     body: JSON.stringify(appData),
   });
 };
 
 export const updateDeliveryPrivacySettings = async (privacyData) => {
-  return fetchWithAuth("/api/delivery-settings/privacy", {
+  return fetchWithAuth("/api/delivery/settings/privacy", {
     method: "PUT",
     body: JSON.stringify(privacyData),
   });
@@ -581,21 +642,21 @@ export const updateDeliveryPrivacySettings = async (privacyData) => {
 
 // Export Reports API functions
 export const exportSalesReport = async (dateRange, format) => {
-  return fetchWithAuth("/api/export-reports/sales", {
+  return fetchWithAuthFile("/api/reports/sales", {
     method: "POST",
     body: JSON.stringify({ dateRange, format }),
   });
 };
 
 export const exportInventoryReport = async (format) => {
-  return fetchWithAuth("/api/export-reports/inventory", {
+  return fetchWithAuthFile("/api/reports/inventory", {
     method: "POST",
     body: JSON.stringify({ format }),
   });
 };
 
 export const exportCustomerReport = async (format) => {
-  return fetchWithAuth("/api/export-reports/customers", {
+  return fetchWithAuthFile("/api/reports/customer", {
     method: "POST",
     body: JSON.stringify({ format }),
   });
@@ -603,38 +664,38 @@ export const exportCustomerReport = async (format) => {
 
 // Admin Profile API functions
 export const getAdminProfile = async () => {
-  return fetchWithAuth("/api/admin-profile");
+  return fetchWithAuth("/api/admin/profile");
 };
 
 export const updateAdminProfile = async (profileData) => {
-  return fetchWithAuth("/api/admin-profile", {
+  return fetchWithAuth("/api/admin/profile", {
     method: "PUT",
     body: JSON.stringify(profileData),
   });
 };
 
 export const changeAdminPassword = async (currentPassword, newPassword) => {
-  return fetchWithAuth("/api/admin-profile/password", {
+  return fetchWithAuth("/api/admin/profile/password", {
     method: "PUT",
     body: JSON.stringify({ currentPassword, newPassword }),
   });
 };
 
 export const getAdminActivity = async (page = 1, limit = 10) => {
-  return fetchWithAuth(`/api/admin-profile/activity?page=${page}&limit=${limit}`);
+  return fetchWithAuth(`/api/admin/profile/activity?page=${page}&limit=${limit}`);
 };
 
 // Delivery Admin API functions
 export const getDeliveryBoysAdmin = async () => {
-  return fetchWithAuth("/api/delivery-admin/delivery-boys");
+  return fetchWithAuth("/api/delivery/admin/delivery-boys");
 };
 
 export const getDeliveryAnalytics = async (period = "month") => {
-  return fetchWithAuth(`/api/delivery-admin/analytics?period=${period}`);
+  return fetchWithAuth(`/api/delivery/admin/analytics?period=${period}`);
 };
 
 export const assignDeliveryBoyAdmin = async (orderId, deliveryBoyId) => {
-  return fetchWithAuth(`/api/delivery-admin/assign-delivery/${orderId}`, {
+  return fetchWithAuth(`/api/delivery/admin/assign/${orderId}`, {
     method: "POST",
     body: JSON.stringify({ deliveryBoyId }),
   });
@@ -646,5 +707,5 @@ export const getDeliveryPerformanceReport = async (deliveryBoyId, startDate, end
   if (startDate) params.append("startDate", startDate);
   if (endDate) params.append("endDate", endDate);
 
-  return fetchWithAuth(`/api/delivery-admin/performance-report?${params.toString()}`);
+  return fetchWithAuth(`/api/delivery/admin/performance?${params.toString()}`);
 };

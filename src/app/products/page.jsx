@@ -6,7 +6,7 @@ import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
-import { Leaf, Filter } from "lucide-react";
+import { Filter } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -18,31 +18,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { getProducts } from "@/lib/api";
-import Link from "next/link";
-
-const LeafLoader = () => {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <div className="leafbase">
-        <div className="lf">
-          <div className="leaf1">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="leaf2">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="leaf3">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="tail"></div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const SkeletonLoader = () => {
   return (
@@ -78,7 +53,16 @@ export default function ProductsPage() {
       try {
         setLoading(true);
         const data = await getProducts();
-        setProducts(data.filter(product => product.inStock)); // Filter in-stock products
+        // Sort products: in-stock (stock > 0) first, then out-of-stock
+        const sortedProducts = data.sort((a, b) => {
+          const aInStock = a.stock > 0;
+          const bInStock = b.stock > 0;
+          if (aInStock && !bInStock) return -1;
+          if (!aInStock && bInStock) return 1;
+          return 0;
+        });
+        console.log("Fetched and sorted products:", sortedProducts.map(p => ({ name: p.name, stock: p.stock })));
+        setProducts(sortedProducts);
       } catch (error) {
         console.error("Error fetching products:", error);
       } finally {
@@ -161,16 +145,28 @@ export default function ProductsPage() {
     setActionLoading(false);
   };
 
-  const filteredProducts = products.filter((product) => {
-    if (selectedCategory !== "all" && product.category !== selectedCategory) return false;
-    if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
-    if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
+  const filteredProducts = products
+    .filter((product) => {
+      if (selectedCategory !== "all" && product.category !== selectedCategory) return false;
+      if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
+      if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const aInStock = a.stock > 0;
+      const bInStock = b.stock > 0;
+      if (aInStock && !bInStock) return -1;
+      if (!aInStock && bInStock) return 1;
+      return 0;
+    });
+
+  useEffect(() => {
+    console.log("Filtered and sorted products:", filteredProducts.map(p => ({ name: p.name, stock: p.stock })));
+  }, [filteredProducts]);
 
   return (
     <>
-      {actionLoading && <LeafLoader />}
+      {actionLoading && <SkeletonLoader />}
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8">
           <div>
@@ -262,7 +258,20 @@ export default function ProductsPage() {
             <div className="sticky top-20">
               <div className="bg-card rounded-lg border p-4">
                 <h3 className="font-medium mb-3 flex items-center gap-2">
-                  <Leaf className="h-4 w-4 text-primary" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 text-primary"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
                   Categories
                 </h3>
                 <div className="space-y-2">
@@ -324,9 +333,9 @@ export default function ProductsPage() {
               <div className="text-center py-12">
                 <h3 className="text-lg font-medium mb-2">No products found</h3>
                 <p className="text-muted-foreground mb-6">Try adjusting your filters or search query</p>
-                <Link href="/products" onClick={(e) => handleNavigation(e, "/products")}>
+                <a href="/products" onClick={(e) => handleNavigation(e, "/products")}>
                   <Button>Browse Products</Button>
-                </Link>
+                </a>
               </div>
             )}
           </div>

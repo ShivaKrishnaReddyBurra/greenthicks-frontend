@@ -1,4 +1,4 @@
-"use client"; // Mark as client component
+"use client";
 
 import React, { useEffect, useRef } from "react";
 import { Inter } from "next/font/google";
@@ -10,9 +10,9 @@ import { Providers } from "./providers";
 import webicon from "@/public/favicon.ico";
 import LayoutWrapper from "@/components/layout-wrapper";
 import { Toaster } from "@/components/ui/toaster";
-import { metadata } from './metadata'; // Import metadata from the separate file
-import DeliveryReturnButton from '@/components/DeliveryReturnButton'; // Adjust the path if needed
-
+import { metadata } from './metadata';
+import DeliveryReturnButton from '@/components/DeliveryReturnButton';
+import DeliveryAdminReturnButton from '@/components/DeliveryAdminReturnPage';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,16 +21,12 @@ export default function RootLayout({ children }) {
   const loginCSSRef = useRef(null);
 
   useEffect(() => {
-    // Check if the current route is one of the auth pages
     const isAuthPage = ['/login', '/register', '/LoginOrRegister'].includes(pathname);
     if (isAuthPage) {
-      // Dynamically import login.css for auth pages
       import('./login.css').then((module) => {
         if (loginCSSRef.current) {
-          // Remove the previous CSS if it exists
           document.head.removeChild(loginCSSRef.current);
         }
-        // Create a new link element for the CSS
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = './login.css';
@@ -38,14 +34,12 @@ export default function RootLayout({ children }) {
         document.head.appendChild(link);
       });
     } else {
-      // Remove the login CSS if navigating away from an auth page
       if (loginCSSRef.current) {
         document.head.removeChild(loginCSSRef.current);
         loginCSSRef.current = null;
       }
     }
 
-    // Cleanup function to remove the CSS when the component unmounts
     return () => {
       if (loginCSSRef.current) {
         document.head.removeChild(loginCSSRef.current);
@@ -63,10 +57,17 @@ export default function RootLayout({ children }) {
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <Providers>
             <LayoutWrapper>{children}</LayoutWrapper>
+            <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center space-y-3 sm:bottom-8 sm:right-8">
+              <div className="flex space-x-3">
+                <DeliveryAdminReturnButton />
+                <DeliveryReturnButton />
+              </div>
+              <div className="flex justify-center">
+                <AdminReturnButton />
+              </div>
+            </div>
           </Providers>
         </ThemeProvider>
-        <DeliveryReturnButton />
-        <AdminReturnButton />
         <Toaster />
       </body>
     </html>

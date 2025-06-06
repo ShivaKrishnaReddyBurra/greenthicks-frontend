@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Settings } from "lucide-react";
+import { Shield } from "lucide-react";
 import { checkAdminStatus } from "@/lib/auth-utils";
 
 const LeafLoader = () => {
@@ -30,18 +30,19 @@ const LeafLoader = () => {
   );
 };
 
-export default function AdminReturnButton() {
-  const [isAdmin, setIsAdmin] = useState(false);
+export default function DeliveryAdminReturnButton() {
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
-  const isAdminPage = pathname.startsWith("/admin");
+  const isRestrictedPage = pathname.startsWith("/admin") || pathname.startsWith("/delivery");
 
   useEffect(() => {
     setMounted(true);
-    setIsAdmin(checkAdminStatus());
+    const isAdmin = checkAdminStatus();
+    setIsAuthorized(isAdmin);
   }, []);
 
   const handleNavigation = async (e, href) => {
@@ -52,7 +53,7 @@ export default function AdminReturnButton() {
     setIsLoading(false);
   };
 
-  if (!mounted || !isAdmin || isAdminPage) {
+  if (!mounted || !isAuthorized || isRestrictedPage) {
     return null;
   }
 
@@ -60,12 +61,12 @@ export default function AdminReturnButton() {
     <>
       {isLoading && <LeafLoader />}
       <Link
-  href="/admin/dashboard"
-  onClick={(e) => handleNavigation(e, "/admin/dashboard")}
-  className="bg-green-600 text-white p-3 rounded-full shadow-lg hover:bg-green-700 transition-colors"
+  href="/delivery-admin/dashboard"
+  onClick={(e) => handleNavigation(e, "/delivery-admin/dashboard")}
+  className="bg-green-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
   aria-label="Return to Admin Dashboard"
 >
-  <Settings className="h-6 w-6" />
+  <Shield className="h-6 w-6" />
 </Link>
     </>
   );

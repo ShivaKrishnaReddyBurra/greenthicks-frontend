@@ -62,13 +62,13 @@ export default function DeliveryReturnButton() {
     <>
       {isLoading && <LeafLoader />}
       <Link
-        href="/delivery/dashboard"
-        onClick={(e) => handleNavigation(e, "/delivery/dashboard")}
-        className="fixed bottom-16 right-4 z-50 bg-green-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors px-4 py-2 mb-2"
-        aria-label="Return to Delivery Dashboard"
-      >
-        <Truck className="h-6 w-6" />
-      </Link>
+  href="/delivery/dashboard"
+  onClick={(e) => handleNavigation(e, "/delivery/dashboard")}
+  className="bg-green-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
+  aria-label="Return to Delivery Dashboard"
+>
+  <Truck className="h-6 w-6" />
+</Link>
     </>
   );
 }

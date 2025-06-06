@@ -1,380 +1,776 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Upload, X, ArrowLeft, Save } from "lucide-react"
-import { createProduct } from "@/lib/api"
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { Tabs, TabsContent, TabsTrigger, TabsList } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Upload, X, ArrowLeft, Save, ImagePlus, Trash2 } from 'lucide-react';
+import { createProduct } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AddProduct() {
-  const router = useRouter()
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    price: "",
-    stock: "",
-    category: "",
-    unit: "",
-    featured: false,
-    bestseller: false,
-    new: false,
-    seasonal: false,
-    discount: 0,
-  })
+    const router = useRouter();
+    const { toast } = useToast();
+    const [formData, setFormData] = useState({
+        name: '',
+        description: '',
+        price: '',
+        originalPrice: '',
+        stock: '',
+        category: '',
+        unit: '',
+        sku: '',
+        featured: false,
+        bestseller: false,
+        new: true, // Default to true for new products
+        seasonal: false,
+        organic: false,
+        tags: [],
+        nutrition: {
+            calories: 0,
+            protein: 0,
+            carbs: 0,
+            fat: 0,
+            fiber: 0,
+            vitamins: [],
+        },
+        policies: {
+            return: '',
+            shipping: '',
+            availability: '',
+        },
+        published: false,
+    });
+    const [images, setImages] = useState([]);
+    const [imagePreviews, setImagePreviews] = useState([]);
+    const [newImagesPrimary, setNewImagesPrimary] = useState([]);
+    const [newTag, setNewTag] = useState('');
+    const [newVitamin, setNewVitamin] = useState({ name: '', amount: '', daily: '' });
+    const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState('general');
 
-  const [images, setImages] = useState([])
-  const [imagePreviews, setImagePreviews] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+    const categories = [
+        'leafy',
+        'fruit',
+        'root',
+        'herbs',
+        'milk',
+        'pulses',
+        'grains',
+        'spices',
+        'nuts',
+        'oils',
+        'snacks',
+        'beverages',
+    ];
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    })
-  }
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData({
+            ...formData,
+            [name]: type === 'checkbox' ? checked : value,
+        });
+    };
 
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files)
-    const maxSize = 3 * 1024 * 1024 // 3MB in bytes
+    const handleNutritionChange = (e) => {
+        const { name, value } = e.target;
+        setFormData({
+            ...formData,
+            nutrition: {
+                ...formData.nutrition,
+                [name]: parseFloat(value) || 0,
+            },
+        });
+    };
 
-    // Check for file size
-    const oversizedFiles = files.filter(file => file.size > maxSize)
-    if (oversizedFiles.length > 0) {
-      setError("⚠ Some images exceed 3MB. Please upload images smaller than 3MB.")
-      return
-    }
+    const handlePolicyChange = (e) => {
+        const { name, value } = e.target;
+        setFormData({
+            ...formData,
+            policies: {
+                ...formData.policies,
+                [name]: value,
+            },
+        });
+    };
 
-    if (images.length + files.length > 6) {
-      setError("You can upload a maximum of 6 images")
-      return
-    }
+    const handleAddTag = () => {
+        if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+            setFormData({
+                ...formData,
+                tags: [...formData.tags, newTag.trim()],
+            });
+            setNewTag('');
+        }
+    };
 
-    const newImages = [...images, ...files]
-    setImages(newImages)
+    const handleRemoveTag = (tagToRemove) => {
+        setFormData({
+            ...formData,
+            tags: formData.tags.filter((tag) => tag !== tagToRemove),
+        });
+    };
 
-    const previews = files.map((file) => {
-      return new Promise((resolve) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result)
-        reader.readAsDataURL(file)
-      })
-    })
+    const handleAddVitamin = () => {
+        if (newVitamin.name && newVitamin.amount) {
+            setFormData({
+                ...formData,
+                nutrition: {
+                    ...formData.nutrition,
+                    vitamins: [...formData.nutrition.vitamins, { ...newVitamin }],
+                },
+            });
+            setNewVitamin({ name: '', amount: '', daily: '' });
+        }
+    };
 
-    Promise.all(previews).then((results) => {
-      setImagePreviews([...imagePreviews, ...results])
-    })
-  }
+    const handleRemoveVitamin = (index) => {
+        const updatedVitamins = [...formData.nutrition.vitamins];
+        updatedVitamins.splice(index, 1);
+        setFormData({
+            ...formData,
+            nutrition: { ...formData.nutrition, vitamins: updatedVitamins },
+        });
+    };
 
-  const removeImage = (index) => {
-    setImages(images.filter((_, i) => i !== index))
-    setImagePreviews(imagePreviews.filter((_, i) => i !== index))
-  }
+    const handleImageChange = (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+        const maxSize = 3 * 1024 * 1024; // 3MB
+        const oversizedFiles = files.filter((file) => file.size > maxSize);
+        if (oversizedFiles.length > 0) {
+            toast({
+                title: 'Error',
+                description: 'Some images exceed 3MB. Please upload smaller images.',
+                variant: 'destructive',
+            });
+            return;
+        }
 
-    try {
-      if (
-        !formData.name ||
-        !formData.price ||
-        !formData.stock ||
-        !formData.category ||
-        !formData.description ||
-        !formData.unit ||
-        images.length === 0
-      ) {
-        throw new Error("Please fill all required fields and upload at least one image")
-      }
+        if (images.length + files.length > 6) {
+            toast({
+                title: 'Error',
+                description: 'Maximum of 6 images allowed.',
+                variant: 'destructive',
+            });
+            return;
+        }
 
-      const productData = {
-        ...formData,
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock),
-        discount: formData.discount ? parseInt(formData.discount) : 0,
-      }
+        setImages([...images, ...files]);
+        const newPreviews = files.map((file) => URL.createObjectURL(file));
+        setImagePreviews([...imagePreviews, ...newPreviews]);
+        setNewImagesPrimary([...newImagesPrimary, ...files.map((_, i) => i === 0 && images.length === 0)]);
+    };
 
-      await createProduct(productData, images)
-      router.push("/admin/products")
-    } catch (error) {
-      console.error("Error adding product:", error)
-      setError("Failed to add product. Please try again.")
-    } finally {
-      setLoading(false)
-    }
-  }
+    const handleRemoveImage = (index) => {
+        const updatedImages = [...images];
+        updatedImages.splice(index, 1);
+        setImages(updatedImages);
 
-  const categories = ["leafy", "fruit", "root", "herbs", "milk", "pulses", "grains", "spices", "nuts", "oils", "snacks", "beverages"]
+        const updatedPreviews = [...imagePreviews];
+        URL.revokeObjectURL(updatedPreviews[index]);
+        updatedPreviews.splice(index, 1);
+        setImagePreviews(updatedPreviews);
 
-  return (
-    <div>
-      {/* Breadcrumb */}
-      <div className="flex items-center mb-6">
-        <Link href="/admin/products" className="flex items-center text-muted-foreground hover:text-foreground">
-          <ArrowLeft size={16} className="mr-2" />
-          Back to Products
-        </Link>
-      </div>
+        const updatedPrimary = [...newImagesPrimary];
+        const wasPrimary = updatedPrimary[index];
+        updatedPrimary.splice(index, 1);
+        setNewImagesPrimary(updatedPrimary);
 
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <h1 className="text-3xl font-bold mb-4 md:mb-0">Add New Product</h1>
-      </div>
+        // If the removed image was primary, set the first remaining image as primary
+        if (wasPrimary && updatedImages.length > 0) {
+            const newPrimary = [...updatedPrimary];
+            newPrimary[0] = true;
+            setNewImagesPrimary(newPrimary);
+        }
+    };
 
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-          <p>{error}</p>
+    const handleSetPrimaryImage = (index) => {
+        setNewImagesPrimary(newImagesPrimary.map((_, i) => i === index));
+    };
+
+    const handleSubmit = async () => {
+        setLoading(true);
+        try {
+            if (
+                !formData.name ||
+                !formData.price ||
+                !formData.stock ||
+                !formData.category ||
+                !formData.description ||
+                !formData.unit ||
+                images.length === 0
+            ) {
+                throw new Error('Please fill all required fields and upload at least one image');
+            }
+
+            const productData = {
+                name: formData.name,
+                description: formData.description,
+                price: parseFloat(formData.price),
+                originalPrice: formData.originalPrice
+                    ? parseFloat(formData.originalPrice)
+                    : parseFloat(formData.price),
+                category: formData.category,
+                unit: formData.unit,
+                stock: parseInt(formData.stock),
+                featured: formData.featured,
+                bestseller: formData.bestseller,
+                seasonal: formData.seasonal,
+                new: formData.new,
+                organic: formData.organic,
+                tags: formData.tags,
+                nutrition: formData.nutrition,
+                policies: formData.policies,
+                sku: formData.sku || `PROD-${Date.now()}`,
+                published: formData.published,
+            };
+
+            const imageData = images.map((_, index) => ({
+                primary: newImagesPrimary[index] || false,
+            }));
+
+            await createProduct(productData, images, imageData);
+
+            toast({
+                title: 'Success',
+                description: 'Product added successfully',
+            });
+            router.push('/admin/products');
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: error.message || 'Failed to add product.',
+                variant: 'destructive',
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Add New Product</h1>
+                    <p className="text-muted-foreground">Create a new product with all necessary details.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => router.push('/admin/products')}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back
+                    </Button>
+                    <Button onClick={handleSubmit} disabled={loading}>
+                        {loading ? (
+                            <>
+                                <div className="animate-spin mr-2 h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div>
+                                Saving...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="mr-2 h-4 w-4" />
+                                Save Product
+                            </>
+                        )}
+                    </Button>
+                </div>
+            </div>
+
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+                <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="general">General</TabsTrigger>
+                    <TabsTrigger value="images">Images</TabsTrigger>
+                    <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
+                    <TabsTrigger value="policies">Policies</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="general" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Basic Information</CardTitle>
+                            <CardDescription>Enter the basic details of your product.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Product Name *</Label>
+                                    <Input
+                                        id="name"
+                                        name="name"
+                                        value={formData.name}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="sku">SKU</Label>
+                                    <Input
+                                        id="sku"
+                                        name="sku"
+                                        value={formData.sku}
+                                        onChange={handleChange}
+                                        placeholder="e.g., PROD-123"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="description">Description *</Label>
+                                <Textarea
+                                    id="description"
+                                    name="description"
+                                    rows={4}
+                                    value={formData.description}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="price">Price (₹) *</Label>
+                                    <Input
+                                        id="price"
+                                        name="price"
+                                        type="number"
+                                        step="0.01"
+                                        value={formData.price}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="originalPrice">Original Price (₹)</Label>
+                                    <Input
+                                        id="originalPrice"
+                                        name="originalPrice"
+                                        type="number"
+                                        step="0.01"
+                                        value={formData.originalPrice}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="stock">Stock Quantity *</Label>
+                                    <Input
+                                        id="stock"
+                                        name="stock"
+                                        type="number"
+                                        value={formData.stock}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="category">Category *</Label>
+                                    <Select
+                                        name="category"
+                                        value={formData.category}
+                                        onValueChange={(value) => setFormData({ ...formData, category: value })}
+                                        required
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select category" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {categories.map((cat) => (
+                                                <SelectItem key={cat} value={cat}>
+                                                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="unit">Unit *</Label>
+                                    <Input
+                                        id="unit"
+                                        name="unit"
+                                        value={formData.unit}
+                                        onChange={handleChange}
+                                        placeholder="e.g., kg, pack"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Tags</Label>
+                                <div className="flex flex-wrap gap-2 mb-2">
+                                    {formData.tags.map((tag) => (
+                                        <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                                            {tag}
+                                            <button
+                                                onClick={() => handleRemoveTag(tag)}
+                                                className="ml-1 rounded-full hover:bg-muted p-0.5"
+                                            >
+                                                <X className="h-3 w-3" />
+                                                <span className="sr-only">Remove {tag}</span>
+                                            </button>
+                                        </Badge>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder="Add a tag"
+                                        value={newTag}
+                                        onChange={(e) => setNewTag(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                                    />
+                                    <Button type="button" onClick={handleAddTag} size="sm">
+                                        Add
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Product Status</CardTitle>
+                            <CardDescription>Control the visibility and status of your product.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="published">Published</Label>
+                                    <p className="text-sm text-muted-foreground">Make this product visible on your store.</p>
+                                </div>
+                                <Switch
+                                    id="published"
+                                    name="published"
+                                    checked={formData.published}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, published: checked })}
+                                />
+                            </div>
+                            <Separator />
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="featured">Featured</Label>
+                                    <p className="text-sm text-muted-foreground">Show this product in featured sections.</p>
+                                </div>
+                                <Switch
+                                    id="featured"
+                                    name="featured"
+                                    checked={formData.featured}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, featured: checked })}
+                                />
+                            </div>
+                            <Separator />
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="bestseller">Bestseller</Label>
+                                    <p className="text-sm text-muted-foreground">Mark as a top-selling product.</p>
+                                </div>
+                                <Switch
+                                    id="bestseller"
+                                    name="bestseller"
+                                    checked={formData.bestseller}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, bestseller: checked })}
+                                />
+                            </div>
+                            <Separator />
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="seasonal">Seasonal</Label>
+                                    <p className="text-sm text-muted-foreground">Mark as a seasonal product.</p>
+                                </div>
+                                <Switch
+                                    id="seasonal"
+                                    name="seasonal"
+                                    checked={formData.seasonal}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, seasonal: checked })}
+                                />
+                            </div>
+                            <Separator />
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="new">New</Label>
+                                    <p className="text-sm text-muted-foreground">Mark as a new product.</p>
+                                </div>
+                                <Switch
+                                    id="new"
+                                    name="new"
+                                    checked={formData.new}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, new: checked })}
+                                />
+                            </div>
+                            <Separator />
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label htmlFor="organic">Organic</Label>
+                                    <p className="text-sm text-muted-foreground">Mark as an organic product.</p>
+                                </div>
+                                <Switch
+                                    id="organic"
+                                    name="organic"
+                                    checked={formData.organic}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, organic: checked })}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="images" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Product Images</CardTitle>
+                            <CardDescription>Upload product images. The primary image is displayed first.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {imagePreviews.map((preview, index) => (
+                                    <div key={preview} className="border rounded-lg overflow-hidden">
+                                        <div className="relative aspect-square">
+                                            <Image
+                                                src={preview}
+                                                alt={`New image preview ${index + 1}`}
+                                                fill
+                                                className="object-cover"
+                                            />
+                                            {newImagesPrimary[index] && (
+                                                <div className="absolute top-2 left-2">
+                                                    <Badge variant="default">Primary</Badge>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="p-3 flex justify-between items-center">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleSetPrimaryImage(index)}
+                                                disabled={newImagesPrimary[index]}
+                                            >
+                                                {newImagesPrimary[index] ? 'Primary' : 'Set as Primary'}
+                                            </Button>
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => handleRemoveImage(index)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                <div className="border border-dashed rounded-lg overflow-hidden">
+                                    <div className="aspect-square flex flex-col items-center justify-center p-6 text-center">
+                                        <ImagePlus className="h-10 w-10 text-muted-foreground mb-2" />
+                                        <h3 className="font-medium">Add Image</h3>
+                                        <p className="text-sm text-muted-foreground mb-4">Upload a new product image (max 3MB)</p>
+                                        <Button variant="secondary" size="sm" asChild>
+                                            <label>
+                                                <Upload className="h-4 w-4 mr-2" />
+                                                Upload
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    multiple
+                                                    className="hidden"
+                                                    onChange={handleImageChange}
+                                                />
+                                            </label>
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="nutrition" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Nutrition Facts</CardTitle>
+                            <CardDescription>Add nutritional information for your product.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="calories">Calories</Label>
+                                    <Input
+                                        id="calories"
+                                        name="calories"
+                                        type="number"
+                                        value={formData.nutrition.calories || ''}
+                                        onChange={handleNutritionChange}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="protein">Protein (g)</Label>
+                                    <Input
+                                        id="protein"
+                                        name="protein"
+                                        type="number"
+                                        step="0.1"
+                                        value={formData.nutrition.protein || ''}
+                                        onChange={handleNutritionChange}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="carbs">Carbs (g)</Label>
+                                    <Input
+                                        id="carbs"
+                                        name="carbs"
+                                        type="number"
+                                        step="0.1"
+                                        value={formData.nutrition.carbs || ''}
+                                        onChange={handleNutritionChange}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="fat">Fat (g)</Label>
+                                    <Input
+                                        id="fat"
+                                        name="fat"
+                                        type="number"
+                                        step="0.1"
+                                        value={formData.nutrition.fat || ''}
+                                        onChange={handleNutritionChange}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="fiber">Fiber (g)</Label>
+                                <Input
+                                    id="fiber"
+                                    name="fiber"
+                                    type="number"
+                                    step="0.1"
+                                    value={formData.nutrition.fiber || ''}
+                                    onChange={handleNutritionChange}
+                                />
+                            </div>
+
+                            <div className="space-y-4">
+                                <Label>Vitamins & Minerals</Label>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Name</TableHead>
+                                            <TableHead>Amount</TableHead>
+                                            <TableHead>% Daily Value</TableHead>
+                                            <TableHead className="w-[100px]">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {formData.nutrition.vitamins.map((vitamin, index) => (
+                                            <TableRow key={index}>
+                                                <TableCell>{vitamin.name}</TableCell>
+                                                <TableCell>{vitamin.amount}</TableCell>
+                                                <TableCell>{vitamin.daily}</TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleRemoveVitamin(index)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="vitaminName">Name</Label>
+                                        <Input
+                                            id="vitaminName"
+                                            value={newVitamin.name}
+                                            onChange={(e) => setNewVitamin({ ...newVitamin, name: e.target.value })}
+                                            placeholder="e.g., Vitamin C"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="vitaminAmount">Amount</Label>
+                                        <Input
+                                            id="vitaminAmount"
+                                            value={newVitamin.amount}
+                                            onChange={(e) => setNewVitamin({ ...newVitamin, amount: e.target.value })}
+                                            placeholder="e.g., 90mg"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="vitaminDaily">% Daily Value</Label>
+                                        <Input
+                                            id="vitaminDaily"
+                                            value={newVitamin.daily}
+                                            onChange={(e) => setNewVitamin({ ...newVitamin, daily: e.target.value })}
+                                            placeholder="e.g., 100%"
+                                        />
+                                    </div>
+                                </div>
+                                <Button onClick={handleAddVitamin} size="sm">
+                                    Add Vitamin/Mineral
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="policies" className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Product Policies</CardTitle>
+                            <CardDescription>Define policies for returns, shipping, and availability.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="return">Return Policy</Label>
+                                <Textarea
+                                    id="return"
+                                    name="return"
+                                    rows={3}
+                                    value={formData.policies.return}
+                                    onChange={handlePolicyChange}
+                                    placeholder="Describe the return policy..."
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="shipping">Shipping Policy</Label>
+                                <Textarea
+                                    id="shipping"
+                                    name="shipping"
+                                    rows={3}
+                                    value={formData.policies.shipping}
+                                    onChange={handlePolicyChange}
+                                    placeholder="Describe the shipping policy..."
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="availability">Availability</Label>
+                                <Textarea
+                                    id="availability"
+                                    name="availability"
+                                    rows={3}
+                                    value={formData.policies.availability}
+                                    onChange={handlePolicyChange}
+                                    placeholder="Describe availability..."
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
-      )}
-
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-card rounded-lg shadow-md p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold mb-4">Basic Information</h2>
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-muted-foreground mb-1">
-                Product Name *
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full p-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-muted-foreground mb-1">
-                Description *
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                required
-                rows={4}
-                className="w-full p-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label htmlFor="category" className="block text-sm font-medium text-muted-foreground mb-1">
-                Category *
-              </label>
-              <select
-                id="category"
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                required
-                className="w-full p-2 border rounded-md"
-              >
-                <option value="">Select a category</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Pricing & Inventory */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold mb-4">Pricing & Inventory</h2>
-            <div>
-              <label htmlFor="price" className="block text-sm font-medium text-muted-foreground mb-1">
-                Price (₹) *
-              </label>
-              <input
-                type="number"
-                id="price"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                required
-                min="0"
-                step="0.01"
-                className="w-full p-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label htmlFor="discount" className="block text-sm font-medium text-muted-foreground mb-1">
-                Discount (%)
-              </label>
-              <input
-                type="number"
-                id="discount"
-                name="discount"
-                value={formData.discount}
-                onChange={handleChange}
-                min="0"
-                max="100"
-                className="w-full p-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label htmlFor="stock" className="block text-sm font-medium text-muted-foreground mb-1">
-                Stock *
-              </label>
-              <input
-                type="number"
-                id="stock"
-                name="stock"
-                value={formData.stock}
-                onChange={handleChange}
-                required
-                min="0"
-                className="w-full p-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label htmlFor="unit" className="block text-sm font-medium text-muted-foreground mb-1">
-                Unit *
-              </label>
-              <input
-                type="text"
-                id="unit"
-                name="unit"
-                value={formData.unit}
-                onChange={handleChange}
-                required
-                className="w-full p-2 border rounded-md"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Image Upload and Tags */}
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold mb-4">Images & Tags</h2>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">
-              Product Images (up to 6, max 3MB each) <span className="text-red-500">*</span>
-            </label>
-            {imagePreviews.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                {imagePreviews.map((preview, index) => (
-                  <div key={index} className="relative w-full h-24 border rounded-md overflow-hidden">
-                    <img
-                      src={preview}
-                      alt={`Preview ${index + 1}`}
-                      className="w-full h-full object-contain"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center h-64">
-              <Upload size={48} className="text-gray-400 mb-2" />
-              <p className="text-sm text-gray-500 mb-2">Click or drag to upload images</p>
-              <input
-                type="file"
-                id="images"
-                name="images"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handleImageChange}
-              />
-              <label
-                htmlFor="images"
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-md cursor-pointer hover:bg-primary/90 transition-colors"
-              >
-                Select Images
-              </label>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="featured"
-                name="featured"
-                checked={formData.featured}
-                onChange={handleChange}
-                className="mr-2"
-              />
-              <label htmlFor="featured" className="text-sm">
-                Featured
-              </label>
-            </div>
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="bestseller"
-                name="bestseller"
-                checked={formData.bestseller}
-                onChange={handleChange}
-                className="mr-2"
-              />
-              <label htmlFor="bestseller" className="text-sm">
-                Bestseller
-              </label>
-            </div>
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="new"
-                name="new"
-                checked={formData.new}
-                onChange={handleChange}
-                className="mr-2"
-              />
-              <label htmlFor="new" className="text-sm">
-                New Arrival
-              </label>
-            </div>
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="seasonal"
-                name="seasonal"
-                checked={formData.seasonal}
-                onChange={handleChange}
-                className="mr-2"
-              />
-              <label htmlFor="seasonal" className="text-sm">
-                Seasonal
-              </label>
-            </div>
-          </div>
-        </div>
-
-        {/* Form Actions */}
-        <div className="mt-6 pt-6 border-t flex justify-end gap-2">
-          <Link
-            href="/admin/products"
-            className="px-4 py-2 border rounded-md hover:bg-muted transition-colors flex items-center"
-          >
-            <X size={18} className="mr-2" />
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center disabled:opacity-50"
-          >
-            <Save size={18} className="mr-2" />
-            {loading ? "Saving..." : "Save Product"}
-          </button>
-        </div>
-      </form>
-    </div>
-  )
+    );
 }
