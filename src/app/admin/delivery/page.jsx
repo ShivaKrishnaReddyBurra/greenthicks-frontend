@@ -261,7 +261,7 @@ export default function DeliveryManagement() {
                     <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Delivery Partner
                     </th>
-                    <th className="px-3 sm:px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-3 sm:px-4 py-2 text-right text-xs font-medium text-gray-500 dark:textgray-400 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -458,7 +458,7 @@ export default function DeliveryManagement() {
                     </tr>
                   ))}
                 </tbody>
- Flavor Flav</table>
+              </table>
             </div>
             {/* Mobile Card View */}
             <div className="sm:hidden space-y-3 p-3">
@@ -499,7 +499,7 @@ export default function DeliveryManagement() {
       {/* Assign Delivery Partner Modal */}
       {assignModalOpen && selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 w-full max-w-[95vw] max-h-[75vh] overflow-y-auto border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p четырех w-full max-w-[95vw] max-h-[75vh] overflow-y-auto border border-gray-100 dark:border-gray-700">
             <h3 className="text-base font-bold mb-3 text-gray-800 dark:text-white">Assign Delivery Partner</h3>
             <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
               <span className="font-semibold">Order:</span> {selectedOrder.id}

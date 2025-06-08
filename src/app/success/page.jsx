@@ -1,15 +1,15 @@
 "use client";
 import React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, MapPin } from "lucide-react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Home, ShoppingBag } from "lucide-react";
 import { getOrder } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import Image from "next/image";
-import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import SuccessAnimation from "./success-animation";
 
 export default function CheckoutSuccessPage() {
   const router = useRouter();
@@ -34,6 +34,7 @@ export default function CheckoutSuccessPage() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isAfter1PM, setIsAfter1PM] = useState(false);
+  const audioRef = useRef(null);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -51,23 +52,20 @@ export default function CheckoutSuccessPage() {
       }
 
       try {
-        // Fetch order details from backend
         const response = await getOrder(orderId);
         const order = response;
-        
-        // Calculate delivery date and time based on order time
+
         const orderDate = new Date(order.orderDate);
         const today = new Date();
         const tomorrow = new Date(today);
         tomorrow.setDate(today.getDate() + 1);
-        
-        // Check if order was placed before 1 PM
+
         const isBefore1PM = orderDate.getHours() < 13;
         setIsAfter1PM(!isBefore1PM);
-        
+
         const deliveryDate = isBefore1PM ? today : tomorrow;
-        const deliveryTime = isBefore1PM 
-          ? "Today (Evening Delivery, 6 PM - 10 PM)" 
+        const deliveryTime = isBefore1PM
+          ? "Today (Evening Delivery, 6 PM - 10 PM)"
           : "Tomorrow (Evening Delivery, 6 PM - 10 PM)";
 
         setOrderDetails({
@@ -94,7 +92,6 @@ export default function CheckoutSuccessPage() {
           appliedCoupon: sessionStorage.getItem("appliedCoupon") || "",
         });
 
-        // Clear session storage
         sessionStorage.removeItem("orderId");
         sessionStorage.removeItem("orderDate");
         sessionStorage.removeItem("deliveryDate");
@@ -116,7 +113,6 @@ export default function CheckoutSuccessPage() {
           description: "Failed to load order details. Using cached information.",
           variant: "destructive",
         });
-        
       } finally {
         setIsLoading(false);
       }
@@ -125,10 +121,27 @@ export default function CheckoutSuccessPage() {
     fetchOrderDetails();
   }, [router, toast]);
 
+  useEffect(() => {
+    if (audioRef.current && !isLoading) {
+      const playAudio = () => {
+        audioRef.current.play().catch((error) => {
+          console.error("Audio playback failed:", error);
+          toast({
+            title: "Audio Playback Error",
+            description: "Unable to play success sound.",
+            variant: "destructive",
+          });
+        });
+      };
+      const timer = setTimeout(playAudio, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, toast]);
+
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex justify-center items-center p-4 sm:p-6">
+        <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-green-600 dark:border-green-400"></div>
       </div>
     );
   }
@@ -137,129 +150,82 @@ export default function CheckoutSuccessPage() {
     return null;
   }
 
-  const subtotal = orderDetails.orderItems.reduce((total, item) => total + item.price * item.quantity, 0);
-
-
   return (
-    <div className="leaf-pattern-3">
-      <div className="container mx-auto px-4 py-12 max-w-3xl">
-        <div className="flex flex-col items-center text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
-            <CheckCircle className="h-10 w-10 text-green-600" />
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white dark:from-gray-900 dark:to-gray-800 flex flex-col items-center justify-center p-4 sm:p-6">
+      <style jsx global>{`
+        @keyframes particle {
+          0% {
+            transform: rotate(var(--angle)) translateY(-16px);
+            opacity: 1;
+          }
+          100% {
+            transform: rotate(var(--angle)) translateY(-40px);
+            opacity: 0;
+          }
+        }
+        .animate-particle {
+          --angle: 0deg;
+          animation: particle 0.8s ease-out forwards;
+        }
+      `}</style>
+      <Card className="w-full max-w-md sm:max-w-lg md:max-w-screen-md border-green-200 dark:border-green-700 shadow-lg bg-white dark:bg-gray-800 box-border">
+        <CardHeader className="text-center border-b border-gray-200 dark:border-gray-700 pb-6">
+          <div className="mx-auto mb-4 w-20 sm:w-24">
+            <SuccessAnimation />
+            <audio ref={audioRef}>
+              <source src="@/public/sounds/success.mp3" type="audio/mpeg" />
+              <source src="@/public/sounds/success.ogg" type="audio/ogg" />
+              Your browser does not support the audio element.
+            </audio>
+          </div>
+          <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-green-700 dark:text-green-400">
+            Order Successful!
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-4 text-gray-600 dark:text-gray-200 text-sm sm:text-base">
+          <div className="text-center">
+            <p>Thank you for your purchase. Your order has been confirmed.</p>
+            <p className="mt-2">
+              Order #: <span className="font-medium">{orderDetails.orderId}</span>
+            </p>
+            <p className="mt-2">
+              Your vegetables will be delivered {orderDetails.deliveryTime.toLowerCase()}.
+            </p>
           </div>
 
-          <h1 className="text-3xl font-bold mb-4">Order Confirmed!</h1>
-          <p className="text-gray-600 mb-4">
-            Thank you for your order. Your vegetables will be delivered {orderDetails.deliveryTime.toLowerCase()}.
-          </p>
-          
           {isAfter1PM && (
-            <Alert variant="destructive" className="mb-6 w-full">
-              <AlertDescription>
+            <Alert className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 mt-4">
+              <AlertTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <span className="text-amber-500 dark:text-amber-400">⏰</span> Next Day Delivery
+              </AlertTitle>
+              <AlertDescription className="text-sm sm:text-base">
                 Since your order was placed after 1 PM, it will be delivered tomorrow evening.
               </AlertDescription>
             </Alert>
           )}
-
-          <div className="w-full bg-card border rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Order Details</h2>
-            <div className="space-y-6">
-              <div className="text-center pb-4 border-b">
-                <p className="text-gray-500 text-sm">Order Number</p>
-                <p className="font-bold text-xl">{orderDetails.orderId}</p>
-              </div>
-
-              <div className="text-center pb-4 border-b">
-                <p className="text-gray-500 text-sm">Order Date</p>
-                <p className="font-bold">{orderDetails.orderDate}</p>
-              </div>
-
-              <div className="text-center pb-4 border-b">
-                <p className="text-gray-500 text-sm">Estimated Delivery</p>
-                <p className="font-bold">{orderDetails.deliveryTime}</p>
-              </div>
-
-              <div className="text-center pb-4 border-b">
-                <p className="text-gray-500 text-sm">Payment Method</p>
-                <p className="font-bold">
-                  {orderDetails.paymentMethod === "upi"
-                    ? "UPI"
-                    : orderDetails.paymentMethod === "credit-card"
-                    ? "Credit/Debit Card"
-                    : "Cash on Delivery"}
-                </p>
-              </div>
-
-              <div className="text-left">
-                <p className="text-gray-500 text-sm mb-2">Shipping Address</p>
-                <p className="font-medium">
-                  {orderDetails.shippingAddress.firstName} {orderDetails.shippingAddress.lastName}
-                </p>
-                <p>{orderDetails.shippingAddress.address}</p>
-                <p>
-                  {orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.state}{" "}
-                  {orderDetails.shippingAddress.zipCode}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="w-full bg-card border rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
-            <div className="space-y-4">
-              {orderDetails.orderItems.map((item) => (
-                <div key={item.productId} className="flex items-center gap-3 py-3 border-b last:border-0">
-                  <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                    <Image
-                      src={item.image || "/placeholder.svg?height=64&width=64"}
-                      alt={item.name}
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs w-5 h-5 flex items-center justify-center rounded-bl-md">
-                      {item.quantity}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-sm">{item.name}</h3>
-                  </div>
-                  <div className="text-sm font-medium">₹{(item.price * item.quantity).toFixed(2)}</div>
-                </div>
-              ))}
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
-                </div>
-                {orderDetails.appliedCoupon && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Discount ({orderDetails.appliedCoupon})</span>
-                    <span>-₹{orderDetails.discount.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Shipping</span>
-                  <span>{orderDetails.shipping}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-medium text-lg">
-                  <span>Total</span>
-                  <span>₹{orderDetails.orderTotal.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="w-full space-y-4">
-            <Link href="/products">
-              <Button className="w-full bg-green-600 hover:bg-green-700">Continue Shopping</Button>
-            </Link>
+        </CardContent>
+        <CardFooter className="flex flex-col sm:flex-row gap-3 pt-2">
+          <Button
+            asChild
+            className="w-full sm:w-auto min-h-12 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white"
+          >
             <Link href="/my-orders">
-              <Button variant="outline" className="w-full">View Order History</Button>
+              <ShoppingBag className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              View Order
             </Link>
-          </div>
-        </div>
-      </div>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            className="w-full sm:w-auto min-h-12 border-green-600 dark:border-green-400 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-gray-700"
+          >
+            <Link href="/products">
+              <Home className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              Continue Shopping
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
