@@ -1,8 +1,9 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { BarChart3, ShoppingBag, Users, ArrowUp, ArrowDown, DollarSign, Package } from "lucide-react"
-import Link from "next/link"
+import { useState, useEffect } from "react";
+import { BarChart3, ShoppingBag, Users, ArrowUp, ArrowDown, DollarSign, Package, LayoutDashboard } from "lucide-react";
+import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdminAltDashboard() {
   const [stats, setStats] = useState({
@@ -67,11 +68,11 @@ export default function AdminAltDashboard() {
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
               <div className="p-5">
-                <div className="animate-pulse flex space-x-4">
-                  <div className="rounded-full bg-gray-200 dark:bg-gray-700 h-12 w-12"></div>
+                <div className="flex space-x-4">
+                  <Skeleton className="h-12 w-12 rounded-full" />
                   <div className="flex-1 space-y-4 py-1">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-5/6" />
                   </div>
                 </div>
               </div>
@@ -218,19 +219,19 @@ export default function AdminAltDashboard() {
                     [...Array(5)].map((_, i) => (
                       <tr key={i}>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+                          <Skeleton className="h-4 w-16" />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                          <Skeleton className="h-4 w-24" />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+                          <Skeleton className="h-4 w-20" />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+                          <Skeleton className="h-4 w-16" />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
+                          <Skeleton className="h-4 w-12" />
                         </td>
                       </tr>
                     ))
@@ -320,11 +321,11 @@ export default function AdminAltDashboard() {
             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
-                  <li key={i} className="py-3 flex animate-pulse">
-                    <div className="h-10 w-10 rounded bg-gray-200 dark:bg-gray-700"></div>
+                  <li key={i} className="py-3 flex">
+                    <Skeleton className="h-10 w-10 rounded" />
                     <div className="ml-3 flex-1">
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                      <Skeleton className="h-4 w-3/4 mb-2" />
+                      <Skeleton className="h-4 w-1/2" />
                     </div>
                   </li>
                 ))
@@ -338,7 +339,6 @@ export default function AdminAltDashboard() {
                       <p className="text-sm font-medium text-gray-900 dark:text-white">Organic Spinach</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">$4.99 • 120 sold</p>
                     </div>
-
                   </li>
                   <li className="py-3 flex">
                     <div className="h-10 w-10 rounded bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
@@ -365,6 +365,5 @@ export default function AdminAltDashboard() {
         </div>        
       </div>
     </div>
-  )
+  );
 }
-

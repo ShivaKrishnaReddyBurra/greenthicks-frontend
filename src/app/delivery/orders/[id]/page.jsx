@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import QRCode from "react-qr-code";
+import { QRCode } from 'react-qrcode-logo'; // or 'qrcode.react'
 import { getOrder, getAllUsers, getUserProfile, assignDeliveryBoy, updateDeliveryStatus } from "@/lib/api";
 import { formatCurrency } from "@/lib/currency";
 
@@ -503,7 +503,7 @@ export default function DeliveryOrderDetailPage() {
                             <p className="mb-2">Customer can scan this to pay {formatCurrency(order.total)}:</p>
                             <QRCode
                               value={generateUPIQR()}
-                              className="mx-auto p-4 bg-white rounded-xl shadow-md"
+                              className="mx-auto p-4 justify-center bg-white rounded-xl shadow-md"
                               level="H"
                               includeMargin={true}
                               renderAs="canvas"

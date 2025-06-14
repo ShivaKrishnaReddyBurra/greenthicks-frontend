@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-context";
 import { fetchWithAuth, createOrder } from "@/lib/api";
@@ -12,9 +12,11 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Truck, ShieldCheck, LockIcon, MapPin } from "lucide-react";
+import { ArrowLeft, Truck, ShieldCheck, LockIcon, MapPin, X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import CheckoutMapComponent from "@/components/checkout-map-component";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const LeafLoader = () => {
   return (
@@ -60,6 +62,7 @@ export default function CheckoutPage() {
   const [shouldRedirect, setShouldRedirect] = useState(null);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [isServiceAvailable, setIsServiceAvailable] = useState(null);
+  const [showServiceUnavailableModal, setShowServiceUnavailableModal] = useState(false);
   const debounceTimeout = useRef(null);
 
   const [formData, setFormData] = useState({
@@ -73,6 +76,7 @@ export default function CheckoutPage() {
     zipCode: "",
     useCurrentLocation: false,
     currentLocation: null,
+    mapLocation: null,
   });
 
   useEffect(() => {
@@ -97,8 +101,8 @@ export default function CheckoutPage() {
       setActionLoading(true);
       try {
         const [profile, addressData] = await Promise.all([
-          fetchWithAuth('/api/auth/profile'),
-          fetchWithAuth('/api/addresses'),
+          fetchWithAuth("/api/auth/profile"),
+          fetchWithAuth("/api/addresses"),
         ]);
         setAddresses(addressData);
         const primaryAddress = addressData.find((addr) => addr.isPrimary) || addressData[0];
@@ -115,16 +119,17 @@ export default function CheckoutPage() {
             zipCode: primaryAddress.zipCode || "",
             useCurrentLocation: false,
             currentLocation: primaryAddress.location || null,
+            mapLocation: primaryAddress.mapLocation || null,
           });
-          await checkServiceAvailability(primaryAddress.zipCode);
+          await checkServiceAvailability(primaryAddress.zipCode, primaryAddress.mapLocation);
         } else {
           setIsAddingAddress(true);
         }
 
-        const subtotal = parseFloat(sessionStorage.getItem("cartSubtotal") || "0");
-        const shipping = parseFloat(sessionStorage.getItem("cartShipping") || "0");
-        const discount = parseFloat(sessionStorage.getItem("cartDiscount") || "0");
-        const total = parseFloat(sessionStorage.getItem("cartTotal") || "0");
+        const subtotal = Number.parseFloat(sessionStorage.getItem("cartSubtotal") || "0");
+        const shipping = Number.parseFloat(sessionStorage.getItem("cartShipping") || "0");
+        const discount = Number.parseFloat(sessionStorage.getItem("cartDiscount") || "0");
+        const total = Number.parseFloat(sessionStorage.getItem("cartTotal") || "0");
         const appliedCoupon = sessionStorage.getItem("appliedCoupon") || "";
 
         setOrderSummary({
@@ -149,10 +154,15 @@ export default function CheckoutPage() {
     fetchData();
   }, []);
 
-  const checkServiceAvailability = async (pincode) => {
+  const checkServiceAvailability = async (pincode, mapLocation = null) => {
     setActionLoading(true);
     try {
-      const response = await fetchWithAuth(`/api/service-areas/check?pincode=${pincode}`);
+      let url = `/api/service-areas/check?pincode=${pincode}`;
+      if (mapLocation) {
+        url += `&lat=${mapLocation.lat}&lng=${mapLocation.lng}`;
+      }
+
+      const response = await fetchWithAuth(url);
       setIsServiceAvailable(true);
       toast({
         title: "Service Available",
@@ -160,11 +170,15 @@ export default function CheckoutPage() {
       });
     } catch (error) {
       setIsServiceAvailable(false);
-      toast({
-        title: "Service Unavailable",
-        description: error.message || "Delivery is not available in this area.",
-        variant: "destructive",
-      });
+      if (mapLocation) {
+        setShowServiceUnavailableModal(true);
+      } else {
+        toast({
+          title: "Service Unavailable",
+          description: error.message || "Delivery is not available in this area.",
+          variant: "destructive",
+        });
+      }
     } finally {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setActionLoading(false);
@@ -181,7 +195,7 @@ export default function CheckoutPage() {
     if (name === "zipCode" && value.match(/^\d{5,6}$/)) {
       clearTimeout(debounceTimeout.current);
       debounceTimeout.current = setTimeout(() => {
-        checkServiceAvailability(value);
+        checkServiceAvailability(value, formData.mapLocation);
       }, 500);
     }
   };
@@ -202,16 +216,65 @@ export default function CheckoutPage() {
         zipCode: selectedAddress.zipCode,
         useCurrentLocation: false,
         currentLocation: selectedAddress.location || null,
+        mapLocation: selectedAddress.mapLocation || null,
       });
-      await checkServiceAvailability(selectedAddress.zipCode);
+      await checkServiceAvailability(selectedAddress.zipCode, selectedAddress.mapLocation);
       setIsAddingAddress(false);
     }
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setActionLoading(false);
   };
 
+  const handleMapLocationSelect = (location, address) => {
+    setFormData((prev) => ({
+      ...prev,
+      mapLocation: location,
+      address: address,
+    }));
+
+    // Try to extract city, state, and zip from the address
+    const addressParts = address.split(", ");
+    if (addressParts.length >= 3) {
+      // Attempt to find zip code in the last parts
+      const zipMatch = addressParts[addressParts.length - 1].match(/\d{5,6}/);
+      if (zipMatch) {
+        setFormData((prev) => ({
+          ...prev,
+          zipCode: zipMatch[0],
+        }));
+        checkServiceAvailability(zipMatch[0], location);
+      }
+
+      // Try to extract city and state
+      if (addressParts.length >= 3) {
+        setFormData((prev) => ({
+          ...prev,
+          city: addressParts[addressParts.length - 3] || prev.city,
+          state: addressParts[addressParts.length - 2] || prev.state,
+        }));
+      }
+    }
+
+    toast({
+      title: "Location Selected",
+      description: "Your delivery location has been updated.",
+    });
+  };
+
   const handleSaveAddress = async () => {
-    const { firstName, lastName, email, phone, address, city, state, zipCode, useCurrentLocation, currentLocation } = formData;
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      address,
+      city,
+      state,
+      zipCode,
+      useCurrentLocation,
+      currentLocation,
+      mapLocation,
+    } = formData;
 
     if (!firstName || !lastName || !email || !phone || !address || !city || !state || !zipCode) {
       toast({
@@ -222,7 +285,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!/^(\+91[\-\s]?)?[6-9]\d{9}$/.test(phone)) {
+    if (!/^(\+91[-\s]?)?[6-9]\d{9}$/.test(phone)) {
       toast({
         title: "Invalid Phone",
         description: "Phone number must be in Indian format (e.g., +91 9234567890).",
@@ -262,10 +325,11 @@ export default function CheckoutPage() {
         zipCode,
         isPrimary: true,
         location: useCurrentLocation && currentLocation ? currentLocation : undefined,
+        mapLocation: mapLocation || undefined,
       };
 
-      const response = await fetchWithAuth('/api/addresses', {
-        method: 'POST',
+      const response = await fetchWithAuth("/api/addresses", {
+        method: "POST",
         body: JSON.stringify(addressData),
       });
 
@@ -370,7 +434,11 @@ export default function CheckoutPage() {
       {actionLoading && <LeafLoader />}
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <Link href="/cart" className="inline-flex items-center text-primary hover:underline" onClick={(e) => handleNavigation(e, "/cart")}>
+          <Link
+            href="/cart"
+            className="inline-flex items-center text-primary hover:underline"
+            onClick={(e) => handleNavigation(e, "/cart")}
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to cart
           </Link>
@@ -397,6 +465,11 @@ export default function CheckoutPage() {
                             <p className="font-medium">
                               {addr.firstName} {addr.lastName}
                               {addr.isPrimary && <span className="ml-2 text-primary">(Primary)</span>}
+                              {addr.mapLocation && (
+                                <span className="ml-2 text-green-600 flex items-center text-xs">
+                                  <MapPin className="h-3 w-3 mr-1" /> Map Location
+                                </span>
+                              )}
                             </p>
                             <p>{addr.address}</p>
                             <p>
@@ -502,7 +575,7 @@ export default function CheckoutPage() {
                                       });
                                       await new Promise((resolve) => setTimeout(resolve, 1000));
                                       setActionLoading(false);
-                                    }
+                                    },
                                   );
                                 } else {
                                   toast({
@@ -524,12 +597,15 @@ export default function CheckoutPage() {
                               }
                             }}
                           />
-                          <Label htmlFor="useCurrentLocation" className="text-sm flex items-center">
-                            <MapPin className="h-3.5 w-3.5 text-primary mr-1" />
-                            Share location for precise delivery
-                          </Label>
                         </div>
                       </div>
+
+                      <CheckoutMapComponent
+                        onLocationSelect={handleMapLocationSelect}
+                        initialLocation={formData.mapLocation}
+                        initialAddress={formData.address}
+                      />
+
                       <Textarea
                         id="address"
                         name="address"
@@ -537,35 +613,31 @@ export default function CheckoutPage() {
                         onChange={handleInputChange}
                         required
                       />
+
                       {formData.useCurrentLocation && formData.currentLocation && (
                         <div className="bg-primary/10 p-2 rounded-md text-sm flex items-center">
                           <MapPin className="h-4 w-4 text-primary inline mr-2 flex-shrink-0" />
                           <span>Location shared for precise delivery</span>
                         </div>
                       )}
+
+                      {formData.mapLocation && (
+                        <div className="bg-green-50 dark:bg-green-950/30 p-2 rounded-md text-sm flex items-center">
+                          <MapPin className="h-4 w-4 text-green-600 inline mr-2 flex-shrink-0" />
+                          <span>Precise location selected on map</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="city">City *</Label>
-                      <Input
-                        id="city"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        required
-                      />
+                      <Input id="city" name="city" value={formData.city} onChange={handleInputChange} required />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="state">State *</Label>
-                        <Input
-                          id="state"
-                          name="state"
-                          value={formData.state}
-                          onChange={handleInputChange}
-                          required
-                        />
+                        <Input id="state" name="state" value={formData.state} onChange={handleInputChange} required />
                       </div>
 
                       <div className="space-y-2">
@@ -585,6 +657,26 @@ export default function CheckoutPage() {
                     </Button>
                   </div>
                 )}
+
+                {isServiceAvailable === false && (
+                  <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md p-4 mt-4">
+                    <div className="flex items-center">
+                      <X className="h-5 w-5 text-red-500 mr-2" />
+                      <span className="text-red-700 dark:text-red-400">
+                        Delivery is not available in this area. Please select a different location.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {isServiceAvailable === true && (
+                  <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md p-4 mt-4">
+                    <div className="flex items-center">
+                      <Truck className="h-5 w-5 text-green-500 mr-2" />
+                      <span className="text-green-700 dark:text-green-400">✅ Delivery available in this area</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="bg-card rounded-lg border p-6 mb-6">
@@ -597,9 +689,7 @@ export default function CheckoutPage() {
                   <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
                   <div>
                     <p className="text-sm font-medium">Cash on Delivery</p>
-                    <p className="text-xs text-muted-foreground">
-                      Pay when your order is delivered.
-                    </p>
+                    <p className="text-xs text-muted-foreground">Pay when your order is delivered.</p>
                   </div>
                 </div>
               </div>
@@ -627,6 +717,42 @@ export default function CheckoutPage() {
             <OrderSummary cart={cart} orderSummary={orderSummary} />
           </div>
         </div>
+
+        <Dialog open={showServiceUnavailableModal} onOpenChange={setShowServiceUnavailableModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <X className="h-5 w-5 text-red-500" />
+                Service Not Available
+              </DialogTitle>
+              <DialogDescription>
+                We're sorry, but delivery is not available at the selected location.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="bg-red-50 dark:bg-red-950/30 p-4 rounded-lg">
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  The location you selected is outside our delivery area. Please choose a different location or check
+                  our service areas.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowServiceUnavailableModal(false)} className="flex-1">
+                  Try Different Location
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowServiceUnavailableModal(false);
+                    router.push("/service-areas-view");
+                  }}
+                  className="flex-1"
+                >
+                  View Service Areas
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );

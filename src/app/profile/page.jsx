@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { fetchWithAuth } from "@/lib/api";
+import { fetchWithAuth, createOrder } from "@/lib/api";
 import { getAuthToken, clearAuth } from "@/lib/auth-utils";
 import {
   Bell,
@@ -15,6 +14,7 @@ import {
   User,
   X,
   Phone,
+  Lock,
 } from "lucide-react";
 import coverPhoto from "@/public/coverpage.png";
 import coverPhoto1 from "@/public/coverpage1.png";
@@ -43,7 +43,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 import LeafLoader from "@/components/LeafLoader";
+import CheckoutMapComponent from "@/components/checkout-map-component";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -54,6 +56,8 @@ export default function ProfilePage() {
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [showAddressPrompt, setShowAddressPrompt] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetPasswordEmail, setResetPasswordEmail] = useState("");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -65,9 +69,12 @@ export default function ProfilePage() {
     zipCode: "",
     phone: "",
     isPrimary: false,
-    currentLocation: "",
+    currentLocation: null,
+    mapLocation: null,
+    useCurrentLocation: false,
   });
-  const [actionLoading, setActionLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const actionTimeout = useRef(null);
 
@@ -84,7 +91,7 @@ export default function ProfilePage() {
   }, []);
 
   const fetchUserData = async () => {
-    setActionLoading(true);
+    setIsLoading(true);
     try {
       const [profileData, addressesData] = await Promise.all([
         fetchWithAuth("/api/auth/profile"),
@@ -120,6 +127,8 @@ export default function ProfilePage() {
           phone: primaryAddress.phone || "",
           isPrimary: primaryAddress.isPrimary || false,
           currentLocation: primaryAddress.location || null,
+          mapLocation: primaryAddress.mapLocation || null,
+          useCurrentLocation: false,
         });
       } else {
         setFormData({
@@ -133,7 +142,9 @@ export default function ProfilePage() {
           zipCode: "",
           phone: profileData.phone || "",
           isPrimary: false,
-          currentLocation: selectedAddress.location || null,
+          currentLocation: null,
+          mapLocation: null,
+          useCurrentLocation: false,
         });
       }
     } catch (error) {
@@ -149,15 +160,14 @@ export default function ProfilePage() {
         router.push("/login");
       }
     } finally {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setActionLoading(false);
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     const token = getAuthToken();
     if (!token) {
-      setActionLoading(true);
+      setIsLoading(true);
       setTimeout(() => {
         router.push("/login");
       }, 1000);
@@ -169,6 +179,22 @@ export default function ProfilePage() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleMapLocationSelect = (location, address, addressComponents) => {
+    setFormData((prev) => ({
+      ...prev,
+      mapLocation: location,
+      address: address,
+      city: addressComponents.city || prev.city,
+      state: addressComponents.state || prev.state,
+      zipCode: addressComponents.zipCode || prev.zipCode,
+    }));
+
+    toast({
+      title: "Location Selected",
+      description: "Your delivery location has been updated.",
+    });
   };
 
   const handleProfileSubmit = async (e) => {
@@ -214,7 +240,6 @@ export default function ProfilePage() {
           router.push("/login");
         }
       } finally {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
         setActionLoading(false);
       }
     }, 500);
@@ -239,6 +264,7 @@ export default function ProfilePage() {
               state: formData.state,
               zipCode: formData.zipCode,
               isPrimary: formData.isPrimary,
+              mapLocation: formData.mapLocation,
             }),
           });
           setAddresses((prev) =>
@@ -261,6 +287,7 @@ export default function ProfilePage() {
               state: formData.state,
               zipCode: formData.zipCode,
               isPrimary: formData.isPrimary,
+              mapLocation: formData.mapLocation,
             }),
           });
           setAddresses((prev) => [
@@ -289,7 +316,35 @@ export default function ProfilePage() {
           router.push("/login");
         }
       } finally {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+      }
+    }, 500);
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        await fetchWithAuth("/api/auth/reset-password", {
+          method: "POST",
+          body: JSON.stringify({ email: resetPasswordEmail }),
+        });
+        toast({
+          title: "Success",
+          description: "Password reset link sent to your email.",
+        });
+        setShowResetPassword(false);
+        setResetPasswordEmail("");
+      } catch (error) {
+        console.error("Error sending password reset:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to send password reset link. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
         setActionLoading(false);
       }
     }, 500);
@@ -324,6 +379,8 @@ export default function ProfilePage() {
         zipCode: primaryAddress.zipCode || "",
         phone: primaryAddress.phone || "",
         isPrimary: primaryAddress.isPrimary || false,
+        mapLocation: primaryAddress.mapLocation || null,
+        useCurrentLocation: false,
       }));
     } else {
       setSelectedAddressId(null);
@@ -339,26 +396,34 @@ export default function ProfilePage() {
         zipCode: "",
         phone: user?.phone || "",
         isPrimary: false,
+        mapLocation: null,
+        useCurrentLocation: false,
       }));
     }
   };
 
   const handleAddNewAddress = () => {
-    setIsEditingAddress(true);
-    setSelectedAddressId(null);
-    setFormData((prev) => ({
-      ...prev,
-      firstName: user?.firstName || user?.name?.split(" ")[0] || "",
-      lastName: user?.lastName || user?.name?.split(" ")[1] || "",
-      username: user?.username || "",
-      email: user?.email || "",
-      address: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      phone: user?.phone || "",
-      isPrimary: true,
-    }));
+    setActionLoading(true);
+    setTimeout(() => {
+      setIsEditingAddress(true);
+      setSelectedAddressId(null);
+      setFormData((prev) => ({
+        ...prev,
+        firstName: user?.firstName || user?.name?.split(" ")[0] || "",
+        lastName: user?.lastName || user?.name?.split(" ")[1] || "",
+        username: user?.username || "",
+        email: user?.email || "",
+        address: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        phone: user?.phone || "",
+        isPrimary: true,
+        mapLocation: null,
+        useCurrentLocation: false,
+      }));
+      setActionLoading(false);
+    }, 500);
   };
 
   const handleSetPrimary = async (addressId) => {
@@ -393,6 +458,8 @@ export default function ProfilePage() {
           phone: updatedAddress.address.phone,
           isPrimary: true,
           username: user?.username || "",
+          mapLocation: updatedAddress.address.mapLocation,
+          useCurrentLocation: false,
         });
         await fetchUserData();
         toast({
@@ -412,7 +479,6 @@ export default function ProfilePage() {
           router.push("/login");
         }
       } finally {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
         setActionLoading(false);
       }
     }, 500);
@@ -442,6 +508,8 @@ export default function ProfilePage() {
               phone: primaryAddress.phone,
               isPrimary: primaryAddress.isPrimary,
               username: user?.username || "",
+              mapLocation: primaryAddress.mapLocation,
+              useCurrentLocation: false,
             });
           } else {
             setSelectedAddressId(null);
@@ -457,6 +525,8 @@ export default function ProfilePage() {
               zipCode: "",
               phone: user?.phone || "",
               isPrimary: false,
+              mapLocation: null,
+              useCurrentLocation: false,
             }));
           }
         }
@@ -479,7 +549,6 @@ export default function ProfilePage() {
           router.push("/login");
         }
       } finally {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
         setActionLoading(false);
       }
     }, 500);
@@ -491,11 +560,28 @@ export default function ProfilePage() {
       setActionLoading(true);
       await new Promise((resolve) => setTimeout(resolve, 1000));
       callback();
+      setActionLoading(false);
     }, 500);
   };
 
-  if (actionLoading) {
-    return <LeafLoader />;
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <Skeleton className="h-48 md:h-64 w-full mb-8" />
+        <div className="flex items-center gap-4 mb-8">
+          <Skeleton className="h-32 w-32 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Skeleton className="h-96 md:col-span-2" />
+          <Skeleton className="h-64" />
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -504,6 +590,7 @@ export default function ProfilePage() {
 
   return (
     <div className="bg-background min-h-screen">
+      {actionLoading && <LeafLoader />}
       {showAddressPrompt && (
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mx-auto max-w-2xl mt-4">
           <p className="font-medium">Please add an address to complete your profile!</p>
@@ -516,6 +603,7 @@ export default function ProfilePage() {
                 handleAddNewAddress();
               })
             }
+            disabled={actionLoading}
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Address Now
@@ -595,6 +683,7 @@ export default function ProfilePage() {
                     size="icon"
                     onClick={() => setIsEditingProfile(!isEditingProfile)}
                     className="h-8 w-8 text-muted-foreground"
+                    disabled={actionLoading}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -612,6 +701,7 @@ export default function ProfilePage() {
                             onChange={handleInputChange}
                             placeholder="Your first name"
                             required
+                            disabled={actionLoading}
                           />
                         </div>
                         <div className="space-y-2">
@@ -623,6 +713,7 @@ export default function ProfilePage() {
                             onChange={handleInputChange}
                             placeholder="Your last name"
                             required
+                            disabled={actionLoading}
                           />
                         </div>
                       </div>
@@ -635,6 +726,7 @@ export default function ProfilePage() {
                           onChange={handleInputChange}
                           placeholder="Your username"
                           required
+                          disabled={actionLoading}
                         />
                       </div>
                       <div className="space-y-2">
@@ -647,6 +739,7 @@ export default function ProfilePage() {
                           onChange={handleInputChange}
                           placeholder="Your email address"
                           required
+                          disabled={actionLoading}
                         />
                       </div>
                       <div className="space-y-2">
@@ -660,6 +753,7 @@ export default function ProfilePage() {
                           pattern="^(?:\+91\s?)?\d{10}$"
                           title="Phone number must be in Indian format (e.g., +91 92345678901)"
                           required
+                          disabled={actionLoading}
                         />
                         <p className="text-xs text-muted-foreground">
                           Use international format (e.g., +91 2345678901)
@@ -743,6 +837,56 @@ export default function ProfilePage() {
                     <h3 className="text-sm font-medium text-muted-foreground">Addresses Saved</h3>
                     <p>{addresses.length}</p>
                   </div>
+                  <Dialog open={showResetPassword} onOpenChange={setShowResetPassword}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => setResetPasswordEmail(user.email)}
+                        disabled={actionLoading}
+                      >
+                        <Lock className="h-4 w-4 mr-2" />
+                        Reset Password
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Reset Password</DialogTitle>
+                        <DialogDescription>
+                          Enter your email address to receive a password reset link.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleResetPassword} className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="resetEmail">Email</Label>
+                          <Input
+                            id="resetEmail"
+                            type="email"
+                            value={resetPasswordEmail}
+                            onChange={(e) => setResetPasswordEmail(e.target.value)}
+                            placeholder="Your email address"
+                            required
+                            disabled={actionLoading}
+                          />
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setShowResetPassword(false)}
+                            disabled={actionLoading}
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Cancel
+                          </Button>
+                          <Button type="submit" disabled={actionLoading}>
+                            <Lock className="h-4 w-4 mr-2" />
+                            Send Reset Link
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                   <Button
                     variant="outline"
                     className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
@@ -773,7 +917,7 @@ export default function ProfilePage() {
                     Add New Address
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>{selectedAddressId ? "Edit Address" : "Add New Address"}</DialogTitle>
                     <DialogDescription>Enter the details for your address.</DialogDescription>
@@ -789,6 +933,7 @@ export default function ProfilePage() {
                           onChange={handleInputChange}
                           placeholder="First name"
                           required
+                          disabled={actionLoading}
                         />
                       </div>
                       <div className="space-y-2">
@@ -800,6 +945,7 @@ export default function ProfilePage() {
                           onChange={handleInputChange}
                           placeholder="Last name"
                           required
+                          disabled={actionLoading}
                         />
                       </div>
                     </div>
@@ -813,6 +959,7 @@ export default function ProfilePage() {
                         onChange={handleInputChange}
                         placeholder="Email address"
                         required
+                        disabled={actionLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -826,23 +973,16 @@ export default function ProfilePage() {
                         pattern="^(?:\+91\s?)?\d{10}$"
                         title="Phone number must be in Indian format (e.g., +91 92345678901)"
                         required
+                        disabled={actionLoading}
                       />
                       <p className="text-xs text-muted-foreground">
                         Use international format (e.g., +91 92345678901)
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="address">Address</Label>
-                      <Input
-                        id="address"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        placeholder="Street address"
-                        required
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="address">Address</Label>
+                        <div className="flex items-center gap-2">
                           <Checkbox
                             id="useCurrentLocation"
                             checked={formData.useCurrentLocation}
@@ -864,7 +1004,6 @@ export default function ProfilePage() {
                                         title: "Location shared",
                                         description: "Your current location has been added to help with delivery.",
                                       });
-                                      await new Promise((resolve) => setTimeout(resolve, 1000));
                                       setActionLoading(false);
                                     },
                                     async (error) => {
@@ -873,7 +1012,6 @@ export default function ProfilePage() {
                                         description: "Could not get your current location. Please check permissions.",
                                         variant: "destructive",
                                       });
-                                      await new Promise((resolve) => setTimeout(resolve, 1000));
                                       setActionLoading(false);
                                     }
                                   );
@@ -883,7 +1021,6 @@ export default function ProfilePage() {
                                     description: "Your browser does not support geolocation.",
                                     variant: "destructive",
                                   });
-                                  await new Promise((resolve) => setTimeout(resolve, 1000));
                                   setActionLoading(false);
                                 }
                               } else {
@@ -892,16 +1029,35 @@ export default function ProfilePage() {
                                   useCurrentLocation: false,
                                   currentLocation: null,
                                 });
-                                await new Promise((resolve) => setTimeout(resolve, 1000));
                                 setActionLoading(false);
                               }
                             }}
+                            disabled={actionLoading}
                           />
-                          <Label htmlFor="useCurrentLocation" className="text-sm flex items-center">
-                            <MapPin className="h-3.5 w-3.5 text-primary mr-1" />
-                            Share location for precise delivery
-                          </Label>
                         </div>
+                      </div>
+                      <CheckoutMapComponent
+                        onLocationSelect={handleMapLocationSelect}
+                        initialLocation={formData.mapLocation}
+                        initialAddress={formData.address}
+                      />
+                      <Input
+                        id="address"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        placeholder="Street address"
+                        required
+                        disabled={actionLoading}
+                      />
+                      {formData.useCurrentLocation && formData.currentLocation && (
+                        <div className="bg-primary/10 p-2 rounded-md text-sm flex items-center">
+                          <MapPin className="h-4 w-4 text-primary inline mr-2 flex-shrink-0" />
+                          <span>Location shared for precise delivery</span>
+                        </div>
+                      )}
+                      
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="city">City</Label>
@@ -912,6 +1068,7 @@ export default function ProfilePage() {
                           onChange={handleInputChange}
                           placeholder="City"
                           required
+                          disabled={actionLoading}
                         />
                       </div>
                       <div className="space-y-2">
@@ -923,6 +1080,7 @@ export default function ProfilePage() {
                           onChange={handleInputChange}
                           placeholder="State"
                           required
+                          disabled={actionLoading}
                         />
                       </div>
                     </div>
@@ -937,7 +1095,19 @@ export default function ProfilePage() {
                         pattern="^\d{5,6}$"
                         title="Zip code must be 5 or 6 digits"
                         required
+                        disabled={actionLoading}
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Checkbox
+                        id="isPrimary"
+                        checked={formData.isPrimary}
+                        onCheckedChange={(checked) => setFormData({ ...formData, isPrimary: checked })}
+                        disabled={actionLoading}
+                      />
+                      <Label htmlFor="isPrimary" className="ml-2">
+                        Set as primary address
+                      </Label>
                     </div>
                     <DialogFooter>
                       <Button
@@ -966,6 +1136,11 @@ export default function ProfilePage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         {address.isPrimary && <Badge>Primary</Badge>}
+                        {address.mapLocation && (
+                          <span className="text-green-600 flex items-center text-xs">
+                            <MapPin className="h-3 w-3 mr-1" /> Map Location
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
@@ -973,20 +1148,26 @@ export default function ProfilePage() {
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => {
-                            setIsEditingAddress(true);
-                            setSelectedAddressId(address.addressId);
-                            setFormData({
-                              firstName: address.firstName,
-                              lastName: address.lastName,
-                              email: address.email,
-                              address: address.address,
-                              city: address.city,
-                              state: address.state,
-                              zipCode: address.zipCode,
-                              phone: address.phone,
-                              isPrimary: address.isPrimary,
-                              username: user?.username || "",
-                            });
+                            setActionLoading(true);
+                            setTimeout(() => {
+                              setIsEditingAddress(true);
+                              setSelectedAddressId(address.addressId);
+                              setFormData({
+                                firstName: address.firstName,
+                                lastName: address.lastName,
+                                email: address.email,
+                                address: address.address,
+                                city: address.city,
+                                state: address.state,
+                                zipCode: address.zipCode,
+                                phone: address.phone,
+                                isPrimary: address.isPrimary,
+                                username: user?.username || "",
+                                mapLocation: address.mapLocation,
+                                useCurrentLocation: false,
+                              });
+                              setActionLoading(false);
+                            }, 500);
                           }}
                           disabled={actionLoading}
                         >

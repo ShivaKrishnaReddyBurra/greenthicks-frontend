@@ -411,7 +411,7 @@ export default function AdminProducts() {
                       <div className="h-10 w-10 flex-shrink-0">
                         <img
                           className="h-10 w-10 rounded-md object-cover"
-                          src={product.images[0] || "/placeholder.svg"}
+                          src={(product.images && product.images[0]) || "/placeholder.svg?height=300&width=300"}
                           alt={product.name}
                         />
                       </div>
@@ -487,7 +487,7 @@ export default function AdminProducts() {
                   />
                   <img
                     className="h-12 w-12 rounded-md object-cover"
-                    src={product.images[0] || "/placeholder.svg"}
+                    src={(product.images && product.images[0]) || "/placeholder.svg?height=300&width=300"}
                     alt={product.name}
                   />
                   <div>

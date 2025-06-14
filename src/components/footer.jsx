@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,25 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "next-themes";
 import logo from "@/public/logo.png";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const LeafLoader = () => {
+const SkeletonLoader = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <div className="leafbase">
-        <div className="lf">
-          <div className="leaf1">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="leaf2">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="leaf3">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="tail"></div>
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-12 rounded-full" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-[250px]" />
+          <Skeleton className="h-4 w-[200px]" />
         </div>
       </div>
     </div>
@@ -57,7 +47,7 @@ export default function Footer() {
 
   return (
     <>
-      {isLoading && <LeafLoader />}
+      {isLoading && <SkeletonLoader />}
       <footer className="bg-muted/40 border-t">
         <div className="container mx-auto px-4 sm:px-6 md:px-8 py-8 sm:py-12">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">

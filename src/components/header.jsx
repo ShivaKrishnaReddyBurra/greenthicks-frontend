@@ -39,25 +39,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getAuthToken, clearAuth } from "@/lib/auth-utils";
 import logo from "@/public/logo.png";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const LeafLoader = () => {
+const SkeletonLoader = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <div className="leafbase">
-        <div className="lf">
-          <div className="leaf1">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="leaf2">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="leaf3">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="tail"></div>
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-12 rounded-full" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-[250px]" />
+          <Skeleton className="h-4 w-[200px]" />
         </div>
       </div>
     </div>
@@ -110,20 +101,20 @@ export default function Header() {
     if (requiresAuth && !isAuthenticated) {
       alert("To see your orders, please login first.");
       setIsLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate delay
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       router.push("/LoginOrRegister");
       setIsLoading(false);
       return;
     }
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate navigation delay
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     router.push(href);
     setIsLoading(false);
   };
 
   const handleLogout = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate logout delay
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     clearAuth();
     setIsAuthenticated(false);
     router.push("/LoginOrRegister");
@@ -154,7 +145,7 @@ export default function Header() {
 
   return (
     <>
-      {isLoading && <LeafLoader />}
+      {isLoading && <SkeletonLoader />}
       <header
         className={`sticky top-0 z-50 w-full transition-all duration-200 ${
           isScrolled ? "bg-background/80 backdrop-blur-md shadow-sm" : "bg-background"

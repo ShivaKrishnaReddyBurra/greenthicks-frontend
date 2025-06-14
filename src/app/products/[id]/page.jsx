@@ -1,22 +1,22 @@
-"use client";
+"use client"
 
-import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { useCart } from "@/lib/cart-context";
-import { useFavorites } from "@/lib/favorites-context";
-import { addProductReview, getProducts, getProductById } from "@/lib/fetch-without-auth";
-import { getAuthToken } from "@/lib/auth-utils";
+import React, { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
+import Image from "next/image"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { useToast } from "@/hooks/use-toast"
+import { useCart } from "@/lib/cart-context"
+import { useFavorites } from "@/lib/favorites-context"
+import { addProductReview, getProducts, getProductById } from "@/lib/fetch-without-auth"
+import { getAuthToken } from "@/lib/auth-utils"
 import {
   Heart,
   ShoppingCart,
@@ -31,7 +31,7 @@ import {
   Camera,
   X,
   ZoomIn,
-} from "lucide-react";
+} from "lucide-react"
 
 const LeafLoader = () => {
   return (
@@ -54,35 +54,35 @@ const LeafLoader = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
 export default function ProductDetailPage({ params: paramsPromise }) {
-  const params = React.use(paramsPromise);
-  const router = useRouter();
-  const { toast } = useToast();
-  const { addToCart } = useCart();
-  const { addToFavorites, removeFromFavorites, isFavorite } = useFavorites();
-  const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState("description");
-  const [product, setProduct] = useState(null);
-  const [similarProducts, setSimilarProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [reviewImages, setReviewImages] = useState([]);
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [isFullScreen, setIsFullScreen] = useState(false);
-  const [reviewData, setReviewData] = useState({ name: "", rating: 0, review: "" });
-  const fileInputRef = useRef(null);
-  const touchStartX = useRef(null);
+  const params = React.use(paramsPromise)
+  const router = useRouter()
+  const { toast } = useToast()
+  const { addToCart } = useCart()
+  const { addToFavorites, removeFromFavorites, isFavorite } = useFavorites()
+  const [quantity, setQuantity] = useState(1)
+  const [activeTab, setActiveTab] = useState("description")
+  const [product, setProduct] = useState(null)
+  const [similarProducts, setSimilarProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [reviewImages, setReviewImages] = useState([])
+  const [selectedImage, setSelectedImage] = useState(0)
+  const [isFullScreen, setIsFullScreen] = useState(false)
+  const [reviewData, setReviewData] = useState({ name: "", rating: 0, review: "" })
+  const fileInputRef = useRef(null)
+  const touchStartX = useRef(null)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
-        const productId = Number.parseInt(params.id);
-        const foundProduct = await getProductById(productId);
+        setLoading(true)
+        const productId = Number.parseInt(params.id)
+        const foundProduct = await getProductById(productId)
 
         if (foundProduct) {
           foundProduct.nutrition = foundProduct.nutrition || {
@@ -92,212 +92,206 @@ export default function ProductDetailPage({ params: paramsPromise }) {
             fat: 0,
             fiber: 0,
             vitamins: [],
-          };
+          }
           foundProduct.policies = foundProduct.policies || {
             return: "",
             shipping: "",
             availability: "",
-          };
-          foundProduct.tags = foundProduct.tags || [];
-          foundProduct.sku = foundProduct.sku || `PROD-${foundProduct.globalId}`;
-          foundProduct.images = foundProduct.images.map(img => img);
-          setProduct(foundProduct);
+          }
+          foundProduct.tags = foundProduct.tags || []
+          foundProduct.sku = foundProduct.sku || `PROD-${foundProduct.globalId}`
+          foundProduct.images = Array.isArray(foundProduct.images)
+  ? foundProduct.images.map((img) => img?.url || img)
+  : []
+          setProduct(foundProduct)
 
-          const allProducts = await getProducts();
+          const allProducts = await getProducts()
           const similar = allProducts
             .filter((p) => p.category === foundProduct.category && p.globalId !== foundProduct.globalId)
-            .slice(0, 4);
-          setSimilarProducts(similar);
+            .slice(0, 4)
+          setSimilarProducts(similar)
         }
       } catch (error) {
-        console.error("Error fetching product:", error);
+        console.error("Error fetching product:", error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchData();
-  }, [params.id]);
+    fetchData()
+  }, [params.id])
 
   const handleNavigation = async (e, href) => {
-    e.preventDefault();
-    setActionLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    router.push(href);
-    setActionLoading(false);
-  };
+    e.preventDefault()
+    setActionLoading(true)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    router.push(href)
+    setActionLoading(false)
+  }
 
   const handleAddToCart = async () => {
     if (product) {
-      const token = getAuthToken();
+      const token = getAuthToken()
       if (!token) {
-        const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
-        setActionLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        router.push(`/login?returnUrl=${returnUrl}`);
+        const returnUrl = encodeURIComponent(`/products/${product.globalId}`)
+        setActionLoading(true)
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        router.push(`/login?returnUrl=${returnUrl}`)
         toast({
           title: "Please log in",
           description: "You need to be logged in to add items to your cart.",
           variant: "destructive",
-        });
-        setActionLoading(false);
-        return;
+        })
+        setActionLoading(false)
+        return
       }
-      setActionLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      addToCart(product, quantity);
+      setActionLoading(true)
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      addToCart(product, quantity)
       toast({
         title: "Added to cart",
         description: `${product.name} has been added to your cart.`,
-      });
-      setActionLoading(false);
+      })
+      setActionLoading(false)
     }
-  };
+  }
 
   const toggleFavorite = async () => {
-    if (!product) return;
-    setActionLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (!product) return
+    setActionLoading(true)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
     if (isFavorite(product.globalId)) {
-      removeFromFavorites(product.globalId);
+      removeFromFavorites(product.globalId)
       toast({
         title: "Removed from favorites",
         description: `${product.name} has been removed from your favorites.`,
-      });
+      })
     } else {
-      addToFavorites(product);
+      addToFavorites(product)
       toast({
         title: "Added to favorites",
         description: `${product.name} has been added to your favorites.`,
-      });
+      })
     }
-    setActionLoading(false);
-  };
+    setActionLoading(false)
+  }
 
   const incrementQuantity = () => {
     if (product && quantity < product.stock) {
-      setQuantity(quantity + 1);
+      setQuantity(quantity + 1)
     }
-  };
+  }
 
   const decrementQuantity = () => {
     if (quantity > 1) {
-      setQuantity(quantity - 1);
+      setQuantity(quantity - 1)
     }
-  };
+  }
 
   const handleImageUpload = (e) => {
-    const files = e.target.files;
+    const files = e.target.files
     if (files && files.length > 0) {
-      const maxSize = 3 * 1024 * 1024; // 3MB
-      const oversizedFiles = Array.from(files).filter(file => file.size > maxSize);
+      const maxSize = 3 * 1024 * 1024 // 3MB
+      const oversizedFiles = Array.from(files).filter((file) => file.size > maxSize)
       if (oversizedFiles.length > 0) {
         toast({
           title: "Error",
           description: "Some images exceed 3MB. Please upload smaller images.",
           variant: "destructive",
-        });
-        return;
+        })
+        return
       }
       const newImages = Array.from(files).map((file) => ({
         id: Math.random().toString(36).substring(7),
         url: URL.createObjectURL(file),
         file,
-      }));
-      setReviewImages([...reviewImages, ...newImages]);
+      }))
+      setReviewImages([...reviewImages, ...newImages])
     }
-  };
+  }
 
   const removeImage = (id) => {
-    setReviewImages(reviewImages.filter((img) => img.id !== id));
-  };
+    setReviewImages(reviewImages.filter((img) => img.id !== id))
+  }
 
   const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
+    fileInputRef.current?.click()
+  }
 
   const submitReview = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
     if (!reviewData.name || !reviewData.rating || !reviewData.review) {
       toast({
         title: "Error",
         description: "Please fill all required fields.",
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
 
-    setActionLoading(true);
+    setActionLoading(true)
     try {
-      const formData = new FormData();
-      formData.append("name", reviewData.name);
-      formData.append("rating", reviewData.rating);
-      formData.append("review", reviewData.review);
-      reviewImages.forEach((img) => {
-        formData.append("images", img.file);
-      });
-
-      await addProductReview(product.globalId, reviewData);
+      await addProductReview(product.globalId, reviewData)
       toast({
         title: "Review submitted",
         description: "Thank you for your review! It will be published after moderation.",
-      });
-      setShowReviewForm(false);
-      setReviewImages([]);
-      setReviewData({ name: "", rating: 0, review: "" });
+      })
+      setShowReviewForm(false)
+      setReviewImages([])
+      setReviewData({ name: "", rating: 0, review: "" })
     } catch (error) {
       toast({
         title: "Error",
         description: error.message || "Failed to submit review.",
         variant: "destructive",
-      });
+      })
     } finally {
-      setActionLoading(false);
+      setActionLoading(false)
     }
-  };
+  }
 
   const handleImageSelect = async (index) => {
-    setActionLoading(true);
-    setSelectedImage(index);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setActionLoading(false);
-  };
+    setActionLoading(true)
+    setSelectedImage(index)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    setActionLoading(false)
+  }
 
   const handleFullScreenToggle = async (value) => {
-    setActionLoading(true);
-    setIsFullScreen(value);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setActionLoading(false);
-  };
+    setActionLoading(true)
+    setIsFullScreen(value)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    setActionLoading(false)
+  }
 
   const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
+    touchStartX.current = e.touches[0].clientX
+  }
 
   const handleTouchEnd = async (e) => {
-    if (!touchStartX.current) return;
-    const touchEndX = e.changedTouches[0].clientX;
-    const deltaX = touchStartX.current - touchEndX;
+    if (!touchStartX.current) return
+    const touchEndX = e.changedTouches[0].clientX
+    const deltaX = touchStartX.current - touchEndX
 
     if (Math.abs(deltaX) > 50) {
-      setActionLoading(true);
+      setActionLoading(true)
       if (deltaX > 0 && selectedImage < product.images.length - 1) {
-        setSelectedImage(selectedImage + 1);
+        setSelectedImage(selectedImage + 1)
       } else if (deltaX < 0 && selectedImage > 0) {
-        setSelectedImage(selectedImage - 1);
+        setSelectedImage(selectedImage - 1)
       }
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setActionLoading(false);
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      setActionLoading(false)
     }
-    touchStartX.current = null;
-  };
+    touchStartX.current = null
+  }
 
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[60vh]">
         <LeafLoader />
       </div>
-    );
+    )
   }
 
   if (!product) {
@@ -309,7 +303,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
           <Button>Browse Products</Button>
         </Link>
       </div>
-    );
+    )
   }
 
   return (
@@ -371,9 +365,9 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                   <ZoomIn className="h-5 w-5" />
                 </Button>
               </div>
-              {product.discount > 0 && (
+              {product.discountPercentage > 0 && (
                 <Badge className="absolute top-4 left-4 bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700">
-                  -{product.discount}% OFF
+                  -{product.discountPercentage}% OFF
                 </Badge>
               )}
               {product.stock <= 5 && product.stock > 0 && (
@@ -432,11 +426,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                   </Badge>
                 )}
                 {product.tags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    className="text-xs sm:text-sm px-2 py-0.5"
-                  >
+                  <Badge key={tag} variant="secondary" className="text-xs sm:text-sm px-2 py-0.5">
                     {tag}
                   </Badge>
                 ))}
@@ -450,17 +440,18 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                     <Star
                       key={i}
                       className={`h-4 w-4 ${
-                        i < Math.round((product.reviews?.reduce((sum, r) => sum + r.rating, 0) ?? 0) / (product.reviews?.length || 1))
+                        i <
+                        Math.round(
+                          (product.reviews?.reduce((sum, r) => sum + r.rating, 0) ?? 0) /
+                            (product.reviews?.length || 1),
+                        )
                           ? "fill-yellow-400 text-yellow-400"
                           : "fill-muted text-muted"
                       }`}
                     />
                   ))}
                 </div>
-                <span className="text-sm text-muted-foreground">
-  ({product.reviews?.length ?? 0} reviews)
-</span>
-
+                <span className="text-sm text-muted-foreground">({product.reviews?.length ?? 0} reviews)</span>
               </div>
 
               <div className="flex items-center gap-3 mb-4">
@@ -842,7 +833,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                                 {reviewImages.map((img) => (
                                   <div key={img.id} className="relative w-16 h-16 sm:w-20 sm:h-20">
                                     <Image
-                                      src={img}
+                                      src={img.url || "/placeholder.svg"}
                                       alt="Review image preview"
                                       width={80}
                                       height={80}
@@ -910,7 +901,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                                   {review.images.map((img, index) => (
                                     <Image
                                       key={index}
-                                      src={img.url}
+                                      src={img.url || "/placeholder.svg"}
                                       alt={`Review image ${index + 1}`}
                                       width={80}
                                       height={80}
@@ -944,27 +935,31 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                   <Card className="h-full border-muted hover:shadow-lg transition-shadow bg-card">
                     <div className="relative aspect-square">
                       <Image
-                        src={
-                          similarProduct.images[0] || "/placeholder.svg?height=300&width=300"
-                        }
+                        src={similarProduct.images[0] || "/placeholder.svg?height=300&width=300"}
                         alt={similarProduct.name}
                         width={300}
                         height={300}
                         className="object-cover w-full h-full rounded-t-lg group-hover:opacity-90 transition-opacity"
                         loading="lazy"
                       />
-                      {similarProduct.discount > 0 && (
+                      {similarProduct.discountPercentage > 0 && (
                         <Badge className="absolute top-2 left-2 bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-xs sm:text-sm">
-                          -{similarProduct.discount}% OFF
+                          -{similarProduct.discountPercentage}% OFF
                         </Badge>
                       )}
                       {similarProduct.stock <= 5 && similarProduct.stock > 0 && (
-                        <Badge variant="outline" className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm text-xs sm:text-sm">
+                        <Badge
+                          variant="outline"
+                          className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm text-xs sm:text-sm"
+                        >
                           Only {similarProduct.stock} left
                         </Badge>
                       )}
                       {similarProduct.stock === 0 && (
-                        <Badge variant="outline" className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm text-xs sm:text-sm">
+                        <Badge
+                          variant="outline"
+                          className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm text-xs sm:text-sm"
+                        >
                           Out of Stock
                         </Badge>
                       )}
@@ -991,7 +986,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                               i <
                               Math.round(
                                 similarProduct.reviews.reduce((sum, r) => sum + r.rating, 0) /
-                                  (similarProduct.reviews.length || 1)
+                                  (similarProduct.reviews.length || 1),
                               )
                                 ? "fill-yellow-400 text-yellow-400"
                                 : "fill-muted text-muted"
@@ -1011,5 +1006,5 @@ export default function ProductDetailPage({ params: paramsPromise }) {
         )}
       </div>
     </>
-  );
+  )
 }

@@ -126,7 +126,7 @@ export function ProductCard({ product }) {
           >
             <div className="aspect-square overflow-hidden rounded-md bg-muted">
               <Image
-                src={product.images[0] || "/placeholder.svg?height=300&width=300"}
+                src={(product.images && product.images[0]) || "/placeholder.svg?height=300&width=300"}
                 alt={product.name}
                 width={300}
                 height={300}

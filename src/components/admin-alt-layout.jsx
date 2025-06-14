@@ -18,6 +18,14 @@ import {
   Store,
   FileText,
   Search,
+  LayoutDashboard,
+  Package,
+  ShoppingCartIcon,
+  AlertTriangle,
+  RefreshCw,
+  FileEdit,
+  ShoppingBagIcon,
+  BarChart,
 } from "lucide-react";
 import logo from "@/public/logo.png";
 
@@ -63,15 +71,21 @@ export default function AdminAltLayout({ children }) {
   };
 
   const navigation = [
-    { name: "Dashboard", href: "/admin-alt/dashboard", icon: Home },
-    { name: "Orders", href: "/admin-alt/orders", icon: ShoppingBag },
-    { name: "Products", href: "/admin-alt/products", icon: Store },
-    { name: "Customers", href: "/admin-alt/users", icon: Users },
-    { name: "Delivery", href: "/admin-alt/delivery", icon: Truck },
-    { name: "Sellers", href: "/admin-alt/sellers", icon: Store },
-    { name: "Invoices", href: "/admin-alt/invoices", icon: FileText },
-    { name: "Analytics", href: "/admin-alt/analytics", icon: BarChart3 },
-    { name: "Settings", href: "/admin-alt/settings", icon: Settings },
+    { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+    { name: "Products", href: "/admin/products", icon: Package },
+    { name: "Orders", href: "/admin/orders", icon: ShoppingCartIcon },
+    { name: "Delivery", href: "/admin/delivery", icon: Truck },
+    { name: "Cancellations", href: "/admin/cancellations", icon: AlertTriangle },
+    { name: "Returns", href: "/admin/returns", icon: RefreshCw },
+    { name: "Users", href: "/admin/users", icon: Users },
+    { name: "Coupons", href: "/admin/coupons", icon: ShoppingBagIcon },
+    { name: "Service-Areas", href: "/admin/service-areas", icon: ShoppingBagIcon },
+    { name: "Sellers", href: "/admin/sellers", icon: Store },
+    { name: "Static Pages", href: "/admin/pages", icon: FileEdit },
+    { name: "Analytics", href: "/admin/analytics", icon: BarChart },
+    { name: "Invoices", href: "/admin/invoices", icon: FileText },
+    { name: "Notifications", href: "/admin/notifications", icon: Bell },
+    { name: "Settings", href: "/admin/settings", icon: Settings },
   ];
 
   return (

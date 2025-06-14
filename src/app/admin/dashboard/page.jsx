@@ -6,7 +6,7 @@ import {
   BarChart,
   Users,
   TrendingUp,
-  DollarSign,
+  IndianRupeeIcon,
   Truck,
   AlertTriangle,
   Download,
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-full">
-              <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <IndianRupeeIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">{stats.todayOrders} orders today</p>

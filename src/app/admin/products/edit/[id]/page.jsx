@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Save, Trash2, Upload, Star, Check, X, ArrowLeft, ImagePlus, Eye } from "lucide-react";
-import { getProductById, updateProduct, deleteReview, updateReviewStatus, setPrimaryImage, deleteImage } from "@/lib/fetch-without-auth";
+import { getProductById, updateProduct, deleteReview, updateReviewStatus, setPrimaryImage, deleteImage } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 const SkeletonLoader = () => (

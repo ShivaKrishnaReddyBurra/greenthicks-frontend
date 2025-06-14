@@ -80,9 +80,16 @@ export const fetchWithAuthFormData = async (url, formData, method = "POST") => {
     throw new Error("Not authenticated. Please log in.");
   }
 
+  if (!(formData instanceof FormData)) {
+    console.error("Invalid formData in fetchWithAuthFormData:", formData);
+    throw new Error("formData must be a FormData object");
+  }
+
   const headers = {
     Authorization: `Bearer ${token}`,
   };
+
+  console.log(`Sending FormData to ${API_URL}${url}:`, Object.fromEntries(formData));
 
   const response = await fetch(`${API_URL}${url}`, {
     method,
@@ -101,6 +108,7 @@ export const fetchWithAuthFormData = async (url, formData, method = "POST") => {
     }
     if (error.errors) {
       const errorMessages = error.errors.map((err) => err.msg).join("; ");
+      console.error("Backend validation errors:", error.errors);
       throw new Error(errorMessages || `Request failed with status ${response.status}`);
     }
     throw new Error(error.message || `Request failed with status ${response.status}`);
@@ -269,26 +277,26 @@ export const processReturnRefund = async (id, refundData) => {
 
 // Favorites API functions
 export const apiAddToFavorites = async (productId) => {
-  return fetchWithAuth("/api/favorites", {
+  return fetchWithAuth("/api/highlight", {
     method: "POST",
     body: JSON.stringify({ productId }),
   });
 };
 
 export const apiRemoveFromFavorites = async (productId) => {
-  return fetchWithAuth(`/api/favorites/${productId}`, {
+  return fetchWithAuth(`/api/highlight/${productId}`, {
     method: "DELETE",
   });
 };
 
 export const apiClearFavorites = async () => {
-  return fetchWithAuth("/api/favorites", {
+  return fetchWithAuth("/api/highlight", {
     method: "DELETE",
   });
 };
 
 export const getFavorites = async () => {
-  return fetchWithAuth("/api/favorites");
+  return fetchWithAuth("/api/highlight");
 };
 
 // Delivery API functions
@@ -335,53 +343,60 @@ export const getProductById = async (globalId) => {
   return fetchWithoutAuth(`/api/products/${globalId}`);
 };
 
-export const createProduct = async (productData, images, imageData) => {
+export const createProduct = async (productData, images = [], imageData = []) => {
+  if (!productData || typeof productData !== 'object') {
+    console.error("Invalid productData:", productData);
+    throw new Error("Invalid product data provided");
+  }
+
   const formData = new FormData();
 
+  // Handle product data
   const complexFields = ["nutrition", "policies", "tags"];
-  Object.keys(productData).forEach((key) => {
-    if (complexFields.includes(key) && productData[key] != null) {
-      formData.append(key, JSON.stringify(productData[key]));
-    } else if (productData[key] != null) {
-      formData.append(key, productData[key]);
+  for (const [key, value] of Object.entries(productData)) {
+    if (value == null) continue;
+    if (complexFields.includes(key)) {
+      try {
+        formData.append(key, JSON.stringify(value));
+      } catch (e) {
+        console.error(`Failed to serialize ${key}:`, e);
+        throw new Error(`Failed to serialize ${key}: ${e.message}`);
+      }
+    } else {
+      formData.append(key, String(value));
     }
-  });
+  }
 
-  formData.append("imageData", JSON.stringify(imageData));
-
-  if (images && images.length > 0) {
-    images.forEach((image) => {
-      formData.append("images", image);
+  // Handle images
+  if (Array.isArray(images) && images.length > 0) {
+    images.forEach((image, index) => {
+      if (image instanceof File) {
+        formData.append("images", image);
+      } else {
+        console.warn(`Invalid image at index ${index}:`, image);
+      }
     });
+  }
+
+  // Handle imageData
+  if (Array.isArray(imageData) && imageData.length > 0) {
+    try {
+      formData.append("imageData", JSON.stringify(imageData));
+    } catch (e) {
+      console.error("Failed to serialize imageData:", e);
+      throw new Error(`Failed to serialize imageData: ${e.message}`);
+    }
   }
 
   return fetchWithAuthFormData("/api/products", formData, "POST");
 };
 
-export const updateProduct = async (globalId, productData, images = [], imageData = [], keepImages = true) => {
-  const formData = new FormData();
-
-  const complexFields = ["nutrition", "policies", "tags"];
-  Object.keys(productData).forEach((key) => {
-    if (complexFields.includes(key) && productData[key] != null) {
-      formData.append(key, JSON.stringify(productData[key]));
-    } else if (productData[key] != null) {
-      formData.append(key, productData[key]);
-    }
-  });
-
-  if (imageData && imageData.length > 0) {
-    formData.append("imageData", JSON.stringify(imageData));
+export const updateProduct = async (globalId, formData) => {
+  if (!(formData instanceof FormData)) {
+    console.error("Invalid formData in updateProduct:", formData);
+    throw new Error("formData must be a valid FormData object");
   }
-
-  formData.append("keepImages", keepImages.toString());
-
-  if (images && images.length > 0) {
-    images.forEach((image) => {
-      formData.append("images", image);
-    });
-  }
-
+  console.log("updateProduct FormData:", Object.fromEntries(formData));
   return fetchWithAuthFormData(`/api/products/${globalId}`, formData, "PUT");
 };
 
@@ -414,7 +429,7 @@ export const addProductReview = async (globalId, reviewData) => {
 export const updateReviewStatus = async (globalId, reviewId, approved) => {
   return fetchWithAuth(`/api/products/${globalId}/reviews/${reviewId}`, {
     method: "PATCH",
-    body: JSON.stringify({ approved }),
+    body: JSON.stringify({ status: approved ? 'approved' : 'rejected' }),
   });
 };
 

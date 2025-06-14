@@ -17,33 +17,25 @@ import {
   Navigation,
   MessageSquare,
   Camera,
-  QrCode,
   DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import QRCode from "qrcode.react";
+import QRCode from "react-qr-code"; // Verify this import
 import { getOrder, updateDeliveryStatus, fetchWithAuthFormData } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const LeafLoader = () => {
+console.log("QRCode import:", QRCode); // Debug import
+
+const SkeletonLoader = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <div className="leafbase">
-        <div className="lf">
-          <div className="leaf1">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="leaf2">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="leaf3">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="tail"></div>
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-12 rounded-full" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-[250px]" />
+          <Skeleton className="h-4 w-[200px]" />
         </div>
       </div>
     </div>
@@ -450,7 +442,7 @@ export default function DeliveryDetailsPage() {
   };
 
   if (actionLoading) {
-    return <LeafLoader />;
+    return <SkeletonLoader />;
   }
 
   if (!delivery) {
@@ -596,9 +588,9 @@ export default function DeliveryDetailsPage() {
                     <div className="flex flex-col items-center">
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Scan to pay with UPI</p>
                       <QRCode
-                        value={`upi://pay?pa=greenthicks@upi&pn=Greenthicks&am=${delivery.total}&cu=INR&tn=Order-${delivery.id}`}
+                        value={`upi://pay?pa=funnygn156@oksbi&pn=Greenthicks&am=${delivery.total}&cu=INR&tn=Order-${delivery.id}`}
                         size={150}
-                        className="border-2 border-gray-200 dark:border-gray-600 rounded-lg p-2"
+                        className="mx-auto p-4 justify-center bg-white rounded-xl shadow-md"
                       />
                     </div>
                     <Button
@@ -752,7 +744,7 @@ export default function DeliveryDetailsPage() {
                   </div>
                 </div>
               </div>
-           </div>
+            </div>
           </div>
 
           {/* Order Items */}
