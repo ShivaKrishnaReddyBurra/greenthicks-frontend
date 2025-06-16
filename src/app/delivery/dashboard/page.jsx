@@ -402,7 +402,7 @@ export default function DeliveryDashboardPage() {
                 <CardDescription>Optimize your route for maximum efficiency</CardDescription>
               </CardHeader>
               <CardContent className="h-[400px] relative">
-                <LoadScript googleMapsApiKey="AIzaSyAGHLQ5wiz_tOujYKWFvp3ccseCHlXPlWM">
+                <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
                   {pendingDeliveries.length > 0 ? (
                     <GoogleMap
                       mapContainerStyle={mapContainerStyle}
