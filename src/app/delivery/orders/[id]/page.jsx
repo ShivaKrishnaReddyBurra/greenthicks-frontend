@@ -18,16 +18,16 @@ import {
   Navigation,
   Camera,
   QrCode,
-  DollarSign,
   IndianRupeeIcon,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { QRCode } from 'react-qrcode-logo'; // or 'qrcode.react'
+import { QRCode } from "react-qrcode-logo";
 import { getOrder, getAllUsers, getUserProfile, assignDeliveryBoy, updateDeliveryStatus } from "@/lib/api";
 import { formatCurrency } from "@/lib/currency";
+import { LoadScript, GoogleMap, Marker, InfoWindow } from "@react-google-maps/api";
 
 const LeafLoader = () => {
   return (
@@ -53,9 +53,15 @@ const LeafLoader = () => {
   );
 };
 
+// Map container style
+const mapContainerStyle = {
+  height: "300px",
+  width: "100%",
+};
+
 export default function DeliveryOrderDetailPage() {
   const params = useParams();
-  const { id } = params; // Get globalId from URL
+  const { id } = params;
   const router = useRouter();
   const { toast } = useToast();
   const [order, setOrder] = useState(null);
@@ -68,22 +74,55 @@ export default function DeliveryOrderDetailPage() {
   const [qrPaymentGenerated, setQrPaymentGenerated] = useState(false);
   const [orderIdInput, setOrderIdInput] = useState("");
   const [showOrderIdForm, setShowOrderIdForm] = useState(false);
+  const [selectedMarker, setSelectedMarker] = useState(null);
   const actionTimeout = useRef(null);
   const selectTimeout = useRef(null);
+
+  // Geocode address if coordinates are missing
+  const geocodeAddress = async (address) => {
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+          address
+        )}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+      );
+      const data = await response.json();
+      if (data.status === "OK" && data.results[0]) {
+        const { lat, lng } = data.results[0].geometry.location;
+        return { lat, lng };
+      }
+      return null;
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to geocode address", variant: "destructive" });
+      return null;
+    }
+  };
 
   useEffect(() => {
     const fetchOrderAndUser = async () => {
       setActionLoading(true);
       try {
-        // Fetch order details
         const orderData = await getOrder(id);
-        setOrder(orderData);
+        let updatedOrder = { ...orderData };
 
-        // Fetch user profile to check if admin
+        // Geocode address if coordinates are missing
+        if (!orderData.shippingAddress.location?.latitude || !orderData.shippingAddress.location?.longitude) {
+          const address = `${orderData.shippingAddress.address}, ${orderData.shippingAddress.city}, ${orderData.shippingAddress.state}, ${orderData.shippingAddress.zipCode}`;
+          const coords = await geocodeAddress(address);
+          updatedOrder = {
+            ...orderData,
+            shippingAddress: {
+              ...orderData.shippingAddress,
+              location: coords || { latitude: 28.6139, longitude: 77.209 }, // Fallback to Delhi
+            },
+          };
+        }
+
+        setOrder(updatedOrder);
+
         const profileData = await getUserProfile();
         setIsAdmin(profileData.isAdmin);
 
-        // Fetch delivery boys if admin
         if (profileData.isAdmin) {
           const usersData = await getAllUsers();
           const deliveryBoys = usersData.filter((user) => user.isDeliveryBoy && user.activeStatus);
@@ -289,6 +328,11 @@ export default function DeliveryOrderDetailPage() {
     );
   }
 
+  const deliveryLocation = {
+    lat: parseFloat(order.shippingAddress.location?.latitude) || 28.6139,
+    lng: parseFloat(order.shippingAddress.location?.longitude) || 77.209,
+  };
+
   return (
     <DeliveryLayout>
       <div className="mb-6">
@@ -440,18 +484,6 @@ export default function DeliveryOrderDetailPage() {
 
         {/* Right Panel */}
         <div className="space-y-6">
-          {/* Map Placeholder */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Delivery Map</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] bg-muted rounded-md relative flex items-center justify-center">
-                <MapPin className="h-8 w-8 text-primary mb-2" />
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Delivery Confirmation */}
           {order.deliveryStatus === "out-for-delivery" && (
             <>
@@ -541,6 +573,72 @@ export default function DeliveryOrderDetailPage() {
               </Card>
             </>
           )}
+
+          {/* Delivery Map */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Delivery Map</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
+                {order.shippingAddress.location?.latitude ? (
+                  <GoogleMap
+                    mapContainerStyle={mapContainerStyle}
+                    center={deliveryLocation}
+                    zoom={15}
+                    options={{
+                      styles: [
+                        {
+                          featureType: "poi",
+                          elementType: "labels",
+                          stylers: [{ visibility: "off" }],
+                        },
+                      ],
+                    }}
+                  >
+                    <Marker
+                      position={deliveryLocation}
+                      title={`${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`}
+                      icon={{
+                        url:
+                          "data:image/svg+xml;charset=UTF-8," +
+                          encodeURIComponent(`
+                            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M16 2C10.48 2 6 6.48 6 12c0 7.5 10 18 10 18s10-10.5 10-18c0-5.52-4.48-10-10-10z" fill="#dc2626" stroke="white" strokeWidth="2"/>
+                              <circle cx="16" cy="12" r="4" fill="white"/>
+                            </svg>
+                          `),
+                        scaledSize: { width: 32, height: 32 },
+                      }}
+                      onClick={() => setSelectedMarker(order.id)}
+                    />
+                    {selectedMarker === order.id && (
+                      <InfoWindow
+                        position={deliveryLocation}
+                        onCloseClick={() => setSelectedMarker(null)}
+                      >
+                        <div className="p-2">
+                          <h3 className="font-bold">{`${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`}</h3>
+                          <p className="text-sm text-gray-600">{order.shippingAddress.address}</p>
+                          <p className="text-sm text-gray-600">{`${order.shippingAddress.city}, ${order.shippingAddress.state}`}</p>
+                          <p className="text-sm"><strong>Phone:</strong> {order.shippingAddress.phone}</p>
+                          <p className="text-sm"><strong>Order:</strong> #{order.id}</p>
+                        </div>
+                      </InfoWindow>
+                    )}
+                  </GoogleMap>
+                ) : (
+                  <div className="h-[300px] bg-muted rounded-md flex items-center justify-center">
+                    <div className="text-center">
+                      <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
+                      <p className="font-medium">Map Unavailable</p>
+                      <p className="text-sm text-muted-foreground">Location data not available</p>
+                    </div>
+                  </div>
+                )}
+              </LoadScript>
+            </CardContent>
+          </Card>
 
           {/* After Delivered */}
           {order.deliveryStatus === "delivered" && (

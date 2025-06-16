@@ -12,6 +12,24 @@ import { Package, MapPin, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { getDeliveryOrders, updateDeliveryStatus, getUserProfile, fetchWithAuth } from "@/lib/api";
+import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
+
+function CompletionRate() {
+  const [rate, setRate] = useState(null);
+
+  useEffect(() => {
+    const value = Math.floor(80 + Math.random() * 20);
+    setRate(value);
+  }, []);
+
+  if (rate === null) return null; // or loading spinner
+
+  return (
+    <span className="text-green-500 inline-flex items-center">
+      {rate}% completion rate
+    </span>
+  );
+}
 
 const LeafLoader = () => {
   return (
@@ -35,6 +53,12 @@ const LeafLoader = () => {
       </div>
     </div>
   );
+};
+
+// Map container style
+const mapContainerStyle = {
+  height: "400px",
+  width: "100%",
 };
 
 export default function DeliveryDashboardPage() {
@@ -253,6 +277,14 @@ export default function DeliveryDashboardPage() {
     }
   };
 
+  // Default center for the map (e.g., warangal or first delivery location)
+  const defaultCenter = pendingDeliveries.length > 0 && pendingDeliveries[0].shippingAddress.latitude
+    ? {
+        lat: parseFloat(pendingDeliveries[0].shippingAddress.latitude),
+        lng: parseFloat(pendingDeliveries[0].shippingAddress.longitude),
+      }
+    : { lat: 17.9784, lng: 79.5941 }; // Fallback to NYC
+
   return (
     <>
       {actionLoading && <LeafLoader />}
@@ -349,11 +381,9 @@ export default function DeliveryDashboardPage() {
                   ).length
                 }
               </div>
-              <p className="text-xs text-muted-foreground">
-                <span className="text-green-500 inline-flex items-center">
-                  {Math.floor(80 + Math.random() * 20)}% completion rate
-                </span>
-              </p>
+             <p className="text-xs text-muted-foreground">
+              <CompletionRate />
+            </p>
             </CardContent>
           </Card>
         </div>
@@ -372,16 +402,40 @@ export default function DeliveryDashboardPage() {
                 <CardDescription>Optimize your route for maximum efficiency</CardDescription>
               </CardHeader>
               <CardContent className="h-[400px] relative">
-                <div className="absolute inset-0 bg-muted flex items-center justify-center">
-                  <div className="text-center">
-                    <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
-                    <p className="font-medium">Delivery Map</p>
-                    <p className="text-sm text-muted-foreground">
-                      Google Maps integration would show your delivery route here
-                    </p>
-                  </div>
-                </div>
-                </CardContent>
+                <LoadScript googleMapsApiKey="AIzaSyAGHLQ5wiz_tOujYKWFvp3ccseCHlXPlWM">
+                  {pendingDeliveries.length > 0 ? (
+                    <GoogleMap
+                      mapContainerStyle={mapContainerStyle}
+                      center={defaultCenter}
+                      zoom={12}
+                    >
+                      {pendingDeliveries.map((delivery) => (
+                        delivery.shippingAddress.latitude && delivery.shippingAddress.longitude && (
+                          <Marker
+                            key={delivery.globalId}
+                            position={{
+                              lat: parseFloat(delivery.shippingAddress.latitude),
+                              lng: parseFloat(delivery.shippingAddress.longitude),
+                            }}
+                            title={`${delivery.shippingAddress.firstName} ${delivery.shippingAddress.lastName}`}
+                            label={delivery.id}
+                          />
+                        )
+                      ))}
+                    </GoogleMap>
+                  ) : (
+                    <div className="absolute inset-0 bg-muted flex items-center justify-center">
+                      <div className="text-center">
+                        <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
+                        <p className="font-medium">No Delivery Locations</p>
+                        <p className="text-sm text-muted-foreground">
+                          No pending deliveries to display on the map.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </LoadScript>
+              </CardContent>
             </Card>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -589,6 +643,7 @@ export default function DeliveryDashboardPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
       </DeliveryLayout>
     </>
   );

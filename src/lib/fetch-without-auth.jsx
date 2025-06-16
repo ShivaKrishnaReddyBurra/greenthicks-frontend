@@ -2,7 +2,6 @@ import { getAuthToken } from "@/lib/auth-utils";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-// Fetch without authentication
 export const fetchWithoutAuth = async (url, options = {}) => {
   const headers = {
     ...options.headers,
@@ -26,7 +25,6 @@ export const fetchWithoutAuth = async (url, options = {}) => {
   return response.json();
 };
 
-// Fetch with JWT authentication
 export const fetchWithAuth = async (url, options = {}) => {
   const token = getAuthToken();
 
@@ -68,7 +66,6 @@ export const fetchWithAuth = async (url, options = {}) => {
   return response.json();
 };
 
-// Fetch with authentication for FormData (e.g., file uploads)
 export const fetchWithAuthFormData = async (url, formData, method = "POST") => {
   const token = getAuthToken();
 
@@ -117,7 +114,6 @@ export const fetchWithAuthFormData = async (url, formData, method = "POST") => {
   return response.json();
 };
 
-// Fetch with authentication for file downloads
 export const fetchWithAuthFile = async (url, options = {}) => {
   const token = getAuthToken();
 
@@ -158,7 +154,26 @@ export const fetchWithAuthFile = async (url, options = {}) => {
   return response;
 };
 
-// Admin Dashboard API functions
+export const getServiceAreas = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return fetchWithoutAuth(`/api/service-areas${query ? `?${query}` : ""}`);
+};
+
+export const checkPincode = async (pincode) => {
+  return fetchWithoutAuth(`/api/service-areas/check?pincode=${encodeURIComponent(pincode)}`);
+};
+
+export const getNearbyServiceAreas = async (lat, lng, radius) => {
+  return fetchWithoutAuth(`/api/service-areas/nearby?lat=${lat}&lng=${lng}&radius=${radius}`);
+};
+
+export const checkLocationAvailability = async (location) => {
+  return fetchWithAuth("/api/service-areas/check-location", {
+    method: "POST",
+    body: JSON.stringify({ location }),
+  });
+};
+
 export const getAdminStats = async () => {
   return fetchWithAuth("/api/admin/stats");
 };
@@ -175,7 +190,6 @@ export const getSalesTrend = async () => {
   return fetchWithAuth("/api/admin/sales-trend");
 };
 
-// Admin Notifications API functions
 export const getNotifications = async () => {
   return fetchWithAuth("/api/admin/notifications");
 };
@@ -211,7 +225,6 @@ export const clearAllNotifications = async () => {
   });
 };
 
-// Admin Settings API functions
 export const getAdminSettings = async () => {
   return fetchWithAuth("/api/admin/settings");
 };
@@ -229,7 +242,6 @@ export const resetAdminSettings = async (category) => {
   });
 };
 
-// Cancellations API functions
 export const getCancellations = async (page = 1, limit = 10) => {
   return fetchWithAuth(`/api/cancellations?page=${page}&limit=${limit}`);
 };
@@ -252,7 +264,6 @@ export const processCancellationRefund = async (id, refundData) => {
   });
 };
 
-// Returns API functions
 export const getReturns = async (page = 1, limit = 10) => {
   return fetchWithAuth(`/api/returns?page=${page}&limit=${limit}`);
 };
@@ -275,7 +286,6 @@ export const processReturnRefund = async (id, refundData) => {
   });
 };
 
-// Favorites API functions
 export const apiAddToFavorites = async (productId) => {
   return fetchWithAuth("/api/highlight", {
     method: "POST",
@@ -299,7 +309,6 @@ export const getFavorites = async () => {
   return fetchWithAuth("/api/highlight");
 };
 
-// Delivery API functions
 export const getDeliveryOrders = async (page = 1, limit = 10) => {
   return fetchWithAuth(`/api/delivery?page=${page}&limit=${limit}`);
 };
@@ -334,7 +343,6 @@ export const getDeliveryBoys = async () => {
   return users.filter((user) => user.isDeliveryBoy);
 };
 
-// Product API functions
 export const getProducts = async () => {
   return fetchWithoutAuth("/api/products");
 };
@@ -344,14 +352,13 @@ export const getProductById = async (globalId) => {
 };
 
 export const createProduct = async (productData, images = [], imageData = []) => {
-  if (!productData || typeof productData !== 'object') {
+  if (!productData || typeof productData !== "object") {
     console.error("Invalid productData:", productData);
     throw new Error("Invalid product data provided");
   }
 
   const formData = new FormData();
 
-  // Handle product data
   const complexFields = ["nutrition", "policies", "tags"];
   for (const [key, value] of Object.entries(productData)) {
     if (value == null) continue;
@@ -367,7 +374,6 @@ export const createProduct = async (productData, images = [], imageData = []) =>
     }
   }
 
-  // Handle images
   if (Array.isArray(images) && images.length > 0) {
     images.forEach((image, index) => {
       if (image instanceof File) {
@@ -378,7 +384,6 @@ export const createProduct = async (productData, images = [], imageData = []) =>
     });
   }
 
-  // Handle imageData
   if (Array.isArray(imageData) && imageData.length > 0) {
     try {
       formData.append("imageData", JSON.stringify(imageData));
@@ -418,7 +423,6 @@ export const deleteProduct = async (globalId) => {
   return fetchWithAuth(`/api/products/${globalId}`, { method: "DELETE" });
 };
 
-// Product Review API functions
 export const addProductReview = async (globalId, reviewData) => {
   return fetchWithAuth(`/api/products/${globalId}/reviews`, {
     method: "POST",
@@ -429,7 +433,7 @@ export const addProductReview = async (globalId, reviewData) => {
 export const updateReviewStatus = async (globalId, reviewId, approved) => {
   return fetchWithAuth(`/api/products/${globalId}/reviews/${reviewId}`, {
     method: "PATCH",
-    body: JSON.stringify({ status: approved ? 'approved' : 'rejected' }),
+    body: JSON.stringify({ status: approved ? "approved" : "rejected" }),
   });
 };
 
@@ -439,7 +443,6 @@ export const deleteReview = async (globalId, reviewId) => {
   });
 };
 
-// Order API functions
 export const createOrder = async (orderData) => {
   return fetchWithAuth("/api/orders", {
     method: "POST",
@@ -470,7 +473,6 @@ export const exportOrders = async () => {
   return fetchWithAuthFile("/api/orders/export", { method: "GET" });
 };
 
-// Cart API functions
 export const addToCart = async (productId, quantity) => {
   return fetchWithAuth("/api/cart", {
     method: "POST",
@@ -494,12 +496,10 @@ export const clearCart = async () => {
   });
 };
 
-// User Profile API function
 export const getUserProfile = async () => {
   return fetchWithAuth("/api/users/profile");
 };
 
-// User Management API functions
 export const getUsers = async () => {
   return fetchWithAuth("/api/users");
 };
@@ -521,7 +521,6 @@ export const getUserDetails = async (globalId, page = 1, limit = 10) => {
   return fetchWithAuth(`/api/users/${globalId}/details?page=${page}&limit=${limit}`);
 };
 
-// Coupon API function
 export const validateCoupon = async (couponCode, subtotal) => {
   return fetchWithAuth("/api/coupons/validate", {
     method: "POST",
@@ -529,7 +528,6 @@ export const validateCoupon = async (couponCode, subtotal) => {
   });
 };
 
-// Invoices API functions
 export const getInvoices = async (page = 1, limit = 10) => {
   return fetchWithAuth(`/api/invoices?page=${page}&limit=${limit}`);
 };
@@ -542,7 +540,6 @@ export const getInvoiceData = async (globalId) => {
   return fetchWithAuth(`/api/invoices/${globalId}`);
 };
 
-// Delivery Login API function
 export const deliveryLogin = async (identifier, password) => {
   const loginData = await fetchWithoutAuth("/api/auth/login", {
     method: "POST",
@@ -556,11 +553,10 @@ export const deliveryLogin = async (identifier, password) => {
   return loginData;
 };
 
-// Email Verification API functions
 export const verifyEmail = async (email, token) => {
   return fetchWithoutAuth(
     `/api/auth/verify-email?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`,
-    { method: "GET" },
+    { method: "GET" }
   );
 };
 
@@ -571,9 +567,12 @@ export const resendVerificationEmail = async (email) => {
   });
 };
 
-// Delivery Map API functions
 export const getDeliveryLocations = async () => {
   return fetchWithAuth("/api/delivery/locations");
+};
+
+export const getCurrentLocation = async () => {
+  return fetchWithAuth("/api/delivery/location");
 };
 
 export const updateDeliveryLocation = async (latitude, longitude, address) => {
@@ -583,11 +582,6 @@ export const updateDeliveryLocation = async (latitude, longitude, address) => {
   });
 };
 
-export const getCurrentLocation = async () => {
-  return fetchWithAuth("/api/delivery/location");
-};
-
-// Delivery Dashboard API functions
 export const getDeliveryStats = async () => {
   return fetchWithAuth("/api/delivery/stats");
 };
@@ -596,7 +590,6 @@ export const getDeliveryEarnings = async (period = "month") => {
   return fetchWithAuth(`/api/delivery/earnings?period=${period}`);
 };
 
-// Delivery Profile API functions
 export const getDeliveryProfile = async () => {
   return fetchWithAuth("/api/delivery/profile");
 };
@@ -629,7 +622,6 @@ export const changeDeliveryPassword = async (currentPassword, newPassword) => {
   });
 };
 
-// Delivery Settings API functions
 export const getDeliverySettings = async () => {
   return fetchWithAuth("/api/delivery/settings");
 };
@@ -655,7 +647,6 @@ export const updateDeliveryPrivacySettings = async (privacyData) => {
   });
 };
 
-// Export Reports API functions
 export const exportSalesReport = async (dateRange, format) => {
   return fetchWithAuthFile("/api/reports/sales", {
     method: "POST",
@@ -677,7 +668,6 @@ export const exportCustomerReport = async (format) => {
   });
 };
 
-// Admin Profile API functions
 export const getAdminProfile = async () => {
   return fetchWithAuth("/api/admin/profile");
 };
@@ -700,7 +690,6 @@ export const getAdminActivity = async (page = 1, limit = 10) => {
   return fetchWithAuth(`/api/admin/profile/activity?page=${page}&limit=${limit}`);
 };
 
-// Delivery Admin API functions
 export const getDeliveryBoysAdmin = async () => {
   return fetchWithAuth("/api/delivery/admin/delivery-boys");
 };
@@ -710,7 +699,7 @@ export const getDeliveryAnalytics = async (period = "month") => {
 };
 
 export const assignDeliveryBoyAdmin = async (orderId, deliveryBoyId) => {
-  return fetchWithAuth(`/api/delivery/admin/assign/${orderId}`, {
+  return fetchWithAuth(`/api/delivery/admin/orders/${orderId}`, {
     method: "POST",
     body: JSON.stringify({ deliveryBoyId }),
   });

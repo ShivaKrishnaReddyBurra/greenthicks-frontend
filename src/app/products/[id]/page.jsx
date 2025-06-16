@@ -101,14 +101,26 @@ export default function ProductDetailPage({ params: paramsPromise }) {
           foundProduct.tags = foundProduct.tags || []
           foundProduct.sku = foundProduct.sku || `PROD-${foundProduct.globalId}`
           foundProduct.images = Array.isArray(foundProduct.images)
-  ? foundProduct.images.map((img) => img?.url || img)
-  : []
+            ? foundProduct.images.map((img) => img?.url || img)
+            : []
+          // Fix: Ensure reviews is always an array
+          foundProduct.reviews = Array.isArray(foundProduct.reviews) ? foundProduct.reviews : []
           setProduct(foundProduct)
 
           const allProducts = await getProducts()
           const similar = allProducts
             .filter((p) => p.category === foundProduct.category && p.globalId !== foundProduct.globalId)
             .slice(0, 4)
+            // Fix: Ensure reviews is an array for each similar product
+            .map((p) => ({
+              ...p,
+              reviews: Array.isArray(p.reviews) ? p.reviews : [],
+              images: Array.isArray(p.images) ? p.images.map((img) => img?.url || img) : [],
+              nutrition: p.nutrition || { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, vitamins: [] },
+              policies: p.policies || { return: "", shipping: "", availability: "" },
+              tags: p.tags || [],
+              sku: p.sku || `PROD-${p.globalId}`,
+            }))
           setSimilarProducts(similar)
         }
       } catch (error) {
@@ -443,7 +455,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                         i <
                         Math.round(
                           (product.reviews?.reduce((sum, r) => sum + r.rating, 0) ?? 0) /
-                            (product.reviews?.length || 1),
+                            (product.reviews?.length || 1)
                         )
                           ? "fill-yellow-400 text-yellow-400"
                           : "fill-muted text-muted"
@@ -985,8 +997,8 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                             className={`h-3 w-3 sm:h-4 sm:w-4 ${
                               i <
                               Math.round(
-                                similarProduct.reviews.reduce((sum, r) => sum + r.rating, 0) /
-                                  (similarProduct.reviews.length || 1),
+                                (similarProduct.reviews?.reduce((sum, r) => sum + r.rating, 0) ?? 0) /
+                                  (similarProduct.reviews?.length || 1)
                               )
                                 ? "fill-yellow-400 text-yellow-400"
                                 : "fill-muted text-muted"
@@ -994,7 +1006,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                           />
                         ))}
                         <span className="text-xs sm:text-sm text-muted-foreground">
-                          ({similarProduct.reviews.length})
+                          ({similarProduct.reviews?.length ?? 0})
                         </span>
                       </div>
                     </CardContent>

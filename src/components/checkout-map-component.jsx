@@ -69,7 +69,7 @@ const CheckoutMapComponent = ({
   const [marker, setMarker] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(initialLocation);
   const [address, setAddress] = useState(initialAddress || "");
-  const [addressComponents, setAddressComponents] = useState({ city: "", state: "", zipCode: "" });
+  const [addressComponents, setAddressComponents] = useState({ city: "", state: "", zipCode: "", lag: "", lng: "" });
   const [mapError, setMapError] = useState(null);
   const [mapInitialized, setMapInitialized] = useState(false);
   const [initError, setInitError] = useState(null);
@@ -397,6 +397,8 @@ const CheckoutMapComponent = ({
         let city = "";
         let state = "";
         let zipCode = "";
+        let lag = location.lat;
+        let lng = location.lng;
 
         if (place.address_components) {
           place.address_components.forEach((component) => {
@@ -407,15 +409,19 @@ const CheckoutMapComponent = ({
               state = component.long_name;
             } else if (types.includes("postal_code")) {
               zipCode = component.long_name;
+            } else if (types.includes("street_number")) {
+              lag = parseFloat(component.long_name);
+            } else if (types.includes("route")) {
+              lng = parseFloat(component.long_name);
             }
           });
         }
 
         setSelectedLocation(location);
         setAddress(place.formatted_address || "");
-        setAddressComponents({ city, state, zipCode });
+        setAddressComponents({ city, state, zipCode, lag, lng });
         if (onLocationSelect) {
-          onLocationSelect(location, place.formatted_address || "", { city, state, zipCode });
+          onLocationSelect(location, place.formatted_address || "", { city, state, zipCode, lag, lng });
         }
       }
     }
@@ -438,6 +444,8 @@ const CheckoutMapComponent = ({
         let city = "";
         let state = "";
         let zipCode = "";
+        let lag = location.lat;
+        let lng = location.lng;
 
         results[0].address_components.forEach((component) => {
           const types = component.types;
@@ -447,24 +455,28 @@ const CheckoutMapComponent = ({
             state = component.long_name;
           } else if (types.includes("postal_code")) {
             zipCode = component.long_name;
+          } else if (types.includes("street_number")) {
+            lag = parseFloat(component.long_name);
+          } else if (types.includes("route")) {
+            lng = parseFloat(component.long_name);
           }
         });
 
-        logDebug("✅ Geocoded address", { address: newAddress, city, state, zipCode });
+        logDebug("✅ Geocoded address", { address: newAddress, city, state, zipCode, lag, lng });
 
         setAddress(newAddress);
-        setAddressComponents({ city, state, zipCode });
+        setAddressComponents({ city, state, zipCode, lag, lng });
         if (onLocationSelect) {
-          onLocationSelect(location, newAddress, { city, state, zipCode });
+          onLocationSelect(location, newAddress, { city, state, zipCode, lag, lng });
         }
       } else {
         const errorMsg = `Geocoder failed: ${status}`;
         logDebug("❌ Geocoder error", { status, results });
         setAddress("");
-        setAddressComponents({ city: "", state: "", zipCode: "" });
+        setAddressComponents({ city: "", state: "", zipCode: "", lag: "", lng: "" });
         setMapError(errorMsg);
         if (onLocationSelect) {
-          onLocationSelect(location, "", { city: "", state: "", zipCode: "" });
+          onLocationSelect(location, "", { city: "", state: "", zipCode: "", lag: "", lng: "" });
         }
       }
     });
@@ -648,6 +660,11 @@ const CheckoutMapComponent = ({
                 {addressComponents.city && <span>City: {addressComponents.city} | </span>}
                 {addressComponents.state && <span>State: {addressComponents.state} | </span>}
                 {addressComponents.zipCode && <span>ZIP: {addressComponents.zipCode}</span>}
+                {addressComponents.lag && addressComponents.lng ? (
+                  <span className="ml-2">
+                    Lat: {selectedLocation.lat.toFixed(6)}, Lng: {selectedLocation.lng.toFixed(6)}
+                  </span>
+                ) : null}
               </div>
             ) : null}
           </div>
