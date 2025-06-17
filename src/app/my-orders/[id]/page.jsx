@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Package, Truck, CheckCircle, Clock, MapPin, RotateCcw, XCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Package, Truck, CheckCircle, Clock, MapPin, RotateCcw, XCircle, Camera, X, Star } from "lucide-react";
 import Image from "next/image";
-import { getOrder, cancelOrder } from "@/lib/api";
+import { getOrder, cancelOrder, addProductReview } from "@/lib/api";
 import { getAuthToken } from "@/lib/auth-utils";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useParams } from "next/navigation";
@@ -40,11 +43,19 @@ const LeafLoader = () => {
 export default function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [actionLoading, setActionLoading] = useState(true);
+  const [showReturnForm, setShowReturnForm] = useState(false);
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState({});
+  const [returnData, setReturnData] = useState({ reason: "", images: [] });
+  const [cancelReason, setCancelReason] = useState("");
+  const [reviewData, setReviewData] = useState({});
   const { toast } = useToast();
   const router = useRouter();
   const params = useParams();
   const id = params.id;
   const actionTimeout = useRef(null);
+  const fileInputRef = useRef(null);
+  const reviewFileInputRefs = useRef({});
 
   useEffect(() => {
     if (!getAuthToken()) {
@@ -99,13 +110,96 @@ export default function OrderDetailPage() {
     fetchOrder();
   }, [id, toast, router]);
 
-  const handleCancelOrder = async () => {
+  const handleImageUpload = (e) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const maxSize = 3 * 1024 * 1024; // 3MB
+      const oversizedFiles = Array.from(files).filter((file) => file.size > maxSize);
+      if (oversizedFiles.length > 0) {
+        toast({
+          title: "Error",
+          description: "Some images exceed 3MB. Please upload smaller images.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const newImages = Array.from(files).map((file) => ({
+        id: Math.random().toString(36).substring(7),
+        url: URL.createObjectURL(file),
+        file,
+      }));
+      setReturnData({ ...returnData, images: [...returnData.images, ...newImages] });
+    }
+  };
+
+  const removeImage = (id) => {
+    setReturnData({ ...returnData, images: returnData.images.filter((img) => img.id !== id) });
+  };
+
+  const handleReviewImageUpload = (e, productId) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const maxSize = 3 * 1024 * 1024; // 3MB
+      const oversizedFiles = Array.from(files).filter((file) => file.size > maxSize);
+      if (oversizedFiles.length > 0) {
+        toast({
+          title: "Error",
+          description: "Some images exceed 3MB. Please upload smaller images.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const newImages = Array.from(files).map((file) => ({
+        id: Math.random().toString(36).substring(7),
+        url: URL.createObjectURL(file),
+        file,
+      }));
+      setReviewData((prev) => ({
+        ...prev,
+        [productId]: {
+          ...prev[productId],
+          images: [...(prev[productId]?.images || []), ...newImages],
+        },
+      }));
+    }
+  };
+
+  const removeReviewImage = (productId, id) => {
+    setReviewData((prev) => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
+        images: prev[productId]?.images.filter((img) => img.id !== id) || [],
+      },
+    }));
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  const triggerReviewFileInput = (productId) => {
+    reviewFileInputRefs.current[productId]?.click();
+  };
+
+  const handleCancelOrder = async (e) => {
+    e.preventDefault();
+    if (!cancelReason) {
+      toast({
+        title: "Error",
+        description: "Please provide a reason for cancellation.",
+        variant: "destructive",
+      });
+      return;
+    }
     clearTimeout(actionTimeout.current);
     actionTimeout.current = setTimeout(async () => {
       setActionLoading(true);
       try {
-        await cancelOrder(id);
+        await cancelOrder(id, { reason: cancelReason });
         setOrder((prev) => ({ ...prev, status: "cancelled" }));
+        setShowCancelForm(false);
+        setCancelReason("");
         toast({
           title: "Order cancelled",
           description: "Your order has been successfully cancelled.",
@@ -128,7 +222,6 @@ export default function OrderDetailPage() {
     actionTimeout.current = setTimeout(async () => {
       setActionLoading(true);
       try {
-        // Placeholder for future API call
         await new Promise((resolve) => setTimeout(resolve, 1000));
         toast({
           title: "Support contacted",
@@ -147,13 +240,23 @@ export default function OrderDetailPage() {
     }, 500);
   };
 
-  const handleReturnItems = () => {
+  const handleReturnItems = async (e) => {
+    e.preventDefault();
+    if (!returnData.reason || returnData.images.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please provide a reason and at least one image for the return.",
+        variant: "destructive",
+      });
+      return;
+    }
     clearTimeout(actionTimeout.current);
     actionTimeout.current = setTimeout(async () => {
       setActionLoading(true);
       try {
-        // Placeholder for future API call
         await new Promise((resolve) => setTimeout(resolve, 1000));
+        setShowReturnForm(false);
+        setReturnData({ reason: "", images: [] });
         toast({
           title: "Return initiated",
           description: "Your return request has been submitted.",
@@ -171,21 +274,39 @@ export default function OrderDetailPage() {
     }, 500);
   };
 
-  const handleWriteReview = (productId) => {
+  const handleSubmitReview = async (e, productId) => {
+    e.preventDefault();
+    const data = reviewData[productId] || { name: "", rating: 0, review: "", images: [] };
+    if (!data.name || !data.rating || !data.review) {
+      toast({
+        title: "Error",
+        description: "Please fill all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
     clearTimeout(actionTimeout.current);
     actionTimeout.current = setTimeout(async () => {
       setActionLoading(true);
       try {
-        // Placeholder for future API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await addProductReview(productId, {
+          ...data,
+          verified: true,
+          images: data.images?.map((img) => img.file) || [],
+        });
+        setShowReviewForm((prev) => ({ ...prev, [productId]: false }));
+        setReviewData((prev) => ({
+          ...prev,
+          [productId]: { name: "", rating: 0, review: "", images: [] },
+        }));
         toast({
           title: "Review submitted",
-          description: "Thank you for your review!",
+          description: "Thank you for your review! It will be published after moderation.",
         });
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to submit review. Please try again.",
+          description: error.message || "Failed to submit review.",
           variant: "destructive",
         });
       } finally {
@@ -315,16 +436,6 @@ export default function OrderDetailPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-medium">{formatCurrency(item.quantity * item.price)}</p>
-                      {order.status === "delivered" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs"
-                          onClick={() => handleWriteReview(item.productId)}
-                        >
-                          Write Review
-                        </Button>
-                      )}
                     </div>
                   </div>
                 ))}
@@ -350,6 +461,154 @@ export default function OrderDetailPage() {
                   <span>Total</span>
                   <span>{formatCurrency(order.total)}</span>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {order.status === "delivered" && order.items.map((item, index) => (
+                  <div key={index}>
+                    <Button
+                      className="w-full bg-yellow-500 hover:bg-yellow-600 text-black"
+                      onClick={() => setShowReviewForm((prev) => ({ ...prev, [item.productId]: true }))}
+                    >
+                      <Star className="mr-2 h-4 w-4" />
+                      Write Review for {item.name}
+                    </Button>
+                    {showReviewForm[item.productId] && (
+                      <form
+                        onSubmit={(e) => handleSubmitReview(e, item.productId)}
+                        className="space-y-4 mt-4"
+                      >
+                        <div>
+                          <Label htmlFor={`reviewName-${item.productId}`}>Your Name *</Label>
+                          <Input
+                            id={`reviewName-${item.productId}`}
+                            value={reviewData[item.productId]?.name || ""}
+                            onChange={(e) =>
+                              setReviewData((prev) => ({
+                                ...prev,
+                                [item.productId]: { ...prev[item.productId], name: e.target.value },
+                              }))
+                            }
+                            placeholder="Enter your name"
+                            required
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label>Rating *</Label>
+                          <div className="flex gap-1 mt-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                onClick={() =>
+                                  setReviewData((prev) => ({
+                                    ...prev,
+                                    [item.productId]: { ...prev[item.productId], rating: star },
+                                  }))
+                                }
+                                className={`p-1 transition-colors ${
+                                  star <= (reviewData[item.productId]?.rating || 0)
+                                    ? "text-yellow-400"
+                                    : "text-muted-foreground"
+                                }`}
+                              >
+                                <Star
+                                  className={`h-5 w-5 ${
+                                    star <= (reviewData[item.productId]?.rating || 0)
+                                      ? "fill-yellow-400"
+                                      : "fill-none"
+                                  }`}
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor={`reviewText-${item.productId}`}>Your Review *</Label>
+                          <Textarea
+                            id={`reviewText-${item.productId}`}
+                            value={reviewData[item.productId]?.review || ""}
+                            onChange={(e) =>
+                              setReviewData((prev) => ({
+                                ...prev,
+                                [item.productId]: { ...prev[item.productId], review: e.target.value },
+                              }))
+                            }
+                            placeholder="Share your experience with this product"
+                            required
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label>Upload Images (Optional, max 3MB each)</Label>
+                          <div className="mt-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => triggerReviewFileInput(item.productId)}
+                            >
+                              <Camera className="mr-2 h-4 w-4" />
+                              Add Images
+                            </Button>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/jpg,image/png"
+                              multiple
+                              ref={(el) => (reviewFileInputRefs.current[item.productId] = el)}
+                              onChange={(e) => handleReviewImageUpload(e, item.productId)}
+                              className="hidden"
+                            />
+                          </div>
+                          {reviewData[item.productId]?.images?.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {reviewData[item.productId].images.map((img) => (
+                                <div key={img.id} className="relative w-16 h-16">
+                                  <Image
+                                    src={img.url}
+                                    alt="Review image preview"
+                                    width={64}
+                                    height={64}
+                                    className="object-cover rounded-md w-full h-full"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute -top-2 -right-2 bg-background/80 rounded-full h-6 w-6"
+                                    onClick={() => removeReviewImage(item.productId, img.id)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button type="submit" disabled={actionLoading}>
+                            Submit Review
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() =>
+                              setShowReviewForm((prev) => ({ ...prev, [item.productId]: false }))
+                            }
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -519,21 +778,120 @@ export default function OrderDetailPage() {
                   <Button
                     variant="outline"
                     className="w-full justify-start text-red-500"
-                    onClick={handleCancelOrder}
+                    onClick={() => setShowCancelForm(true)}
                   >
                     <XCircle className="mr-2 h-4 w-4" />
                     Cancel Order
                   </Button>
                 )}
+                {showCancelForm && (
+                  <form onSubmit={handleCancelOrder} className="space-y-4 mt-4">
+                    <div>
+                      <Label htmlFor="cancelReason">Reason for Cancellation *</Label>
+                      <Textarea
+                        id="cancelReason"
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        placeholder="Please provide the reason for cancelling the order"
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={actionLoading}>
+                        Submit Cancellation
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowCancelForm(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                )}
                 {order.status === "delivered" && (
                   <Button
                     variant="outline"
                     className="w-full justify-start"
-                    onClick={handleReturnItems}
+                    onClick={() => setShowReturnForm(true)}
                   >
                     <RotateCcw className="mr-2 h-4 w-4" />
                     Return Items
                   </Button>
+                )}
+                {showReturnForm && (
+                  <form onSubmit={handleReturnItems} className="space-y-4 mt-4">
+                    <div>
+                      <Label htmlFor="returnReason">Reason for Return *</Label>
+                      <Textarea
+                        id="returnReason"
+                        value={returnData.reason}
+                        onChange={(e) => setReturnData({ ...returnData, reason: e.target.value })}
+                        placeholder="Please provide the reason for returning the items"
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label>Upload Images (Required, max 3MB each)</Label>
+                      <div className="mt-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={triggerFileInput}
+                        >
+                          <Camera className="mr-2 h-4 w-4" />
+                          Add Images
+                        </Button>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png"
+                          multiple
+                          ref={fileInputRef}
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                      </div>
+                      {returnData.images.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {returnData.images.map((img) => (
+                            <div key={img.id} className="relative w-16 h-16">
+                              <Image
+                                src={img.url}
+                                alt="Return image preview"
+                                width={64}
+                                height={64}
+                                className="object-cover rounded-md w-full h-full"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute -top-2 -right-2 bg-background/80 rounded-full h-6 w-6"
+                                onClick={() => removeImage(img.id)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={actionLoading}>
+                        Submit Return
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowReturnForm(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
                 )}
               </div>
             </CardContent>

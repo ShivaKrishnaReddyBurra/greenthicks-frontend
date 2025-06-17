@@ -1,18 +1,20 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect , useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Truck, CheckCircle, Clock, Search, ShoppingBag, XCircle } from "lucide-react";
+import { Package, Truck, CheckCircle, Clock, Search, ShoppingBag, XCircle, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { getUserOrders } from "@/lib/api";
+import { getUserOrders, addProductReview } from "@/lib/api";
 import { getAuthToken } from "@/lib/auth-utils";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const LeafLoader = () => {
   return (
@@ -45,10 +47,12 @@ export default function MyOrdersPage() {
   const [actionLoading, setActionLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [showReviewForm, setShowReviewForm] = useState({});
+  const [reviewData, setReviewData] = useState({});
   const { toast } = useToast();
   const router = useRouter();
   const actionTimeout = useRef(null);
-  const searchTimeout = useRef(null);
+  const searchTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (!getAuthToken()) {
@@ -64,39 +68,45 @@ export default function MyOrdersPage() {
       setActionLoading(true);
       try {
         const response = await getUserOrders(currentPage);
-        const fetchedOrders = response.orders || [];
+        const fetchedOrders = response?.orders || [];
 
-        const enrichedOrders = fetchedOrders.map((order) => ({
-          id: order.globalId || order.id,
-          date: new Date(order.orderDate).toLocaleDateString("en-IN"),
-          status: order.deliveryStatus,
-          items: order.items.map((item) => ({
-            productId: item.productId || item._id,
-            name: item.name,
-            image: item.image || "/placeholder.svg?height=64&width=64",
-            price: item.price,
-            quantity: item.quantity,
-          })),
-          total: order.total,
-          estimatedDelivery: order.deliveryDate
-            ? new Date(order.deliveryDate).toLocaleDateString("en-IN")
-            : new Date(new Date(order.orderDate).getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString(
-                "en-IN"
-              ),
-        }));
+        const enrichedOrders = fetchedOrders.map((order) => {
+          if (!order || !order.items) {
+            console.warn(`Invalid order data:`, order);
+            return null;
+          }
+          return {
+            id: order.globalId || order.id || `order-${Math.random().toString(36).substring(7)}`,
+            date: order.orderDate
+              ? new Date(order.orderDate).toLocaleDateString("en-US")
+              : new Date().toLocaleDateString("en-US"),
+            status: order.deliveryStatus || "pending",
+            items: order.items.map((item) => ({
+              productId: item.productId || item._id || `item-${Math.random().toString(36).substring(7)}`,
+              name: item.name || "Unknown Product",
+              image: item.image || "/placeholder.svg?height=64&width=64",
+              price: item.price || 0,
+              quantity: item.quantity || 1,
+            })),
+            total: order.total || 0,
+            estimatedDelivery: order.deliveryDate
+              ? new Date(order.deliveryDate).toLocaleDateString("en-US")
+              : new Date(new Date(order.orderDate || Date.now()).getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString(
+                  "en-US"
+                ),
+          };
+        }).filter((order) => order !== null);
 
         setOrders(enrichedOrders);
-        setTotalPages(response.totalPages || 1);
+        setTotalPages(response?.totalPages || 1);
       } catch (error) {
+        console.error("Error fetching orders:", error.message);
         toast({
           title: "Error fetching orders",
-          description: error.message || "An error occurred while fetching your orders.",
+          description: error.message || "Failed to load your orders. Please try again.",
           variant: "destructive",
         });
-        if (error.message.includes("Token expired")) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          router.push("/login");
-        }
+        setOrders([]);
       } finally {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         setActionLoading(false);
@@ -106,9 +116,9 @@ export default function MyOrdersPage() {
   }, [toast, router, currentPage]);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-IN", {
+    return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "INR",
+      currency: "USD",
       maximumFractionDigits: 2,
     }).format(amount);
   };
@@ -203,6 +213,96 @@ export default function MyOrdersPage() {
     setActionLoading(false);
   };
 
+  const handleImageChange = (e, key) => {
+    const files = Array.from(e.target.files);
+    const validTypes = ["image/jpeg", "image/png"];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxImages = 3;
+
+    if (files.length > maxImages) {
+      toast({
+        title: "Error",
+        description: `You can upload up to ${maxImages} images only.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const validFiles = files.filter((file) => {
+      if (!validTypes.includes(file.type)) {
+        toast({
+          title: "Error",
+          description: `${file.name} is not a valid image type (JPEG/PNG only).`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      if (file.size > maxSize) {
+        toast({
+          title: "Error",
+          description: `${file.name} exceeds 5MB size limit.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      Promise.all(
+        validFiles.map((file) => {
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+          });
+        })
+      ).then((base64Images) => {
+        setReviewData((prev) => ({
+          ...prev,
+          [key]: { ...prev[key], images: base64Images },
+        }));
+      });
+    }
+  };
+
+  const handleSubmitReview = async (e, productId, orderId) => {
+    e.preventDefault();
+    const key = `${orderId}-${productId}`;
+    const data = reviewData[key] || { name: "", rating: 0, review: "", images: [] };
+    if (!data.name || !data.rating || !data.review) {
+      toast({
+        title: "Error",
+        description: "Please fill in your name, rating, and review.",
+        variant: "destructive",
+      });
+      return;
+    }
+    clearTimeout(actionTimeout.current);
+    actionTimeout.current = setTimeout(async () => {
+      setActionLoading(true);
+      try {
+        await addProductReview(productId, { ...data, verified: true });
+        setShowReviewForm((prev) => ({ ...prev, [key]: false }));
+        setReviewData((prev) => ({ ...prev, [key]: { name: "", rating: 0, review: "", images: [] } }));
+        toast({
+          title: "Review submitted",
+          description: "Thank you for your review! It will be published after moderation.",
+        });
+      } catch (error) {
+        console.error("Error submitting review:", error.message);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to submit review.",
+          variant: "destructive",
+        });
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        setActionLoading(false);
+      }
+    }, 500);
+  };
+
   const filteredOrders = orders.filter((order) => {
     if (activeTab !== "all" && order.status !== activeTab) {
       return false;
@@ -251,7 +351,6 @@ export default function MyOrdersPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">My Orders</h1>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        {/* Desktop: State Bar */}
         <div className="hidden md:flex w-full md:w-auto">
           <div className="flex w-full border rounded-md overflow-hidden">
             {statusOptions.map((option) => (
@@ -269,7 +368,6 @@ export default function MyOrdersPage() {
             ))}
           </div>
         </div>
-        {/* Mobile: Select Dropdown */}
         <div className="md:hidden w-full">
           <select
             value={activeTab}
@@ -283,7 +381,6 @@ export default function MyOrdersPage() {
             ))}
           </select>
         </div>
-        {/* Search Bar */}
         <div className="relative w-full md:w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -332,28 +429,163 @@ export default function MyOrdersPage() {
                     <h3 className="font-medium mb-3">Order Items</h3>
                     <div className="space-y-4">
                       {order.items.slice(0, 2).map((item, index) => (
-                        <div key={index} className="flex items-center gap-4">
-                          <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                            <Link href={`/products/${item.productId}`}>
-                              <Image
-                                src={item.image}
-                                alt={item.name}
-                                fill
-                                className="object-cover"
-                              />
-                            </Link>
+                        <div key={index} className="space-y-4">
+                          <div className="flex items-center gap-4">
+                            <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                              <Link href={`/products/${item.productId}`}>
+                                <Image
+                                  src={item.image}
+                                  alt={item.name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              </Link>
+                            </div>
+                            <div className="flex-1">
+                              <Link
+                                href={`/products/${item.productId}`}
+                                className="font-medium hover:text-primary"
+                              >
+                                {item.name}
+                              </Link>
+                              <p className="text-sm text-muted-foreground">
+                                {item.quantity} x {formatCurrency(item.price)}
+                              </p>
+                              {order.status === "delivered" && (
+                                <Button
+                                  size="sm"
+                                  className="mt-2 bg-amber-600 hover:bg-amber-700 text-white"
+                                  onClick={() => setShowReviewForm((prev) => ({ ...prev, [`${order.id}-${item.productId}`]: true }))}
+                                >
+                                  <Star className="mr-1 h-3 w-3" />
+                                  Review
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <Link
-                              href={`/products/${item.productId}`}
-                              className="font-medium hover:text-primary"
+                          {showReviewForm[`${order.id}-${item.productId}`] && (
+                            <form
+                              onSubmit={(e) => handleSubmitReview(e, item.productId, order.id)}
+                              className="space-y-4 pl-20"
                             >
-                              {item.name}
-                            </Link>
-                            <p className="text-sm text-muted-foreground">
-                              {item.quantity} x {formatCurrency(item.price)}
-                            </p>
-                          </div>
+                              <div>
+                                <Label htmlFor={`reviewName-${order.id}-${item.productId}`}>Your Name *</Label>
+                                <Input
+                                  id={`reviewName-${order.id}-${item.productId}`}
+                                  value={reviewData[`${order.id}-${item.productId}`]?.name || ""}
+                                  onChange={(e) =>
+                                    setReviewData((prev) => ({
+                                      ...prev,
+                                      [`${order.id}-${item.productId}`]: { ...prev[`${order.id}-${item.productId}`], name: e.target.value },
+                                    }))
+                                  }
+                                  placeholder="Enter your name"
+                                  required
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label>Rating *</Label>
+                                <div className="flex gap-1 mt-1">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                      key={star}
+                                      type="button"
+                                      onClick={() =>
+                                        setReviewData((prev) => ({
+                                          ...prev,
+                                          [`${order.id}-${item.productId}`]: { ...prev[`${order.id}-${item.productId}`], rating: star },
+                                        }))
+                                      }
+                                      className={`p-1 transition-colors ${
+                                        star <= (reviewData[`${order.id}-${item.productId}`]?.rating || 0)
+                                          ? "text-yellow-400"
+                                          : "text-muted-foreground"
+                                      }`}
+                                    >
+                                      <Star
+                                        className={`h-5 w-5 ${
+                                          star <= (reviewData[`${order.id}-${item.productId}`]?.rating || 0)
+                                            ? "fill-yellow-400"
+                                            : "fill-none"
+                                        }`}
+                                      />
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <Label htmlFor={`reviewText-${order.id}-${item.productId}`}>Your Review *</Label>
+                                <Textarea
+                                  id={`reviewText-${order.id}-${item.productId}`}
+                                  value={reviewData[`${order.id}-${item.productId}`]?.review || ""}
+                                  onChange={(e) =>
+                                    setReviewData((prev) => ({
+                                      ...prev,
+                                      [`${order.id}-${item.productId}`]: { ...prev[`${order.id}-${item.productId}`], review: e.target.value },
+                                    }))
+                                  }
+                                  placeholder="Share your experience with this product"
+                                  required
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`reviewImages-${order.id}-${item.productId}`}>Upload Images (Optional, max 3, JPEG/PNG, 5MB each)</Label>
+                                <Input
+                                  id={`reviewImages-${order.id}-${item.productId}`}
+                                  type="file"
+                                  accept="image/jpeg,image/png"
+                                  multiple
+                                  onChange={(e) => handleImageChange(e, `${order.id}-${item.productId}`)}
+                                  className="mt-1"
+                                />
+                                {reviewData[`${order.id}-${item.productId}`]?.images?.length > 0 && (
+                                  <div className="flex gap-2 mt-2 flex-wrap">
+                                    {reviewData[`${order.id}-${item.productId}`].images.map((img, idx) => (
+                                      <div key={idx} className="relative h-20 w-20 rounded-md overflow-hidden">
+                                        <Image
+                                          src={img}
+                                          alt={`Preview ${idx + 1}`}
+                                          fill
+                                          className="object-cover"
+                                        />
+                                        <button
+                                          type="button"
+                                          className="absolute top-0 right-0 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center"
+                                          onClick={() =>
+                                            setReviewData((prev) => ({
+                                              ...prev,
+                                              [`${order.id}-${item.productId}`]: {
+                                                ...prev[`${order.id}-${item.productId}`],
+                                                images: prev[`${order.id}-${item.productId}`].images.filter((_, i) => i !== idx),
+                                              },
+                                            }))
+                                          }
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                <Button type="submit" disabled={actionLoading}>
+                                  Submit Review
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() =>
+                                    setShowReviewForm((prev) => ({ ...prev, [`${order.id}-${item.productId}`]: false }))
+                                  }
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </form>
+                          )}
                         </div>
                       ))}
                       {order.items.length > 2 && (

@@ -278,10 +278,10 @@ export default function DeliveryDashboardPage() {
   };
 
   // Default center for the map (e.g., warangal or first delivery location)
-  const defaultCenter = pendingDeliveries.length > 0 && pendingDeliveries[0].shippingAddress.latitude
+  const defaultCenter = pendingDeliveries.length > 0 && pendingDeliveries[0].shippingAddress.location?.latitude
     ? {
-        lat: parseFloat(pendingDeliveries[0].shippingAddress.latitude),
-        lng: parseFloat(pendingDeliveries[0].shippingAddress.longitude),
+        lat: parseFloat(pendingDeliveries[0].shippingAddress.location?.latitude),
+        lng: parseFloat(pendingDeliveries[0].shippingAddress.location?.longitude),
       }
     : { lat: 17.9784, lng: 79.5941 }; // Fallback to NYC
 
@@ -410,12 +410,12 @@ export default function DeliveryDashboardPage() {
                       zoom={12}
                     >
                       {pendingDeliveries.map((delivery) => (
-                        delivery.shippingAddress.latitude && delivery.shippingAddress.longitude && (
+                        delivery.shippingAddress.location?.latitude && delivery.shippingAddress.location?.longitude && (
                           <Marker
                             key={delivery.globalId}
                             position={{
-                              lat: parseFloat(delivery.shippingAddress.latitude),
-                              lng: parseFloat(delivery.shippingAddress.longitude),
+                              lat: parseFloat(delivery.shippingAddress.location?.latitude),
+                              lng: parseFloat(delivery.shippingAddress.location?.longitude),
                             }}
                             title={`${delivery.shippingAddress.firstName} ${delivery.shippingAddress.lastName}`}
                             label={delivery.id}

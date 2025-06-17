@@ -49,9 +49,10 @@ export function FeaturedProducts() {
     const fetchProducts = async () => {
       try {
         const data = await getProducts();
-        setProducts(data);
+        setProducts(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Error fetching products:", error);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
@@ -96,7 +97,7 @@ export function FeaturedProducts() {
 
   return (
     <>
-      {(isTabLoading) && <LeafLoader />}
+      {isTabLoading && <LeafLoader />}
       <section className="py-12 md:py-20">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">

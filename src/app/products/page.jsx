@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { getProducts } from "@/lib/api";
+import { getProducts } from "@/lib/fetch-without-auth";
 
 const SkeletonLoader = () => {
   return (

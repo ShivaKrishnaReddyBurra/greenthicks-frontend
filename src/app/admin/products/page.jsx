@@ -35,9 +35,10 @@ export default function AdminProducts() {
     const fetchProducts = async () => {
       try {
         const data = await getProducts()
-        setProducts(data)
+        setProducts(Array.isArray(data) ? data : [])
       } catch (error) {
         console.error("Error fetching products:", error)
+        setProducts([])
       } finally {
         setIsLoading(false)
       }

@@ -311,11 +311,11 @@ export default function ServiceAreasView() {
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-2 text-sm">
                   <Phone className="h-4 w-4" />
-                  <span>+91 1234567890</span>
+                  <span>+91 9705045597</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="h-4 w-4" />
-                  <span>support@greenthicks.com</span>
+                  <span>greenthickss@gmail.com</span>
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">Contact us to request service in your area</p>
               </CardContent>
@@ -328,7 +328,7 @@ export default function ServiceAreasView() {
               <CardHeader>
                 <CardTitle>Service Coverage Map</CardTitle>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Green circles show our交付 areas. Click markers for details.
+                  Green circles show our service areas. Click markers for details.
                 </p>
               </CardHeader>
               <CardContent className="p-0">

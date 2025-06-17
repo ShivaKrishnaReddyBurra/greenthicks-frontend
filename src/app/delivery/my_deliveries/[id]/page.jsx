@@ -17,7 +17,8 @@ import {
   Navigation,
   MessageSquare,
   Camera,
-  DollarSign,
+  IndianRupeeIcon,
+  ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,7 +78,7 @@ export default function DeliveryDetailsPage() {
             name: `${data.shippingAddress.firstName} ${data.shippingAddress.lastName}`,
             phone: data.shippingAddress.phone,
             address: `${data.shippingAddress.address}, ${data.shippingAddress.city}, ${data.shippingAddress.state}, ${data.shippingAddress.zipCode}`,
-            location: data.shippingAddress.location || { lat: 12.9716, lng: 77.5946 },
+            location: data.shippingAddress.location,
           },
           items: data.items.map((item) => ({
             name: item.name,
@@ -598,7 +599,7 @@ export default function DeliveryDetailsPage() {
                       disabled={processingAction}
                       className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                     >
-                      <DollarSign className="h-4 w-4 mr-2" />
+                      <IndianRupeeIcon className="h-4 w-4 mr-2" />
                       Confirm Cash Payment
                     </Button>
                   </div>
@@ -682,12 +683,12 @@ export default function DeliveryDetailsPage() {
                   </div>
                 </div>
                 <div className="flex items-start">
-                  <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-3 mt-0.5" />
+                  <MapPin className="h-12 w-12 text-gray-500 dark:text-gray-400 mr-3 mt-0.5"/>
                   <div>
                     <h3 className="font-medium text-gray-800 dark:text-white">{delivery.customer.address}</h3>
                     <div className="flex space-x-2 mt-1">
                       <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${delivery.customer.location.lat},${delivery.customer.location.lng}`}
+                        href={`https://www.google.com/maps/search/?api=1&query=${delivery.customer.location.latitude},${delivery.customer.location.longitude}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-green-600 dark:text-green-400 hover:underline flex items-center"
