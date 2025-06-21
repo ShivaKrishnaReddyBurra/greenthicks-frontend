@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,12 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Save, Trash2, Upload, Star, Check, X, ArrowLeft, ImagePlus, Eye } from "lucide-react";
-import { getProductById, updateProduct, deleteReview, updateReviewStatus, setPrimaryImage, deleteImage } from "@/lib/api";
+import { Save, Trash2, Upload, ArrowLeft, ImagePlus, Eye } from "lucide-react";
+import { getProductById, updateProduct, setPrimaryImage, deleteImage } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 const SkeletonLoader = () => (
@@ -80,7 +79,6 @@ export default function ProductEditor({ params }) {
             availability: "",
           },
           tags: data.tags || [],
-          reviews: data.reviews || [],
           images: data.images || [],
         });
       } catch (error) {
@@ -298,7 +296,6 @@ export default function ProductEditor({ params }) {
           availability: "",
         },
         tags: updatedProduct.tags || [],
-        reviews: updatedProduct.reviews || [],
         images: updatedProduct.images || [],
       });
     } catch (error) {
@@ -309,76 +306,6 @@ export default function ProductEditor({ params }) {
       });
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleApproveReview = async (reviewId) => {
-    try {
-      await updateReviewStatus(Number.parseInt(id), reviewId, true);
-      setProduct({
-        ...product,
-        reviews: product.reviews.map((review) => {
-          if (review._id === reviewId) {
-            return { ...review, approved: true };
-          }
-          return review;
-        }),
-      });
-      toast({
-        title: "Success",
-        description: "Review approved successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to approve review",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRejectReview = async (reviewId) => {
-    try {
-      await updateReviewStatus(Number.parseInt(id), reviewId, false);
-      setProduct({
-        ...product,
-        reviews: product.reviews.map((review) => {
-          if (review._id === reviewId) {
-            return { ...review, approved: false };
-          }
-          return review;
-        }),
-      });
-      toast({
-        title: "Success",
-        description: "Review rejected successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to reject review",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteReview = async (reviewId) => {
-    try {
-      await deleteReview(Number.parseInt(id), reviewId);
-      setProduct({
-        ...product,
-        reviews: product.reviews.filter((review) => review._id !== reviewId),
-      });
-      toast({
-        title: "Success",
-        description: "Review deleted successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete review",
-        variant: "destructive",
-      });
     }
   };
 
@@ -402,11 +329,6 @@ export default function ProductEditor({ params }) {
   const categories = [
     "leafy", "fruit", "root", "herbs", "milk", "pulses", "grains", "spices", "nuts", "oils", "snacks", "beverages",
   ];
-
-  const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
 
   return (
     <div className="space-y-6">
@@ -441,11 +363,10 @@ export default function ProductEditor({ params }) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="images">Images</TabsTrigger>
           <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
-          <TabsTrigger value="reviews">Reviews</TabsTrigger>
           <TabsTrigger value="policies">Policies</TabsTrigger>
         </TabsList>
 
@@ -559,7 +480,6 @@ export default function ProductEditor({ params }) {
                     <Badge key={tag} variant="secondary" className="flex items-center gap-1">
                       {tag}
                       <button onClick={() => handleRemoveTag(tag)} className="ml-1 rounded-full hover:bg-muted p-0.5">
-                        <X className="h-3 w-3" />
                       </button>
                     </Badge>
                   ))}
@@ -676,10 +596,10 @@ export default function ProductEditor({ params }) {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {product.images.map((image) => (
-                  <div key={image} className="border rounded-lg overflow-hidden">
+                  <div key={`${image.url}`} className="border rounded-lg overflow-hidden">
                     <div className="relative aspect-square">
                       <Image
-                        src={image || "/placeholder.png"}
+                        src={image.url || "/placeholder.png"}
                         alt="Product image"
                         fill
                         className="object-cover"
@@ -874,14 +794,13 @@ export default function ProductEditor({ params }) {
                         <TableCell>{vitamin.daily}</TableCell>
                         <TableCell>
                           <Button variant="ghost" size="sm" onClick={() => handleRemoveVitamin(index)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="vitaminName">Name</Label>
@@ -919,51 +838,6 @@ export default function ProductEditor({ params }) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="reviews" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Product Reviews</CardTitle>
-              <CardDescription>Manage customer reviews for this product.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Review</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {product.reviews.map((review) => (
-                    <TableRow key={review._id}>
-                      <TableCell>{review.customer?.name || 'Unknown'}</TableCell>
-                      <TableCell>{review.rating}</TableCell>
-                      <TableCell>{review.review}</TableCell>
-                      <TableCell>{formatDate(review.createdAt)}</TableCell>
-                      <TableCell>{review.approved ? 'Approved' : 'Pending'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => handleApproveReview(review._id)}>
-                          Approve
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleRejectReview(review._id)}>
-                          Reject
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteReview(review._id)}>
-                          Delete
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="policies" className="space-y-4">
           <Card>
             <CardHeader>
@@ -975,7 +849,7 @@ export default function ProductEditor({ params }) {
                 <Label htmlFor="returnPolicy">Return Policy</Label>
                 <Textarea
                   id="returnPolicy"
-                  rows={3}
+                  rows="3"
                   value={product.policies.return || ""}
                   onChange={(e) =>
                     setProduct({
@@ -990,7 +864,7 @@ export default function ProductEditor({ params }) {
                 <Label htmlFor="shippingPolicy">Shipping Policy</Label>
                 <Textarea
                   id="shippingPolicy"
-                  rows={3}
+                  rows="3"
                   value={product.policies.shipping || ""}
                   onChange={(e) =>
                     setProduct({
@@ -1005,7 +879,7 @@ export default function ProductEditor({ params }) {
                 <Label htmlFor="availability">Availability</Label>
                 <Textarea
                   id="availability"
-                  rows={3}
+                  rows="3"
                   value={product.policies.availability || ""}
                   onChange={(e) =>
                     setProduct({

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/lib/cart-context";
 import { useFavorites } from "@/lib/favorites-context";
-import { addProductReview, getProducts, getProductById } from "@/lib/fetch-without-auth";
+import { addProductReview, getProducts, getProductById } from "@/lib/api";
 import { getAuthToken } from "@/lib/auth-utils";
 import {
   Heart,
@@ -31,6 +31,8 @@ import {
   Camera,
   X,
   ZoomIn,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 const LeafLoader = () => {
@@ -57,8 +59,7 @@ const LeafLoader = () => {
   );
 };
 
-export default function ProductDetailPage({ params: paramsPromise }) {
-  const params = React.use(paramsPromise);
+export default function ProductDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { addToCart } = useCart();
@@ -73,73 +74,118 @@ export default function ProductDetailPage({ params: paramsPromise }) {
   const [reviewImages, setReviewImages] = useState([]);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [reviewData, setReviewData] = useState({ name: "", rating: 0, review: "" });
+  const [reviewData, setReviewData] = useState({ name: "", rating: 0, review: "", images: [] });
+  const [galleryView, setGalleryView] = useState({ open: false, images: [], currentIndex: 0 });
   const fileInputRef = useRef(null);
   const touchStartX = useRef(null);
+  const params = useParams();
+  const id = params.id;
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const productId = Number.parseInt(params.id);
-        const foundProduct = await getProductById(productId);
 
-        if (foundProduct) {
-          foundProduct.nutrition = foundProduct.nutrition || {
-            calories: 0,
-            protein: 0,
-            carbs: 0,
-            fat: 0,
-            fiber: 0,
-            vitamins: [],
-          };
-          foundProduct.policies = foundProduct.policies || {
-            return: "",
-            shipping: "",
-            availability: "",
-          };
-          foundProduct.tags = foundProduct.tags || [];
-          foundProduct.sku = foundProduct.sku || `PROD-${foundProduct.globalId}`;
-          foundProduct.images = Array.isArray(foundProduct.images)
-            ? foundProduct.images.map((img) => img?.url || img)
-            : [];
-          foundProduct.reviews = Array.isArray(foundProduct.reviews)
-            ? foundProduct.reviews.map((review) => ({
-                ...review,
-                verified: review.verified || false,
-              }))
-            : [];
-          setProduct(foundProduct);
-
-          const allProducts = await getProducts();
-          const similar = allProducts
-            .filter((p) => p.category === foundProduct.category && p.globalId !== foundProduct.globalId)
-            .slice(0, 4)
-            .map((p) => ({
-              ...p,
-              reviews: Array.isArray(p.reviews)
-                ? p.reviews.map((review) => ({
-                    ...review,
-                    verified: review.verified || false,
-                  }))
-                : [],
-              images: Array.isArray(p.images) ? p.images.map((img) => img?.url || img) : [],
-              nutrition: p.nutrition || { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, vitamins: [] },
-              policies: p.policies || { return: "", shipping: "", availability: "" },
-              tags: p.tags || [],
-              sku: p.sku || `PROD-${p.globalId}`,
-            }));
-          setSimilarProducts(similar);
+        if (!id) {
+          throw new Error("Product ID is missing");
         }
+
+        const productId = Number.parseInt(id);
+        if (isNaN(productId)) {
+          throw new Error("Invalid product ID");
+        }
+
+        const foundProduct = await getProductById(productId);
+        if (!foundProduct) {
+          throw new Error("Product not found");
+        }
+
+        // Normalize product
+        foundProduct.nutrition = foundProduct.nutrition || {
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+          fiber: 0,
+          vitamins: [],
+        };
+        foundProduct.policies = foundProduct.policies || {
+          return: "",
+          shipping: "",
+          availability: "",
+        };
+        foundProduct.tags = foundProduct.tags || [];
+        foundProduct.sku = foundProduct.sku || `PROD-${foundProduct.globalId}`;
+        foundProduct.images = Array.isArray(foundProduct.images)
+          ? foundProduct.images.map((img) =>
+              typeof img === "string" ? img : img?.url || "/placeholder.svg?height=500&width=500"
+            )
+          : ["/placeholder.svg?height=500&width=500"];
+        foundProduct.reviews = Array.isArray(foundProduct.reviews)
+          ? foundProduct.reviews.map((review) => ({
+              ...review,
+              verified: review.verified || false,
+              approved: review.approved || false,
+              customer: review.customer || { name: review.customerName || "Anonymous" },
+            }))
+          : [];
+
+        setProduct(foundProduct);
+
+        // Similar Products
+        const allProducts = await getProducts();
+        if (!Array.isArray(allProducts)) {
+          console.warn("getProducts did not return an array");
+          setSimilarProducts([]);
+          return;
+        }
+
+        const similar = allProducts
+          .filter((p) => p.category === foundProduct.category && p.globalId !== foundProduct.globalId)
+          .slice(0, 4)
+          .map((p) => ({
+            ...p,
+            reviews: Array.isArray(p.reviews)
+              ? p.reviews.map((review) => ({
+                  ...review,
+                  verified: review.verified || false,
+                  approved: review.approved || false,
+                  customer: review.customer || { name: review.customerName || "Anonymous" },
+                }))
+              : [],
+            images: Array.isArray(p.images)
+  ? p.images.filter((img) => typeof img === "object" && img.primary === true)
+  : [],
+
+            nutrition: p.nutrition || { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, vitamins: [] },
+            policies: p.policies || { return: "", shipping: "", availability: "" },
+            tags: p.tags || [],
+            sku: p.sku || `PROD-${p.globalId}`,
+          }));
+
+        setSimilarProducts(similar);
       } catch (error) {
         console.error("Error fetching product:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load product details.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [params.id]);
+  }, [id, toast]);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
 
   const handleNavigation = async (e, href) => {
     e.preventDefault();
@@ -150,28 +196,35 @@ export default function ProductDetailPage({ params: paramsPromise }) {
   };
 
   const handleAddToCart = async () => {
-    if (product) {
-      const token = getAuthToken();
-      if (!token) {
-        const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
-        setActionLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        router.push(`/login?returnUrl=${returnUrl}`);
-        toast({
-          title: "Please log in",
-          description: "You need to be logged in to add items to your cart.",
-          variant: "destructive",
-        });
-        setActionLoading(false);
-        return;
-      }
+    if (!product) return;
+    const token = getAuthToken();
+    if (!token) {
+      const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
       setActionLoading(true);
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      addToCart(product, quantity);
+      router.push(`/login?returnUrl=${returnUrl}`);
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to add items to your cart.",
+        variant: "destructive",
+      });
+      setActionLoading(false);
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await addToCart(product.globalId, quantity);
       toast({
         title: "Added to cart",
         description: `${product.name} has been added to your cart.`,
       });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add item to cart.",
+        variant: "destructive",
+      });
+    } finally {
       setActionLoading(false);
     }
   };
@@ -179,21 +232,29 @@ export default function ProductDetailPage({ params: paramsPromise }) {
   const toggleFavorite = async () => {
     if (!product) return;
     setActionLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    if (isFavorite(product.globalId)) {
-      removeFromFavorites(product.globalId);
+    try {
+      if (isFavorite(product.globalId)) {
+        await removeFromFavorites(product.globalId);
+        toast({
+          title: "Removed from favorites",
+          description: `${product.name} has been removed from your favorites.`,
+        });
+      } else {
+        await addToFavorites(product.globalId);
+        toast({
+          title: "Added to favorites",
+          description: `${product.name} has been added to your favorites.`,
+        });
+      }
+    } catch (error) {
       toast({
-        title: "Removed from favorites",
-        description: `${product.name} has been removed from your favorites.`,
+        title: "Error",
+        description: error.message || "Failed to update favorites.",
+        variant: "destructive",
       });
-    } else {
-      addToFavorites(product);
-      toast({
-        title: "Added to favorites",
-        description: `${product.name} has been added to your favorites.`,
-      });
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   const incrementQuantity = () => {
@@ -212,26 +273,54 @@ export default function ProductDetailPage({ params: paramsPromise }) {
     const files = e.target.files;
     if (files && files.length > 0) {
       const maxSize = 3 * 1024 * 1024; // 3MB
-      const oversizedFiles = Array.from(files).filter((file) => file.size > maxSize);
-      if (oversizedFiles.length > 0) {
+      const maxImages = 4;
+      const validTypes = ["image/jpeg", "image/jpg", "image/png"];
+
+      if (files.length > maxImages) {
         toast({
           title: "Error",
-          description: "Some images exceed 3MB. Please upload smaller images.",
+          description: `You can upload up to ${maxImages} images only.`,
           variant: "destructive",
         });
         return;
       }
-      const newImages = Array.from(files).map((file) => ({
-        id: Math.random().toString(36).substring(7),
-        url: URL.createObjectURL(file),
-        file,
-      }));
-      setReviewImages([...reviewImages, ...newImages]);
+
+      const validFiles = Array.from(files).filter((file) => {
+        if (!validTypes.includes(file.type)) {
+          toast({
+            title: "Error",
+            description: `${file.name} is not a valid image type (JPEG/PNG only).`,
+            variant: "destructive",
+          });
+          return false;
+        }
+        if (file.size > maxSize) {
+          toast({
+            title: "Error",
+            description: `${file.name} exceeds 3MB size limit.`,
+            variant: "destructive",
+          });
+          return false;
+        }
+        return true;
+      });
+
+      Promise.all(
+        validFiles.map((file) => {
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+          });
+        })
+      ).then((base64Images) => {
+        setReviewImages((prev) => [...prev, ...base64Images]);
+      });
     }
   };
 
-  const removeImage = (id) => {
-    setReviewImages(reviewImages.filter((img) => img.id !== id));
+  const removeImage = (index) => {
+    setReviewImages(reviewImages.filter((_, i) => i !== index));
   };
 
   const triggerFileInput = () => {
@@ -240,39 +329,72 @@ export default function ProductDetailPage({ params: paramsPromise }) {
 
   const submitReview = async (e) => {
     e.preventDefault();
-    if (!reviewData.name || !reviewData.rating || !reviewData.review) {
+    if (!reviewData.rating || !reviewData.review) {
       toast({
         title: "Error",
-        description: "Please fill all required fields.",
+        description: "Please provide a rating and review text.",
         variant: "destructive",
       });
       return;
     }
 
+    if (!getAuthToken()) {
+      const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
+      setActionLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      router.push(`/login?returnUrl=${returnUrl}`);
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to submit a review.",
+        variant: "destructive",
+      });
+      setActionLoading(false);
+      return;
+    }
+
     setActionLoading(true);
     try {
-      await addProductReview(product.globalId, { ...reviewData, verified: true });
+      const response = await addProductReview(product.globalId, {
+        name: reviewData.name || null,
+        rating: reviewData.rating,
+        review: reviewData.review,
+        images: reviewImages,
+      });
+
       toast({
         title: "Review submitted",
-        description: "Thank you for your review! It will be published after moderation.",
+        description: response.review.verified
+          ? "Thanks for your review"
+          : "You didn’t buy this product, so Greenthicks support team will check your review and then it will publish",
       });
+
       setShowReviewForm(false);
       setReviewImages([]);
-      setReviewData({ name: "", rating: 0, review: "" });
-      const updatedProduct = await getProductById(Number.parseInt(params.id));
-      setProduct({
-        ...updatedProduct,
-        reviews: Array.isArray(updatedProduct.reviews)
-          ? updatedProduct.reviews.map((review) => ({
-              ...review,
-              verified: review.verified || false,
-            }))
-          : [],
-      });
+      setReviewData({ name: "", rating: 0, review: "", images: [] });
+
+      const updatedProduct = await getProductById(Number.parseInt(id));
+      if (updatedProduct) {
+        setProduct({
+          ...updatedProduct,
+          reviews: Array.isArray(updatedProduct.reviews)
+            ? updatedProduct.reviews.map((review) => ({
+                ...review,
+                verified: review.verified || false,
+                approved: review.approved || false,
+                customer: review.customer || { name: review.customerName || "Anonymous" },
+              }))
+            : [],
+        });
+      }
     } catch (error) {
+      console.error("Error submitting review:", error);
+      let errorMessage = error.message || "Failed to submit review.";
+      if (error.response?.errors) {
+        errorMessage = error.response.errors.join("; ");
+      }
       toast({
         title: "Error",
-        description: error.message || "Failed to submit review.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -314,6 +436,23 @@ export default function ProductDetailPage({ params: paramsPromise }) {
       setActionLoading(false);
     }
     touchStartX.current = null;
+  };
+
+  const openGalleryView = (images, index) => {
+    setGalleryView({ open: true, images, currentIndex: index });
+  };
+
+  const closeGalleryView = () => {
+    setGalleryView({ open: false, images: [], currentIndex: 0 });
+  };
+
+  const navigateGallery = (direction) => {
+    setGalleryView((prev) => {
+      let newIndex = prev.currentIndex + direction;
+      if (newIndex < 0) newIndex = prev.images.length - 1;
+      if (newIndex >= prev.images.length) newIndex = 0;
+      return { ...prev, currentIndex: newIndex };
+    });
   };
 
   if (loading) {
@@ -360,6 +499,42 @@ export default function ProductDetailPage({ params: paramsPromise }) {
           </div>
         )}
 
+        {galleryView.open && (
+          <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 text-white"
+              onClick={closeGalleryView}
+            >
+              <X className="h-6 w-6" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white"
+              onClick={() => navigateGallery(-1)}
+            >
+              <ChevronLeft className="h-8 w-8" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white"
+              onClick={() => navigateGallery(1)}
+            >
+              <ChevronRight className="h-8 w-8" />
+            </Button>
+            <Image
+              src={galleryView.images[galleryView.currentIndex] || "/placeholder.svg?height=500&width=500"}
+              alt={`Review image ${galleryView.currentIndex + 1}`}
+              width={800}
+              height={800}
+              className="object-contain max-h-auto w-auto"
+            />
+          </div>
+        )}
+
         <div className="mb-6">
           <Link
             href="/products"
@@ -370,7 +545,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
             Back to products
           </Link>
         </div>
-
+        
         <div className="grid md:grid-cols-2 gap-8 mb-10">
           <div className="space-y-4">
             <div
@@ -378,7 +553,8 @@ export default function ProductDetailPage({ params: paramsPromise }) {
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
-              <div className="aspect-square w-full max-w-[400px] mx-auto">
+            <Card className="bg-muted/10 border-muted">
+              <CardContent className="aspect-square w-full max-w-[400px] mx-auto">
                 <Image
                   src={product.images[selectedImage] || "/placeholder.svg?height=500&width=500"}
                   alt={product.name}
@@ -394,7 +570,8 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                 >
                   <ZoomIn className="h-5 w-5" />
                 </Button>
-              </div>
+              </CardContent>
+            </Card>
               {product.discountPercentage > 0 && (
                 <Badge className="absolute top-4 left-4 bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700">
                   -{product.discountPercentage}% OFF
@@ -412,26 +589,25 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                   </Badge>
                 </div>
               )}
-            </div>
-
+            </div>  
             <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide">
               {product.images.map((image, index) => (
-                <button
+                <Button
                   key={index}
-                  className={`flex-shrink-0 w-16 h-16 rounded-md border ${
-                    selectedImage === index ? "ring-2 ring-primary ring-offset-2" : "opacity-70 active:opacity-100"
+                  className={`flex-shrink-0 w-20 h-20 rounded-md border ${
+                    selectedImage === index ? "ring-2 ring-primary ring-offset-2" : "opacity-70 hover:opacity-100"
                   } bg-background transition-opacity`}
                   onClick={() => handleImageSelect(index)}
                 >
                   <Image
                     src={image || "/placeholder.svg?height=64&width=64"}
                     alt={`${product.name} - view ${index + 1}`}
-                    width={64}
-                    height={64}
+                    width={120}
+                    height={120}
                     className="h-full w-full object-cover"
                     loading="lazy"
                   />
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -472,8 +648,8 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                       className={`h-4 w-4 ${
                         i <
                         Math.round(
-                          (product.reviews?.reduce((sum, r) => sum + r.rating, 0) ?? 0) /
-                            (product.reviews?.length || 1)
+                          (product.reviews?.filter((r) => r.approved).reduce((sum, r) => sum + r.rating, 0) ?? 0) /
+                            (product.reviews?.filter((r) => r.approved).length || 1)
                         )
                           ? "fill-yellow-400 text-yellow-400"
                           : "fill-muted text-muted"
@@ -481,14 +657,14 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                     />
                   ))}
                 </div>
-                <span className="text-sm text-muted-foreground">({product.reviews?.length ?? 0} reviews)</span>
+                <span className="text-sm text-muted-foreground">({product.reviews?.filter((r) => r.approved).length ?? 0} reviews)</span>
               </div>
 
               <div className="flex items-center gap-3 mb-4">
-                <span className="text-2xl sm:text-3xl font-bold text-primary">₹{product.price.toFixed(2)}</span>
+                <span className="text-2xl sm:text-3xl font-bold text-primary">{formatCurrency(product.price)}</span>
                 {product.originalPrice && product.originalPrice > product.price && (
                   <span className="text-lg sm:text-xl text-muted-foreground line-through">
-                    ₹{product.originalPrice.toFixed(2)}
+                    {formatCurrency(product.originalPrice)}
                   </span>
                 )}
                 <span className="text-sm text-muted-foreground">/ {product.unit}</span>
@@ -677,7 +853,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                 value="reviews"
                 className="flex-shrink-0 rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none py-3 px-4 sm:px-6 text-sm sm:text-base"
               >
-                Reviews ({product.reviews?.length ?? 0})
+                Reviews ({product.reviews?.filter((r) => r.approved).length ?? 0})
               </TabsTrigger>
             </TabsList>
             <div className="p-4 sm:p-6 border border-t-0 rounded-b-lg bg-card text-card-foreground">
@@ -743,7 +919,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                           {product.nutrition.vitamins.map((vitamin, index) => (
                             <div key={index} className="flex justify-between py-1">
                               <span>{vitamin.name}</span>
-                              <span>{vitamin.daily || vitamin.amount}</span>
+                              <span>{vitamin.amount} ({vitamin.daily})</span>
                             </div>
                           ))}
                         </>
@@ -773,182 +949,164 @@ export default function ProductDetailPage({ params: paramsPromise }) {
               </TabsContent>
               <TabsContent value="reviews" className="mt-0">
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex justify-between items-center">
                     <h3 className="text-lg sm:text-xl font-semibold">Customer Reviews</h3>
                     <Button
-                      className="bg-primary hover:bg-primary/90 h-10 sm:h-12 text-sm sm:text-base"
-                      onClick={() => setShowReviewForm(!showReviewForm)}
+                      onClick={() => setShowReviewForm(true)}
+                      className="bg-yellow-500 hover:bg-yellow-600 text-black"
                     >
-                      {showReviewForm ? "Cancel" : "Write a Review"}
+                      <Star className="mr-2 h-4 w-4" />
+                      Write a Review
                     </Button>
                   </div>
-
                   {showReviewForm && (
-                    <Card>
-                      <CardContent className="p-4 sm:p-6">
-                        <form onSubmit={submitReview} className="space-y-4">
-                          <div>
-                            <Label htmlFor="name" className="text-sm sm:text-base">
-                              Your Name *
-                            </Label>
-                            <Input
-                              id="name"
-                              value={reviewData.name}
-                              onChange={(e) => setReviewData({ ...reviewData, name: e.target.value })}
-                              placeholder="Enter your name"
-                              required
-                              className="mt-1 h-10 sm:h-12 text-sm sm:text-base"
-                            />
-                          </div>
-
-                          <div>
-                            <Label className="text-sm sm:text-base">Rating *</Label>
-                            <div className="flex gap-1 mt-1">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <button
-                                  key={star}
+                    <form onSubmit={submitReview} className="space-y-4">
+                      <div>
+                        <Label htmlFor="reviewName">Your Name (Optional)</Label>
+                        <Input
+                          id="reviewName"
+                          value={reviewData.name}
+                          onChange={(e) => setReviewData({ ...reviewData, name: e.target.value })}
+                          placeholder="Enter your name (optional)"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label>Rating *</Label>
+                        <div className="flex gap-1 mt-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setReviewData({ ...reviewData, rating: star })}
+                              className={`p-1 transition-colors ${
+                                star <= reviewData.rating ? "text-yellow-400" : "text-muted-foreground"
+                              }`}
+                            >
+                              <Star
+                                className={`h-5 w-5 ${star <= reviewData.rating ? "fill-yellow-400" : "fill-none"}`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="reviewText">Your Review *</Label>
+                        <Textarea
+                          id="reviewText"
+                          value={reviewData.review}
+                          onChange={(e) => setReviewData({ ...reviewData, review: e.target.value })}
+                          placeholder="Share your experience with this product"
+                          required
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label>Upload Images (Optional, max 3MB each)</Label>
+                        <div className="mt-1">
+                          <Button type="button" variant="outline" onClick={triggerFileInput}>
+                            <Camera className="mr-2 h-4 w-4" />
+                            Add Images
+                          </Button>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png"
+                            multiple
+                            ref={fileInputRef}
+                            onChange={handleImageUpload}
+                            className="hidden"
+                          />
+                        </div>
+                        {reviewImages.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {reviewImages.map((img, idx) => (
+                              <div key={idx} className="relative w-16 h-16">
+                                <Image
+                                  src={img}
+                                  alt={`Review image preview ${idx + 1}`}
+                                  width={64}
+                                  height={64}
+                                  className="object-cover rounded-md w-full h-full"
+                                />
+                                <Button
                                   type="button"
-                                  onClick={() => setReviewData({ ...reviewData, rating: star })}
-                                  className={`p-1 transition-colors ${
-                                    star <= reviewData.rating ? "text-yellow-400" : "text-muted-foreground"
-                                  }`}
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute -top-2 -right-2 bg-background/80 rounded-full h-6 w-6"
+                                  onClick={() => removeImage(idx)}
                                 >
-                                  <Star
-                                    className={`h-5 w-5 sm:h-6 sm:w-6 ${
-                                      star <= reviewData.rating ? "fill-yellow-400" : "fill-none"
-                                    }`}
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button type="submit" disabled={actionLoading}>
+                          Submit Review
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowReviewForm(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+                  {product.reviews.filter((r) => r.approved).length > 0 ? (
+                    product.reviews
+                      .filter((r) => r.approved)
+                      .map((review, index) => (
+                        <div key={index} className="border-b pb-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="flex">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-4 w-4 ${
+                                    i < review.rating ? "fill-yellow-400 text-yellow-400" : "fill-muted text-muted"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-sm font-medium">{review.customer.name}</span>
+                            {review.verified && review.approved && (
+                              <Badge className="bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm">
+                                Verified Buyer
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm">{review.review}</p>
+                          {review.images && review.images.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {review.images.map((img, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => openGalleryView(review.images, idx)}
+                                  className="relative w-16 h-16"
+                                >
+                                  <Image
+                                    src={img}
+                                    alt={`Review image ${idx + 1}`}
+                                    width={64}
+                                    height={64}
+                                    className="object-cover rounded-md w-full h-full hover:opacity-90 transition-opacity"
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.src = "/placeholder.svg?height=64&width=64";
+                                    }}
                                   />
                                 </button>
                               ))}
                             </div>
-                          </div>
-
-                          <div>
-                            <Label htmlFor="review" className="text-sm sm:text-base">
-                              Your Review *
-                            </Label>
-                            <Textarea
-                              id="review"
-                              value={reviewData.review}
-                              onChange={(e) => setReviewData({ ...reviewData, review: e.target.value })}
-                              placeholder="Share your experience with this product"
-                              required
-                              className="mt-1 h-24 sm:h-32 text-sm sm:text-base"
-                            />
-                          </div>
-
-                          <div>
-                            <Label className="text-sm sm:text-base">Upload Images (Optional, max 3MB each)</Label>
-                            <div className="mt-1">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={triggerFileInput}
-                                className="h-10 sm:h-12 text-sm sm:text-base"
-                              >
-                                <Camera className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                                Add Images
-                              </Button>
-                              <input
-                                type="file"
-                                accept="image/jpeg,image/jpg,image/png"
-                                multiple
-                                ref={fileInputRef}
-                                onChange={handleImageUpload}
-                                className="hidden"
-                              />
-                            </div>
-                            {reviewImages.length > 0 && (
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                {reviewImages.map((img) => (
-                                  <div key={img.id} className="relative w-16 h-16 sm:w-20 sm:h-20">
-                                    <Image
-                                      src={img.url || "/placeholder.svg"}
-                                      alt="Review image preview"
-                                      width={80}
-                                      height={80}
-                                      className="object-cover rounded-md w-full h-full"
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      className="absolute -top-2 -right-2 bg-background/80 rounded-full h-6 w-6 sm:h-7 sm:w-7"
-                                      onClick={() => removeImage(img.id)}
-                                    >
-                                      <X className="h-3 w-3 sm:h-4 sm:w-4" />
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          <Button
-                            type="submit"
-                            className="bg-primary hover:bg-primary/90 h-10 sm:h-12 text-sm sm:text-base"
-                            disabled={actionLoading}
-                          >
-                            Submit Review
-                          </Button>
-                        </form>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {(product.reviews?.length ?? 0) === 0 ? (
-                    <p className="text-muted-foreground text-sm sm:text-base">
-                      No reviews yet. Be the first to share your experience!
-                    </p>
+                          )}
+                        </div>
+                      ))
                   ) : (
-                    <div className="space-y-4">
-                      {product.reviews
-                        .filter((review) => review.approved)
-                        .map((review) => (
-                          <Card key={review._id} className="bg-muted/40 border-muted">
-                            <CardContent className="p-4 sm:p-5">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="flex">
-                                  {[1, 2, 3, 4, 5].map((star) => (
-                                    <Star
-                                      key={star}
-                                      className={`h-4 w-4 sm:h-5 sm:w-5 ${
-                                        star <= review.rating
-                                          ? "fill-yellow-400 text-yellow-400"
-                                          : "fill-muted text-muted"
-                                      }`}
-                                    />
-                                  ))}
-                                </div>
-                                <span className="text-sm sm:text-base font-medium">{review.customer.name}</span>
-                                {review.verified && (
-                                  <Badge className="bg-green-500 text-xs sm:text-sm">
-                                    Verified Ordered Customer
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm sm:text-base text-muted-foreground mb-2">
-                                {new Date(review.createdAt).toLocaleDateString()}
-                              </p>
-                              <p className="text-sm sm:text-base">{review.review}</p>
-                              {review.images && review.images.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  {review.images.map((img, index) => (
-                                    <Image
-                                      key={index}
-                                      src={img.url || "/placeholder.svg"}
-                                      alt={`Review image ${index + 1}`}
-                                      width={80}
-                                      height={80}
-                                      className="object-cover rounded-md w-16 h-16 sm:w-20 sm:h-20"
-                                    />
-                                  ))}
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        ))}
-                    </div>
+                    <p className="text-muted-foreground text-sm sm:text-base">No approved reviews yet. Be the first to review!</p>
                   )}
                 </div>
               </TabsContent>
@@ -970,7 +1128,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                   <Card className="h-full border-muted hover:shadow-lg transition-shadow bg-card">
                     <div className="relative aspect-square">
                       <Image
-                        src={similarProduct.images[0] || "/placeholder.svg?height=300&width=300"}
+                        src={similarProduct.images[0]?.url  || "/placeholder.svg?height=300&width=300"}
                         alt={similarProduct.name}
                         width={300}
                         height={300}
@@ -1020,8 +1178,8 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                             className={`h-3 w-3 sm:h-4 sm:w-4 ${
                               i <
                               Math.round(
-                                (similarProduct.reviews?.reduce((sum, r) => sum + r.rating, 0) ?? 0) /
-                                  (similarProduct.reviews?.length || 1)
+                                (similarProduct.reviews?.filter((r) => r.approved).reduce((sum, r) => sum + r.rating, 0) ?? 0) /
+                                  (similarProduct.reviews?.filter((r) => r.approved).length || 1)
                               )
                                 ? "fill-yellow-400 text-yellow-400"
                                 : "fill-muted text-muted"
@@ -1029,7 +1187,7 @@ export default function ProductDetailPage({ params: paramsPromise }) {
                           />
                         ))}
                         <span className="text-xs sm:text-sm text-muted-foreground">
-                          ({similarProduct.reviews?.length ?? 0})
+                          ({similarProduct.reviews?.filter((r) => r.approved).length ?? 0})
                         </span>
                       </div>
                     </CardContent>

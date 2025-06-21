@@ -137,39 +137,67 @@ export default function OrderDetailPage() {
   };
 
   const handleReviewImageUpload = (e, productId) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const maxSize = 3 * 1024 * 1024; // 3MB
-      const oversizedFiles = Array.from(files).filter((file) => file.size > maxSize);
-      if (oversizedFiles.length > 0) {
+    const files = Array.from(e.target.files);
+    const validTypes = ["image/jpeg", "image/png"];
+    const maxSize = 3 * 1024 * 1024; // 3MB
+    const maxImages = 4;
+
+    if (files.length > maxImages) {
+      toast({
+        title: "Error",
+        description: `You can upload up to ${maxImages} images only.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const validFiles = files.filter((file) => {
+      if (!validTypes.includes(file.type)) {
         toast({
           title: "Error",
-          description: "Some images exceed 3MB. Please upload smaller images.",
+          description: `${file.name} is not a valid image type (JPEG/PNG only).`,
           variant: "destructive",
         });
-        return;
+        return false;
       }
-      const newImages = Array.from(files).map((file) => ({
-        id: Math.random().toString(36).substring(7),
-        url: URL.createObjectURL(file),
-        file,
-      }));
-      setReviewData((prev) => ({
-        ...prev,
-        [productId]: {
-          ...prev[productId],
-          images: [...(prev[productId]?.images || []), ...newImages],
-        },
-      }));
+      if (file.size > maxSize) {
+        toast({
+          title: "Error",
+          description: `${file.name} exceeds 3MB size limit.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      Promise.all(
+        validFiles.map((file) => {
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+          });
+        })
+      ).then((base64Images) => {
+        setReviewData((prev) => ({
+          ...prev,
+          [productId]: {
+            ...prev[productId],
+            images: [...(prev[productId]?.images || []), ...base64Images],
+          },
+        }));
+      });
     }
   };
 
-  const removeReviewImage = (productId, id) => {
+  const removeReviewImage = (productId, index) => {
     setReviewData((prev) => ({
       ...prev,
       [productId]: {
         ...prev[productId],
-        images: prev[productId]?.images.filter((img) => img.id !== id) || [],
+        images: prev[productId]?.images.filter((_, i) => i !== index) || [],
       },
     }));
   };
@@ -277,10 +305,10 @@ export default function OrderDetailPage() {
   const handleSubmitReview = async (e, productId) => {
     e.preventDefault();
     const data = reviewData[productId] || { name: "", rating: 0, review: "", images: [] };
-    if (!data.name || !data.rating || !data.review) {
+    if (!data.rating || !data.review) {
       toast({
         title: "Error",
-        description: "Please fill all required fields.",
+        description: "Please provide a rating and review.",
         variant: "destructive",
       });
       return;
@@ -290,9 +318,10 @@ export default function OrderDetailPage() {
       setActionLoading(true);
       try {
         await addProductReview(productId, {
-          ...data,
-          verified: true,
-          images: data.images?.map((img) => img.file) || [],
+          name: data.name || null,
+          rating: data.rating,
+          review: data.review,
+          images: data.images || [],
         });
         setShowReviewForm((prev) => ({ ...prev, [productId]: false }));
         setReviewData((prev) => ({
@@ -301,7 +330,7 @@ export default function OrderDetailPage() {
         }));
         toast({
           title: "Review submitted",
-          description: "Thank you for your review! It will be published after moderation.",
+          description: "Thank you for your review",
         });
       } catch (error) {
         toast({
@@ -485,7 +514,7 @@ export default function OrderDetailPage() {
                         className="space-y-4 mt-4"
                       >
                         <div>
-                          <Label htmlFor={`reviewName-${item.productId}`}>Your Name *</Label>
+                          <Label htmlFor={`reviewName-${item.productId}`}>Your Name (Optional)</Label>
                           <Input
                             id={`reviewName-${item.productId}`}
                             value={reviewData[item.productId]?.name || ""}
@@ -495,8 +524,7 @@ export default function OrderDetailPage() {
                                 [item.productId]: { ...prev[item.productId], name: e.target.value },
                               }))
                             }
-                            placeholder="Enter your name"
-                            required
+                            placeholder="Enter your name (optional)"
                             className="mt-1"
                           />
                         </div>
@@ -559,7 +587,7 @@ export default function OrderDetailPage() {
                             </Button>
                             <input
                               type="file"
-                              accept="image/jpeg,image/jpg,image/png"
+                              accept="image/jpeg,image/png"
                               multiple
                               ref={(el) => (reviewFileInputRefs.current[item.productId] = el)}
                               onChange={(e) => handleReviewImageUpload(e, item.productId)}
@@ -568,11 +596,11 @@ export default function OrderDetailPage() {
                           </div>
                           {reviewData[item.productId]?.images?.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-2">
-                              {reviewData[item.productId].images.map((img) => (
-                                <div key={img.id} className="relative w-16 h-16">
+                              {reviewData[item.productId].images.map((img, idx) => (
+                                <div key={idx} className="relative w-16 h-16">
                                   <Image
-                                    src={img.url}
-                                    alt="Review image preview"
+                                    src={img}
+                                    alt={`Review image preview ${idx + 1}`}
                                     width={64}
                                     height={64}
                                     className="object-cover rounded-md w-full h-full"
@@ -582,7 +610,7 @@ export default function OrderDetailPage() {
                                     variant="ghost"
                                     size="icon"
                                     className="absolute -top-2 -right-2 bg-background/80 rounded-full h-6 w-6"
-                                    onClick={() => removeReviewImage(item.productId, img.id)}
+                                    onClick={() => removeReviewImage(item.productId, idx)}
                                   >
                                     <X className="h-3 w-3" />
                                   </Button>
@@ -859,7 +887,7 @@ export default function OrderDetailPage() {
                           {returnData.images.map((img) => (
                             <div key={img.id} className="relative w-16 h-16">
                               <Image
-                                src={img.url}
+                                src={img}
                                 alt="Return image preview"
                                 width={64}
                                 height={64}

@@ -455,7 +455,7 @@ export default function DeliveryOrderDetailPage() {
                   <div key={item._id} className="flex items-center gap-4">
                     <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
                       <Image
-                        src={item.image || "/placeholder.svg?height=64&width=64"}
+                        src={item.image?.url || "/placeholder.svg?height=64&width=64"}
                         alt={item.name}
                         fill
                         className="object-cover"

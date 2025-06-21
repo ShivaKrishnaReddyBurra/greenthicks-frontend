@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect , useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Truck, CheckCircle, Clock, Search, ShoppingBag, XCircle, Star } from "lucide-react";
+import { Package, Truck, CheckCircle, Clock, Search, ShoppingBag, XCircle, Star, Camera } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { getUserOrders, addProductReview } from "@/lib/api";
@@ -53,6 +53,7 @@ export default function MyOrdersPage() {
   const router = useRouter();
   const actionTimeout = useRef(null);
   const searchTimeoutRef = useRef(null);
+  const fileInputRefs = useRef({});
 
   useEffect(() => {
     if (!getAuthToken()) {
@@ -78,21 +79,21 @@ export default function MyOrdersPage() {
           return {
             id: order.globalId || order.id || `order-${Math.random().toString(36).substring(7)}`,
             date: order.orderDate
-              ? new Date(order.orderDate).toLocaleDateString("en-US")
-              : new Date().toLocaleDateString("en-US"),
+              ? new Date(order.orderDate).toLocaleDateString("en-IN")
+              : new Date().toLocaleDateString("en-IN"),
             status: order.deliveryStatus || "pending",
             items: order.items.map((item) => ({
               productId: item.productId || item._id || `item-${Math.random().toString(36).substring(7)}`,
               name: item.name || "Unknown Product",
-              image: item.image || "/placeholder.svg?height=64&width=64",
+              image: item.image?.url || item.image || "/placeholder.svg?height=64&width=64",
               price: item.price || 0,
               quantity: item.quantity || 1,
             })),
             total: order.total || 0,
             estimatedDelivery: order.deliveryDate
-              ? new Date(order.deliveryDate).toLocaleDateString("en-US")
+              ? new Date(order.deliveryDate).toLocaleDateString("en-IN")
               : new Date(new Date(order.orderDate || Date.now()).getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString(
-                  "en-US"
+                  "en-IN"
                 ),
           };
         }).filter((order) => order !== null);
@@ -101,11 +102,20 @@ export default function MyOrdersPage() {
         setTotalPages(response?.totalPages || 1);
       } catch (error) {
         console.error("Error fetching orders:", error.message);
-        toast({
-          title: "Error fetching orders",
-          description: error.message || "Failed to load your orders. Please try again.",
-          variant: "destructive",
-        });
+        if (error.message.includes("Unauthorized")) {
+          toast({
+            title: "Session expired",
+            description: "Please log in again to view your orders.",
+            variant: "destructive",
+          });
+          router.push("/login");
+        } else {
+          toast({
+            title: "Error fetching orders",
+            description: error.message || "Failed to load your orders. Please try again.",
+            variant: "destructive",
+          });
+        }
         setOrders([]);
       } finally {
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -116,9 +126,9 @@ export default function MyOrdersPage() {
   }, [toast, router, currentPage]);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-IN", {
       style: "currency",
-      currency: "USD",
+      currency: "INR",
       maximumFractionDigits: 2,
     }).format(amount);
   };
@@ -126,31 +136,15 @@ export default function MyOrdersPage() {
   const getStatusBadge = (status) => {
     switch (status) {
       case "pending":
-        return (
-          <Badge variant="outline" className="border-blue-500 text-blue-500">
-            Order Placed
-          </Badge>
-        );
+        return <Badge variant="outline" className="border-blue-500 text-blue-500">Order Placed</Badge>;
       case "assigned":
-        return (
-          <Badge variant="outline" className="border-blue-500 text-blue-500">
-            Processing
-          </Badge>
-        );
+        return <Badge variant="outline" className="border-blue-500 text-blue-500">Processing</Badge>;
       case "out-for-delivery":
-        return (
-          <Badge variant="outline" className="border-orange-500 text-orange-500">
-            Out for Delivery
-          </Badge>
-        );
+        return <Badge variant="outline" className="border-orange-500 text-orange-500">Out for Delivery</Badge>;
       case "delivered":
         return <Badge className="bg-green-500">Delivered</Badge>;
       case "cancelled":
-        return (
-          <Badge variant="outline" className="border-red-500 text-red-500">
-            Cancelled
-          </Badge>
-        );
+        return <Badge variant="outline" className="border-red-500 text-red-500">Cancelled</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
@@ -173,8 +167,8 @@ export default function MyOrdersPage() {
   };
 
   const handleSearchQuery = (value) => {
-    clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => {
+    clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
       setActionLoading(true);
       setTimeout(() => {
         setSearchQuery(value);
@@ -213,11 +207,15 @@ export default function MyOrdersPage() {
     setActionLoading(false);
   };
 
+  const triggerFileInput = (key) => {
+    fileInputRefs.current[key]?.click();
+  };
+
   const handleImageChange = (e, key) => {
     const files = Array.from(e.target.files);
     const validTypes = ["image/jpeg", "image/png"];
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    const maxImages = 3;
+    const maxSize = 3 * 1024 * 1024; // 3MB
+    const maxImages = 4;
 
     if (files.length > maxImages) {
       toast({
@@ -240,7 +238,7 @@ export default function MyOrdersPage() {
       if (file.size > maxSize) {
         toast({
           title: "Error",
-          description: `${file.name} exceeds 5MB size limit.`,
+          description: `${file.name} exceeds 3MB size limit.`,
           variant: "destructive",
         });
         return false;
@@ -260,20 +258,30 @@ export default function MyOrdersPage() {
       ).then((base64Images) => {
         setReviewData((prev) => ({
           ...prev,
-          [key]: { ...prev[key], images: base64Images },
+          [key]: { ...prev[key], images: [...(prev[key]?.images || []), ...base64Images] },
         }));
       });
     }
   };
 
+  const removeImage = (key, index) => {
+    setReviewData((prev) => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        images: prev[key].images.filter((_, i) => i !== index),
+      },
+    }));
+  };
+
   const handleSubmitReview = async (e, productId, orderId) => {
     e.preventDefault();
     const key = `${orderId}-${productId}`;
-    const data = reviewData[key] || { name: "", rating: 0, review: "", images: [] };
-    if (!data.name || !data.rating || !data.review) {
+    const data = reviewData[key] || { rating: 0, review: "", images: [], name: "" };
+    if (!data.rating || !data.review) {
       toast({
         title: "Error",
-        description: "Please fill in your name, rating, and review.",
+        description: "Please provide a rating and review.",
         variant: "destructive",
       });
       return;
@@ -282,12 +290,20 @@ export default function MyOrdersPage() {
     actionTimeout.current = setTimeout(async () => {
       setActionLoading(true);
       try {
-        await addProductReview(productId, { ...data, verified: true });
+        const response = await addProductReview(productId, {
+          name: data.name || null,
+          rating: data.rating,
+          review: data.review,
+          images: data.images,
+        });
         setShowReviewForm((prev) => ({ ...prev, [key]: false }));
-        setReviewData((prev) => ({ ...prev, [key]: { name: "", rating: 0, review: "", images: [] } }));
+        setReviewData((prev) => ({
+          ...prev,
+          [key]: { name: "", rating: 0, review: "", images: [] },
+        }));
         toast({
           title: "Review submitted",
-          description: "Thank you for your review! It will be published after moderation.",
+          description: response.message,
         });
       } catch (error) {
         console.error("Error submitting review:", error.message);
@@ -334,13 +350,13 @@ export default function MyOrdersPage() {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <div className="max-w-md mx-auto">
-          <ShoppingBag className="h-16 w-16 mx-auto mb-6 text-muted-foreground" />
+          <ShoppingBag className="h-16 w-16 flex mx-auto mb-6 text-muted-foreground" />
           <h1 className="text-2xl font-bold mb-2">No Orders Yet</h1>
           <p className="text-muted-foreground mb-8">
             You haven't placed any orders yet. Start shopping to see your orders here.
           </p>
           <Link href="/products" onClick={(e) => handleNavigation(e, "/products")}>
-            <Button className="px-8">Start Shopping</Button>
+            <Button type="button" className="px-8">Start Shopping</Button>
           </Link>
         </div>
       </div>
@@ -356,6 +372,7 @@ export default function MyOrdersPage() {
             {statusOptions.map((option) => (
               <button
                 key={option.value}
+                type="button"
                 onClick={() => handleTabChange(option.value)}
                 className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === option.value
@@ -372,7 +389,7 @@ export default function MyOrdersPage() {
           <select
             value={activeTab}
             onChange={(e) => handleTabChange(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {statusOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -410,7 +427,7 @@ export default function MyOrdersPage() {
                       href={`/tracking/${order.id}`}
                       onClick={(e) => handleNavigation(e, `/tracking/${order.id}`)}
                     >
-                      <Button variant="outline" size="sm">
+                      <Button type="button" variant="outline" size="sm">
                         Track Order
                       </Button>
                     </Link>
@@ -418,7 +435,7 @@ export default function MyOrdersPage() {
                       href={`/my-orders/${order.id}`}
                       onClick={(e) => handleNavigation(e, `/my-orders/${order.id}`)}
                     >
-                      <Button size="sm">View Details</Button>
+                      <Button type="button" size="sm">View Details</Button>
                     </Link>
                   </div>
                 </div>
@@ -434,7 +451,7 @@ export default function MyOrdersPage() {
                             <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
                               <Link href={`/products/${item.productId}`}>
                                 <Image
-                                  src={item.image}
+                                  src={item.image || "/placeholder.svg?height=64&width=64"}
                                   alt={item.name}
                                   fill
                                   className="object-cover"
@@ -453,6 +470,7 @@ export default function MyOrdersPage() {
                               </p>
                               {order.status === "delivered" && (
                                 <Button
+                                  type="button"
                                   size="sm"
                                   className="mt-2 bg-amber-600 hover:bg-amber-700 text-white"
                                   onClick={() => setShowReviewForm((prev) => ({ ...prev, [`${order.id}-${item.productId}`]: true }))}
@@ -469,7 +487,7 @@ export default function MyOrdersPage() {
                               className="space-y-4 pl-20"
                             >
                               <div>
-                                <Label htmlFor={`reviewName-${order.id}-${item.productId}`}>Your Name *</Label>
+                                <Label htmlFor={`reviewName-${order.id}-${item.productId}`}>Your Name</Label>
                                 <Input
                                   id={`reviewName-${order.id}-${item.productId}`}
                                   value={reviewData[`${order.id}-${item.productId}`]?.name || ""}
@@ -479,8 +497,7 @@ export default function MyOrdersPage() {
                                       [`${order.id}-${item.productId}`]: { ...prev[`${order.id}-${item.productId}`], name: e.target.value },
                                     }))
                                   }
-                                  placeholder="Enter your name"
-                                  required
+                                  placeholder="Enter your name (optional)"
                                   className="mt-1"
                                 />
                               </div>
@@ -531,15 +548,26 @@ export default function MyOrdersPage() {
                                 />
                               </div>
                               <div>
-                                <Label htmlFor={`reviewImages-${order.id}-${item.productId}`}>Upload Images (Optional, max 3, JPEG/PNG, 5MB each)</Label>
-                                <Input
-                                  id={`reviewImages-${order.id}-${item.productId}`}
-                                  type="file"
-                                  accept="image/jpeg,image/png"
-                                  multiple
-                                  onChange={(e) => handleImageChange(e, `${order.id}-${item.productId}`)}
-                                  className="mt-1"
-                                />
+                                <Label htmlFor={`reviewImages-${order.id}-${item.productId}`}>Upload Images (Optional, max 3MB each)</Label>
+                                <div className="mt-1">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => triggerFileInput(`${order.id}-${item.productId}`)}
+                                  >
+                                    <Camera className="mr-2 h-4 w-4" />
+                                    Add Images
+                                  </Button>
+                                  <input
+                                    id={`reviewImages-${order.id}-${item.productId}`}
+                                    type="file"
+                                    accept="image/jpeg,image/png"
+                                    multiple
+                                    ref={(el) => (fileInputRefs.current[`${order.id}-${item.productId}`] = el)}
+                                    onChange={(e) => handleImageChange(e, `${order.id}-${item.productId}`)}
+                                    className="hidden"
+                                  />
+                                </div>
                                 {reviewData[`${order.id}-${item.productId}`]?.images?.length > 0 && (
                                   <div className="flex gap-2 mt-2 flex-wrap">
                                     {reviewData[`${order.id}-${item.productId}`].images.map((img, idx) => (
@@ -553,15 +581,7 @@ export default function MyOrdersPage() {
                                         <button
                                           type="button"
                                           className="absolute top-0 right-0 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center"
-                                          onClick={() =>
-                                            setReviewData((prev) => ({
-                                              ...prev,
-                                              [`${order.id}-${item.productId}`]: {
-                                                ...prev[`${order.id}-${item.productId}`],
-                                                images: prev[`${order.id}-${item.productId}`].images.filter((_, i) => i !== idx),
-                                              },
-                                            }))
-                                          }
+                                          onClick={() => removeImage(`${order.id}-${item.productId}`, idx)}
                                         >
                                           ×
                                         </button>
@@ -641,6 +661,7 @@ export default function MyOrdersPage() {
       {totalPages > 1 && (
         <div className="flex justify-center gap-4 mt-6">
           <Button
+            type="button"
             disabled={currentPage === 1}
             onClick={() => handlePageChange(currentPage - 1)}
             variant="outline"
@@ -651,6 +672,7 @@ export default function MyOrdersPage() {
             Page {currentPage} of {totalPages}
           </span>
           <Button
+            type="button"
             disabled={currentPage === totalPages}
             onClick={() => handlePageChange(currentPage + 1)}
             variant="outline"

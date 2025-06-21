@@ -147,6 +147,7 @@ export default function ProductsPage() {
 
   const filteredProducts = products
     .filter((product) => {
+      if (!product.published) return false; // Only include published products
       if (selectedCategory !== "all" && product.category !== selectedCategory) return false;
       if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
       if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;

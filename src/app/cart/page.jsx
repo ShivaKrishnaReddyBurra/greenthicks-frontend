@@ -47,8 +47,7 @@ export default function CartPage() {
   const debounceTimeout = useRef(null);
 
   const subtotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
-  const shipping = subtotal > 200 ? 0 : 25.99;
-  const total = subtotal + shipping - discount;
+  const total = subtotal - discount;
 
   const handleApplyCoupon = async () => {
     if (!couponCode) {
@@ -101,7 +100,6 @@ export default function CartPage() {
 
     sessionStorage.setItem("cartDiscount", discount.toString());
     sessionStorage.setItem("cartSubtotal", subtotal.toString());
-    sessionStorage.setItem("cartShipping", shipping.toString());
     sessionStorage.setItem("cartTotal", total.toString());
     sessionStorage.setItem("appliedCoupon", appliedCoupon);
 
@@ -281,12 +279,6 @@ export default function CartPage() {
                       <span>-₹{discount.toFixed(2)}</span>
                     </div>
                   )}
-
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Shipping</span>
-                    <span>{shipping === 0 ? "Free" : `₹${shipping.toFixed(2)}`}</span>
-                  </div>
-
                   <Separator />
 
                   <div className="flex justify-between font-medium text-lg">
@@ -309,7 +301,7 @@ export default function CartPage() {
 
                   <div className="bg-primary/10 rounded-md p-3 text-sm flex items-start gap-2">
                     <Truck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                    <p>Free shipping on orders over ₹200</p>
+                    <p>Free shipping on orders over ₹299</p>
                   </div>
 
                   <Button className="w-full" size="lg" onClick={handleCheckout}>

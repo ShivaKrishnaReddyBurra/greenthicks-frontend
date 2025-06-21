@@ -20,7 +20,7 @@ import {
   ChevronRight,
   Store,
 } from "lucide-react"
-import { getAdminStats, getRecentOrders, getTopProducts, getSalesTrend } from "@/lib/fetch-without-auth" // Updated import
+import { getAdminStats, getRecentOrders, getTopProducts, getSalesTrend } from "@/lib/api" // Updated import
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({

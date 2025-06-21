@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Search,
   Plus,
@@ -14,153 +14,220 @@ import {
   Upload,
   Eye,
   Edit,
-} from "lucide-react"
-
-import { getProducts, deleteProduct } from "@/lib/api"
+  MessageSquare,
+  Star,
+} from "lucide-react";
+import { getProducts, deleteProduct } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminProducts() {
-  const [products, setProducts] = useState([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [sortField, setSortField] = useState("name")
-  const [sortDirection, setSortDirection] = useState("asc")
-  const [filterCategory, setFilterCategory] = useState("All")
-  const [filterStatus, setFilterStatus] = useState("All")
-  const [isLoading, setIsLoading] = useState(true)
-  const [selectedProducts, setSelectedProducts] = useState([])
-  const [selectAll, setSelectAll] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [productsPerPage] = useState(10)
+  const { toast } = useToast();
+  const [products, setProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState("name");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [filterCategory, setFilterCategory] = useState("All");
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [productsPerPage] = useState(10);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const data = await getProducts()
-        setProducts(Array.isArray(data) ? data : [])
+        const data = await getProducts();
+        setProducts(
+          Array.isArray(data)
+            ? data.map((product) => ({
+                ...product,
+                reviews: Array.isArray(product.reviews) ? product.reviews : [],
+              }))
+            : []
+        );
       } catch (error) {
-        console.error("Error fetching products:", error)
-        setProducts([])
+        console.error("Error fetching products:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load products.",
+          variant: "destructive",
+        });
+        setProducts([]);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchProducts()
-  }, [])
+    fetchProducts();
+  }, [toast]);
 
   const handleSort = (field) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
-      setSortField(field)
-      setSortDirection("asc")
+      setSortField(field);
+      setSortDirection("asc");
     }
-  }
+  };
 
   const handleSearch = (e) => {
-    setSearchTerm(e.target.value)
-    setCurrentPage(1)
-  }
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
 
   const handleFilterCategory = (e) => {
-    setFilterCategory(e.target.value)
-    setCurrentPage(1)
-  }
+    setFilterCategory(e.target.value);
+    setCurrentPage(1);
+  };
 
   const handleFilterStatus = (e) => {
-    setFilterStatus(e.target.value)
-    setCurrentPage(1)
-  }
+    setFilterStatus(e.target.value);
+    setCurrentPage(1);
+  };
 
   const handleSelectAll = () => {
     if (selectAll) {
-      setSelectedProducts([])
+      setSelectedProducts([]);
     } else {
-      setSelectedProducts(currentProducts.map((product) => product.globalId))
+      setSelectedProducts(currentProducts.map((product) => product.globalId));
     }
-    setSelectAll(!selectAll)
-  }
+    setSelectAll(!selectAll);
+  };
 
   const handleSelectProduct = (id) => {
     if (selectedProducts.includes(id)) {
-      setSelectedProducts(selectedProducts.filter((productId) => productId !== id))
+      setSelectedProducts(selectedProducts.filter((productId) => productId !== id));
     } else {
-      setSelectedProducts([...selectedProducts, id])
+      setSelectedProducts([...selectedProducts, id]);
     }
-  }
+  };
 
   const handleDeleteSelected = async () => {
-    if (window.confirm(`Are you sure you want to delete ${selectedProducts.length} products?`)) {
-      try {
-        await Promise.all(selectedProducts.map((id) => deleteProduct(id)))
-        setProducts(products.filter((product) => !selectedProducts.includes(product.globalId)))
-        setSelectedProducts([])
-        setSelectAll(false)
-      } catch (error) {
-        console.error("Error deleting products:", error)
-        alert("Failed to delete some products. Please try again.")
-      }
+    if (!confirm(`Are you sure you want to delete ${selectedProducts.length} products?`)) {
+      return;
     }
-  }
+    try {
+      await Promise.allSettled(selectedProducts.map((id) => deleteProduct(id))).then((results) => {
+        const failedIds = results
+          .map((result, index) => (result.status === "rejected" ? selectedProducts[index] : null))
+          .filter(Boolean);
+        if (failedIds.length > 0) {
+          throw new Error(`Failed to delete ${failedIds.length} products.`);
+        }
+        setProducts(products.filter((product) => !selectedProducts.includes(product.globalId)));
+        setSelectedProducts([]);
+        setSelectAll(false);
+        toast({
+          title: "Success",
+          description: "Products deleted successfully.",
+        });
+      });
+    } catch (error) {
+      console.error("Error deleting products:", {
+        message: error.message,
+        status: error.status,
+        response: error.response,
+      });
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete some products.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleDeleteProduct = async (id, name) => {
-    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
-      try {
-        await deleteProduct(id)
-        setProducts(products.filter((product) => product.globalId !== id))
-      } catch (error) {
-        console.error("Error deleting product:", error)
-        alert("Failed to delete product. Please try again.")
-      }
+    if (!confirm(`Are you sure you want to delete ${name}?`)) {
+      return;
     }
-  }
+
+    try {
+      await deleteProduct(id);
+      setProducts(products.filter((product) => product.globalId !== id));
+      toast({
+        title: "Success",
+        description: "Product deleted successfully.",
+      });
+    } catch (error) {
+      console.error("Error deleting product:", {
+        message: error.message,
+        status: error.status,
+        response: error.response,
+      });
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete product.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleExport = () => {
-    const headers = ["ID,Name,Category,Price,Stock,Status"]
+    const headers = ["ID", "Name", "Category", "Price", "Stock", "Status", "Discount", "SKU", "Pending Reviews", "Total Reviews", "Average Stars"];
     const rows = filteredProducts.map((product) => {
-      const status = product.stock === 0 ? "Out of Stock" : product.stock <= 10 ? "Low Stock" : "In Stock"
-      return `${product.globalId},${product.name},${product.category},${product.price},${product.stock},${status}`
-    })
-    const csvContent = [...headers, ...rows].join("\n")
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", "products_export.csv")
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
+      const status = product.stock === 0 ? "Out of Stock" : product.stock <= 10 ? "Low Stock" : "In Stock";
+      const pendingReviews = product.reviews.filter((review) => !review.approved).length;
+      const totalReviews = product.reviews.length;
+      const averageStars = totalReviews > 0 ? (product.reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / totalReviews).toFixed(1) : "0.0";
+      return `${product.globalId},${product.name},${product.category},${product.price},${product.stock},${status},${product.discount || 0},${product.sku || ""},${pendingReviews},${totalReviews},${averageStars}`;
+    });
+    const csvContent = [headers, ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "products.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleImport = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
+    const file = e.target.files[0];
+    if (!file) return;
 
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = async (event) => {
-      const text = event.target.result
-      const rows = text.split("\n").slice(1)
+      const text = event.target.result;
+      const rows = text.split("\n").slice(1);
       const importedProducts = rows
         .filter((row) => row.trim())
         .map((row) => {
-          const [id, name, category, price, stock] = row.split(",")
+          const [id, name, category, price, stock, status, discount, sku, pendingReviews, totalReviews, averageStars] = row.split(",");
           return {
             globalId: parseInt(id),
             name,
             category,
             price: parseFloat(price),
             stock: parseInt(stock),
-          }
-        })
-      console.log("Imported products:", importedProducts)
-      alert("Import functionality requires a backend endpoint. Check console for imported data.")
-    }
-    reader.readAsText(file)
-  }
+            discount: parseFloat(discount) || 0,
+            sku: sku || "",
+            nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, vitamins: [] },
+            policies: { return: "", shipping: "", availability: "" },
+            tags: [],
+            published: false,
+            reviews: [],
+          };
+        });
+      console.log("Imported products:", importedProducts);
+      toast({
+        title: "Info",
+        description: "Import requires backend endpoint. Check console for data.",
+      });
+    };
+    reader.readAsText(file);
+  };
 
   const productsWithStatus = products.map((product) => ({
     ...product,
     status: product.stock === 0 ? "Out of Stock" : product.stock <= 10 ? "Low Stock" : "In Stock",
-  }))
+    pendingReviews: product.reviews.filter((review) => !review.approved).length,
+    totalReviews: product.reviews.length,
+    averageStars: product.reviews.length > 0 
+      ? (product.reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / product.reviews.length).toFixed(1)
+      : "0.0",
+  }));
 
   const filteredProducts = productsWithStatus
     .filter(
@@ -168,50 +235,50 @@ export default function AdminProducts() {
         (filterCategory === "All" || product.category === filterCategory) &&
         (filterStatus === "All" || product.status === filterStatus) &&
         (product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.category.toLowerCase().includes(searchTerm.toLowerCase())),
+          product.category.toLowerCase().includes(searchTerm.toLowerCase()))
     )
     .sort((a, b) => {
-      if (sortField === "price" || sortField === "stock") {
-        return sortDirection === "asc" ? a[sortField] - b[sortField] : b[sortField] - a[sortField]
+      if (sortField === "price" || sortField === "stock" || sortField === "pendingReviews" || sortField === "totalReviews" || sortField === "averageStars") {
+        return sortDirection === "asc" ? a[sortField] - b[sortField] : b[sortField] - a[sortField];
       } else {
         return sortDirection === "asc"
           ? a[sortField].localeCompare(b[sortField])
-          : b[sortField].localeCompare(a[sortField])
+          : b[sortField].localeCompare(a[sortField]);
       }
-    })
+    });
 
-  const indexOfLastProduct = currentPage * productsPerPage
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage
-  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct)
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
+  const indexOfLastProduct = currentPage * productsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
 
   const handlePageChange = (page) => {
-    setCurrentPage(page)
-  }
+    setCurrentPage(page);
+  };
 
-  const categories = ["All", ...new Set(products.map((product) => product.category))]
-  const statuses = ["All", "In Stock", "Low Stock", "Out of Stock"]
+  const categories = ["All", ...new Set(products.map((product) => product.category))];
+  const statuses = ["All", "In Stock", "Low Stock", "Out of Stock"];
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       maximumFractionDigits: 0,
-    }).format(amount)
-  }
+    }).format(amount);
+  };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="p-4 sm:p-6 max-w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">Products</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">Product</h1>
         <div className="flex flex-wrap gap-2">
           <Link
             href="/admin/products/add"
@@ -238,12 +305,7 @@ export default function AdminProducts() {
           <label className="flex items-center px-3 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors cursor-pointer">
             <Upload className="h-4 w-4 mr-1" />
             Import
-            <input
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={handleImport}
-            />
+            <input type="file" accept=".csv" className="hidden" onChange={handleImport} />
           </label>
         </div>
       </div>
@@ -281,7 +343,7 @@ export default function AdminProducts() {
           <div className="flex items-center">
             <AlertTriangle className="h-5 w-5 text-gray-400 mr-2" />
             <select
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3 text-sm"
+              className="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               value={filterStatus}
               onChange={handleFilterStatus}
             >
@@ -389,6 +451,42 @@ export default function AdminProducts() {
                     Status
                   </span>
                 </th>
+                <th className="px-4 py-3 text-left">
+                  <div className="flex items-center">
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Pending Reviews
+                    </span>
+                    <button onClick={() => handleSort("pendingReviews")} className="ml-1 focus:outline-none">
+                      {sortField === "pendingReviews" ? (
+                        sortDirection === "asc" ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )
+                      ) : (
+                        <ChevronDown className="h-4 w-4 opacity-0 group-hover:opacity-100" />
+                      )}
+                    </button>
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left">
+                  <div className="flex items-center">
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Total Reviews
+                    </span>
+                    <button onClick={() => handleSort("totalReviews")} className="ml-1 focus:outline-none">
+                      {sortField === "totalReviews" ? (
+                        sortDirection === "asc" ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )
+                      ) : (
+                        <ChevronDown className="h-4 w-4 opacity-0 group-hover:opacity-100" />
+                      )}
+                    </button>
+                  </div>
+                </th>
                 <th className="px-4 py-3 text-right">
                   <span className="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Actions
@@ -412,7 +510,7 @@ export default function AdminProducts() {
                       <div className="h-10 w-10 flex-shrink-0">
                         <img
                           className="h-10 w-10 rounded-md object-cover"
-                          src={(product.images && product.images[0]) || "/placeholder.svg?height=300&width=300"}
+                          src={product.images?.find((img) => img.primary)?.url || "/placeholder.svg?height=300&width=300"}
                           alt={product.name}
                         />
                       </div>
@@ -437,14 +535,22 @@ export default function AdminProducts() {
                         product.status === "In Stock"
                           ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                           : product.status === "Low Stock"
-                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                       }`}
                     >
                       {product.status}
                     </span>
                   </td>
-                  <td className="px-4 py-4 text-right">
+                  <td className="px-4 py-4">
+                    <div className="text-sm text-gray-900 dark:text-white">{product.pendingReviews}</div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="text-sm text-gray-900 dark:text-white flex items-center">
+                      {product.totalReviews} <Star className="h-4 w-4 ml-1 text-yellow-400" /> {product.averageStars}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right">
                     <div className="flex justify-end space-x-2">
                       <Link
                         href={`/admin/products/${product.globalId}`}
@@ -457,6 +563,12 @@ export default function AdminProducts() {
                         className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
                       >
                         <Edit size={18} />
+                      </Link>
+                      <Link
+                        href={`/admin/products/reviews/${product.globalId}`}
+                        className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                      >
+                        <MessageSquare size={18} />
                       </Link>
                       <button
                         onClick={() => handleDeleteProduct(product.globalId, product.name)}
@@ -473,80 +585,100 @@ export default function AdminProducts() {
         </div>
 
         <div className="lg:hidden space-y-4 p-4">
-          {currentProducts.map((product) => (
-            <div
-              key={product.globalId}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <input
-                    type="checkbox"
-                    checked={selectedProducts.includes(product.globalId)}
-                    onChange={() => handleSelectProduct(product.globalId)}
-                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                  />
-                  <img
-                    className="h-12 w-12 rounded-md object-cover"
-                    src={(product.images && product.images[0]) || "/placeholder.svg?height=300&width=300"}
-                    alt={product.name}
-                  />
-                  <div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">ID: {product.globalId}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {currentProducts.map((product) => (
+              <div
+                key={product.globalId}
+                className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm ${
+                  product.globalId === currentProducts[0]?.globalId ? "col-span-1 h-64" : "col-span-1 h-48"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.includes(product.globalId)}
+                      onChange={() => handleSelectProduct(product.globalId)}
+                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    />
+                    <img
+                      className="h-10 w-10 rounded-md object-cover"
+                      src={product.images?.find((img) => img.primary)?.url || "/placeholder.svg?height=300&width=300"}
+                      alt={product.name}
+                    />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">ID: {product.globalId}</div>
+                    </div>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Link
+                      href={`/admin/products/${product.globalId}`}
+                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      <Eye size={16} />
+                    </Link>
+                    <Link
+                      href={`/admin/products/edit/${product.globalId}`}
+                      className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                    >
+                      <Edit size={16} />
+                    </Link>
+                    <Link
+                      href={`/admin/products/reviews/${product.globalId}`}
+                      className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                    >
+                      <MessageSquare size={16} />
+                    </Link>
+                    <button
+                      onClick={() => handleDeleteProduct(product.globalId, product.name)}
+                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
-                <div className="flex space-x-2">
-                  <Link
-                    href={`/admin/products/${product.globalId}`}
-                    className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                  >
-                    <Eye size={16} />
-                  </Link>
-                  <Link
-                    href={`/admin/products/edit/${product.globalId}`}
-                    className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
-                  >
-                    <Edit size={16} />
-                  </Link>
-                  <button
-                    onClick={() => handleDeleteProduct(product.globalId, product.name)}
-                    className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <span className="text-gray-500 dark:text-gray-400">Category:</span>{" "}
-                  <span className="text-gray-900 dark:text-white">{product.category}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 dark:text-gray-400">Price:</span>{" "}
-                  <span className="text-gray-900 dark:text-white">{formatCurrency(product.price)}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 dark:text-gray-400">Stock:</span>{" "}
-                  <span className="text-gray-900 dark:text-white">{product.stock}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 dark:text-gray-400">Status:</span>{" "}
-                  <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      product.status === "In Stock"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                        : product.status === "Low Stock"
+                <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Category:</span>{" "}
+                    <span className="text-gray-900 dark:text-white">{product.category}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Price:</span>{" "}
+                    <span className="text-gray-900 dark:text-white">{formatCurrency(product.price)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Stock:</span>{" "}
+                    <span className="text-gray-900 dark:text-white">{product.stock}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Status:</span>{" "}
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        product.status === "In Stock"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                          : product.status === "Low Stock"
                           ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
                           : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                    }`}
-                  >
-                    {product.status}
-                  </span>
+                      }`}
+                    >
+                      {product.status}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Pending Reviews:</span>{" "}
+                    <span className="text-gray-900 dark:text-white">{product.pendingReviews}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Total Reviews:</span>{" "}
+                    <span className="text-gray-900 dark:text-white flex items-center">
+                      {product.totalReviews} <Star className="h-3 w-3 ml-1 text-yellow-400" /> {product.averageStars}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -611,5 +743,5 @@ export default function AdminProducts() {
         </div>
       </div>
     </div>
-  )
+  );
 }
