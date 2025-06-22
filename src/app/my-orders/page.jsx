@@ -451,7 +451,7 @@ export default function MyOrdersPage() {
                             <div className="relative h-16 w-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
                               <Link href={`/products/${item.productId}`}>
                                 <Image
-                                  src={item.image || "/placeholder.svg?height=64&width=64"}
+                                  src={item.image?.url|| "/placeholder.svg?height=64&width=64"}
                                   alt={item.name}
                                   fill
                                   className="object-cover"

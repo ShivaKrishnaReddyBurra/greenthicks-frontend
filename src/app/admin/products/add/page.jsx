@@ -53,7 +53,7 @@ export default function AddProduct() {
       shipping: '',
       availability: '',
     },
-    published: false,
+    published: true,
   });
 
   // State for image management

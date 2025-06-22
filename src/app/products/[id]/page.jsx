@@ -558,6 +558,7 @@ export default function ProductDetailPage() {
                 <Image
                   src={product.images[selectedImage] || "/placeholder.svg?height=500&width=500"}
                   alt={product.name}
+                  fill
                   width={500}
                   height={500}
                   className="object-contain h-full w-full"

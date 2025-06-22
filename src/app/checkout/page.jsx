@@ -44,7 +44,7 @@ const LeafLoader = () => {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart, clearCart } = useCart();
+  const { cart } = useCart();
   const { toast } = useToast();
 
   const [paymentMethod] = useState("cash-on-delivery");
@@ -56,10 +56,10 @@ export default function CheckoutPage() {
     discount: 0,
     total: 0,
     appliedCoupon: "",
+    isFreeShipping: false,
   });
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
-  const [shouldRedirect, setShouldRedirect] = useState(null);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [isServiceAvailable, setIsServiceAvailable] = useState(null);
   const [showServiceUnavailableModal, setShowServiceUnavailableModal] = useState(false);
@@ -88,15 +88,9 @@ export default function CheckoutPage() {
         description: "Your cart is empty. Please add items to proceed with checkout.",
         variant: "destructive",
       });
-      setShouldRedirect("/cart");
+      router.push("/cart");
     }
-  }, [cart, toast, isProcessing]);
-
-  useEffect(() => {
-    if (shouldRedirect) {
-      router.push(shouldRedirect);
-    }
-  }, [shouldRedirect, router]);
+  }, [cart, toast, isProcessing, router]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -125,16 +119,58 @@ export default function CheckoutPage() {
             currentLocation: primaryAddress.location || null,
             mapLocation: primaryAddress.mapLocation || null,
           });
+
+          if (!primaryAddress.mapLocation || !primaryAddress.mapLocation.lat || !primaryAddress.mapLocation.lng) {
+            console.error("Invalid mapLocation:", primaryAddress.mapLocation);
+            toast({
+              title: "Invalid Location",
+              description: "Please select a valid delivery location.",
+              variant: "destructive",
+            });
+            setIsServiceAvailable(false);
+            setOrderSummary((prev) => ({
+              ...prev,
+              shipping: 0,
+              total: prev.subtotal - prev.discount,
+            }));
+            setActionLoading(false);
+            return;
+          }
+
           await checkServiceAvailability(primaryAddress.zipCode, primaryAddress.mapLocation);
+          console.log("Selected Address ID:", primaryAddress.addressId);
+          console.log("Service Available:", isServiceAvailable);
         } else {
           setIsAddingAddress(true);
+          console.log("No primary address found, prompting to add new address");
         }
 
         const subtotal = Number.parseFloat(sessionStorage.getItem("cartSubtotal") || "0");
-        const shipping = Number.parseFloat(sessionStorage.getItem("cartShipping") || "0");
         const discount = Number.parseFloat(sessionStorage.getItem("cartDiscount") || "0");
-        const total = Number.parseFloat(sessionStorage.getItem("cartTotal") || "0");
         const appliedCoupon = sessionStorage.getItem("appliedCoupon") || "";
+        const isFreeShipping = sessionStorage.getItem("isFreeShipping") === "true";
+
+        let shipping = 0;
+        if (primaryAddress && !isFreeShipping) {
+          try {
+            const serviceAreaResponse = await fetchWithAuth("/api/service-areas/check-location", {
+              method: "POST",
+              body: JSON.stringify({
+                location: {
+                  lat: parseFloat(primaryAddress.mapLocation?.lat),
+                  lng: parseFloat(primaryAddress.mapLocation?.lng),
+                },
+              }),
+            });
+            console.log("Service area response:", serviceAreaResponse);
+            shipping = subtotal > 299 ? 0 : (serviceAreaResponse.isValid ? serviceAreaResponse.serviceArea?.deliveryFee || 0 : 0);
+          } catch (error) {
+            console.error("Failed to fetch service area:", error);
+            shipping = 0;
+          }
+        }
+
+        const total = subtotal + shipping - discount;
 
         setOrderSummary({
           subtotal,
@@ -142,6 +178,7 @@ export default function CheckoutPage() {
           discount,
           total,
           appliedCoupon,
+          isFreeShipping,
         });
       } catch (error) {
         console.error("Failed to fetch user data:", error);
@@ -182,17 +219,30 @@ export default function CheckoutPage() {
 
       if (response.isValid) {
         setIsServiceAvailable(true);
+        const shipping = orderSummary.isFreeShipping || orderSummary.subtotal > 299 ? 0 : response.serviceArea?.deliveryFee || 0;
+        setOrderSummary((prev) => ({
+          ...prev,
+          shipping,
+          total: prev.subtotal + shipping - prev.discount,
+        }));
         toast({
           title: "Service Available",
-          description: `Delivery is available in ${response.serviceArea.city}, ${response.serviceArea.state}.`,
+          description: `Delivery is available in ${response.serviceArea.city}, ${response.serviceArea.state}.${
+            orderSummary.isFreeShipping || orderSummary.subtotal > 299 ? " Free delivery applied!" : ` Delivery fee: ₹${shipping.toFixed(2)}`
+          }`,
         });
       } else {
         throw new Error(response.message || "Delivery is not available in this area.");
       }
     } catch (error) {
-      console.error("Service availability check failed:", error);
+      console.error("Service availability check failed:", error.message, { pincode, mapLocation });
       setIsServiceAvailable(false);
       setShowServiceUnavailableModal(true);
+      setOrderSummary((prev) => ({
+        ...prev,
+        shipping: 0,
+        total: prev.subtotal - prev.discount,
+      }));
       toast({
         title: "Service Unavailable",
         description: error.message || "Delivery is not available in this area.",
@@ -240,7 +290,6 @@ export default function CheckoutPage() {
         mapLocation: selectedAddress.mapLocation || null,
       });
       await checkServiceAvailability(selectedAddress.zipCode, selectedAddress.mapLocation);
-      setIsAddingAddress(false);
     }
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setActionLoading(false);
@@ -259,31 +308,30 @@ export default function CheckoutPage() {
 
     console.log("Map location selected:", { location, address });
 
-    setFormData((prev) => ({
-      ...prev,
-      mapLocation: location,
-      address: address,
-      lat: parseFloat(location.lat),
-      lng: parseFloat(location.lng),
-    }));
-
     let extractedZipCode = formData.zipCode;
+    let city = formData.city;
+    let state = formData.state;
+
     const addressParts = address.split(", ");
     if (addressParts.length >= 3) {
       const zipMatch = addressParts[addressParts.length - 1].match(/\d{5,6}/);
       if (zipMatch) {
         extractedZipCode = zipMatch[0];
-        setFormData((prev) => ({
-          ...prev,
-          zipCode: extractedZipCode,
-        }));
       }
-      setFormData((prev) => ({
-        ...prev,
-        city: addressParts[addressParts.length - 3] || prev.city,
-        state: addressParts[addressParts.length - 2] || prev.state,
-      }));
+      city = addressParts[addressParts.length - 3] || city;
+      state = addressParts[addressParts.length - 2] || state;
     }
+
+    setFormData((prev) => ({
+      ...prev,
+      mapLocation: location,
+      address,
+      lat: parseFloat(location.lat),
+      lng: parseFloat(location.lng),
+      zipCode: extractedZipCode,
+      city,
+      state,
+    }));
 
     checkServiceAvailability(extractedZipCode || "", location);
 
@@ -420,6 +468,7 @@ export default function CheckoutPage() {
         paymentMethod,
         addressId: selectedAddressId,
         couponCode: orderSummary.appliedCoupon,
+        shippingCost: orderSummary.shipping,
       };
 
       const response = await createOrder(orderData);
@@ -440,8 +489,7 @@ export default function CheckoutPage() {
         description: `Your order ${response.order.id} has been placed.`,
       });
 
-      await clearCart();
-      setShouldRedirect("/success");
+      router.push("/success");
     } catch (error) {
       console.error("Failed to create order:", error);
       toast({
@@ -463,10 +511,6 @@ export default function CheckoutPage() {
     router.push(href);
     setActionLoading(false);
   };
-
-  if (shouldRedirect) {
-    return null;
-  }
 
   return (
     <>
@@ -546,7 +590,7 @@ export default function CheckoutPage() {
                 </Button>
 
                 {isAddingAddress && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 p-4  rounded-lg">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 p-4 rounded-lg">
                     <div className="space-y-2">
                       <Label htmlFor="firstName" className="text-sm font-medium">
                         First Name <span className="text-red-500">*</span>
@@ -698,7 +742,9 @@ export default function CheckoutPage() {
                     <div className="flex items-center">
                       <Truck className="h-5 w-5 text-green-500 mr-2" />
                       <span className="text-green-700 dark:text-green-400 font-medium text-sm sm:text-base">
-                        Delivery available in this area
+                        {orderSummary.isFreeShipping
+                          ? "Free Delivery applied for this area"
+                          : `Delivery available in this area (₹${orderSummary.shipping.toFixed(2)})`}
                       </span>
                     </div>
                   </div>
@@ -834,8 +880,8 @@ function OrderSummary({ cart, orderSummary }) {
         )}
 
         <div className="flex justify-between text-sm sm:text-base">
-          <span className="text-muted-foreground">Shipping</span>
-          <span>{orderSummary.shipping === 0 ? "Free" : `₹${orderSummary.shipping.toFixed(2)}`}</span>
+          <span className="text-muted-foreground">Delivery</span>
+          <span>{orderSummary.isFreeShipping ? "Free" : `₹${orderSummary.shipping.toFixed(2)}`}</span>
         </div>
 
         <Separator />

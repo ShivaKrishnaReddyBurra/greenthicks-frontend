@@ -151,7 +151,7 @@ export default function CheckoutSuccessPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white dark:from-gray-900 dark:to-gray-800 flex flex-col items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen bg-[#fffef4] dark:bg-black flex flex-col items-center justify-center p-4 sm:p-6">
       <style jsx global>{`
         @keyframes particle {
           0% {
@@ -168,28 +168,37 @@ export default function CheckoutSuccessPage() {
           animation: particle 0.8s ease-out forwards;
         }
       `}</style>
-      <Card className="w-full max-w-md sm:max-w-lg md:max-w-screen-md border-green-200 dark:border-green-700 shadow-lg bg-white dark:bg-gray-800 box-border">
+
+      <Card className="w-full max-w-md sm:max-w-lg md:max-w-screen-md border-green-200 dark:border-green-700 shadow-lg bg-[#fffef4] dark:bg-black box-border">
         <CardHeader className="text-center border-b border-gray-200 dark:border-gray-700 pb-6">
           <div className="mx-auto mb-4 w-20 sm:w-24">
             <SuccessAnimation />
             <audio ref={audioRef}>
-              <source src="@/public/sounds/success.mp3" type="audio/mpeg" />
-              <source src="@/public/sounds/success.ogg" type="audio/ogg" />
+              <source src="/sounds/success.mp3" type="audio/mpeg" />
+              <source src="/sounds/success.ogg" type="audio/ogg" />
               Your browser does not support the audio element.
             </audio>
           </div>
+
           <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-green-700 dark:text-green-400">
             Order Successful!
+            <p className="text-sm sm:text-base md:text-lg font-normal mt-2 text-green-700 dark:text-green-300">
+              Thank you for choosing nature's way!
+              <br />
+              By picking organic, you're cultivating a world free from pesticides.
+            </p>
           </CardTitle>
         </CardHeader>
+
         <CardContent className="pt-6 space-y-4 text-gray-600 dark:text-gray-200 text-sm sm:text-base">
           <div className="text-center">
             <p>Thank you for your purchase. Your order has been confirmed.</p>
             <p className="mt-2">
-              Order #: <span className="font-medium">{orderDetails.orderId}</span>
+              Order #: <span className="font-medium">{orderDetails?.orderId}</span>
             </p>
             <p className="mt-2">
-              Your vegetables will be delivered {orderDetails.deliveryTime.toLowerCase()}.
+              Your vegetables will be delivered{" "}
+              {orderDetails?.deliveryTime?.toLowerCase()}.
             </p>
           </div>
 
@@ -204,6 +213,7 @@ export default function CheckoutSuccessPage() {
             </Alert>
           )}
         </CardContent>
+
         <CardFooter className="flex flex-col sm:flex-row gap-3 pt-2">
           <Button
             asChild
@@ -214,6 +224,7 @@ export default function CheckoutSuccessPage() {
               View Order
             </Link>
           </Button>
+
           <Button
             asChild
             variant="outline"

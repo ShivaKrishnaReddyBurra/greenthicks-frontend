@@ -82,7 +82,7 @@ export default function ServiceAreasView() {
     if (!window.google || !mapRef.current || googleMapRef.current) return;
 
     const map = new window.google.maps.Map(mapRef.current, {
-      center: { lat: 28.6139, lng: 77.209 },
+      center: { lat: 17.9784, lng: 79.5941 }, // ✅ Warangal
       zoom: 6,
       mapTypeControl: false,
       streetViewControl: false,
@@ -123,20 +123,32 @@ export default function ServiceAreasView() {
         }
 
         const infoWindow = new window.google.maps.InfoWindow({
-          content: `
-            <div class="p-2">
-              <h3 class="font-bold">${area.city}, ${area.state}</h3>
-              <p class="text-sm">Pincode: ${area.pincode}</p>
-              <p class="text-sm">Delivery Radius: ${area.deliveryRadius || 5} km</p>
-              <p class="text-sm">Est. Time: ${area.estimatedDeliveryTime}</p>
-              ${
-                area.deliveryFee > 0
-                  ? `<p class="text-sm">Delivery Fee: ₹${area.deliveryFee}</p>`
-                  : '<p class="text-sm text-green-600">Free Delivery</p>'
-              }
-            </div>
-          `,
-        });
+  content: `
+    <div style="
+      padding: 12px;
+      background-color: #ecfdf5;
+      border: 1px solid #22c55e;
+      color: #065f46;
+      border-radius: 8px;
+      font-family: sans-serif;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      max-width: 260px;
+    ">
+      <h3 style="margin: 0 0 6px 0; font-weight: bold; font-size: 16px;">
+        ${area.city}, ${area.state}
+      </h3>
+      <p style="margin: 2px 0; font-size: 14px;">Pincode: ${area.pincode}</p>
+      <p style="margin: 2px 0; font-size: 14px;">Delivery Radius: ${area.deliveryRadius || 5} km</p>
+      <p style="margin: 2px 0; font-size: 14px;">Est. Time: ${area.estimatedDeliveryTime}</p>
+      ${
+        area.deliveryFee > 0
+          ? `<p style="margin: 2px 0; font-size: 14px;">Delivery Fee: ₹${area.deliveryFee}</p>`
+          : `<p style="margin: 2px 0; font-size: 14px; color: #15803d;">Free Delivery</p>`
+      }
+    </div>
+  `,
+});
+
 
         marker.addListener("click", () => {
           infoWindow.open(map, marker);

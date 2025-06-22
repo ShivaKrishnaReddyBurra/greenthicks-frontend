@@ -11,8 +11,8 @@ const handleResponse = async (response) => {
     try {
       const text = await response.text();
       error = text ? JSON.parse(text) : { message: `Request failed with status ${response.status}` };
-    } catch {
-      error = { message: `Request failed with status ${response.status}` };
+    } catch (parseError) {
+      error = { message: `Request failed with status ${response.status}`, rawResponse: text };
     }
     const errorMessage = error.errors && Array.isArray(error.errors)
       ? error.errors.map((err) => err.msg || err.message || "Unknown error").join("; ")
@@ -20,6 +20,7 @@ const handleResponse = async (response) => {
     const err = new Error(errorMessage);
     err.status = response.status;
     err.response = error;
+    console.error("API error:", { url: response.url, status: response.status, error }); // Added logging
     throw err;
   }
   return response.json();
@@ -46,6 +47,7 @@ export const fetchWithoutAuth = async (url, options = {}) => {
 
 export const fetchWithAuth = async (url, options = {}) => {
   const token = getAuthToken();
+  const timeout = 10000; // 10 seconds timeout
 
   if (!token) {
     if (typeof window !== "undefined") {
@@ -63,11 +65,20 @@ export const fetchWithAuth = async (url, options = {}) => {
 
   let response;
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
     response = await fetch(`${API_URL}${url}`, {
       ...options,
       headers,
+      signal: controller.signal, // Added AbortController signal
     });
+
+    clearTimeout(timeoutId);
   } catch (fetchError) {
+    if (fetchError.name === "AbortError") {
+      throw new Error("Request timed out");
+    }
     throw new Error(`Network error: ${fetchError.message}`);
   }
 
@@ -932,15 +943,10 @@ export const processReturnRefund = async (id, refundData) => {
 
 export async function getServiceAreas({ limit = 100, active = true } = {}) {
   try {
-    const response = await fetch(`${API_URL}/active/all`, {
+    const response = await fetchWithAuth(`/api/service-areas?limit=${limit}&active=${active}`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
     });
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    const data = await response.json();
-    return { serviceAreas: data };
+    return response; // Backend returns { success, serviceAreas, pagination }
   } catch (error) {
     console.error("Error fetching service areas:", error);
     throw error;

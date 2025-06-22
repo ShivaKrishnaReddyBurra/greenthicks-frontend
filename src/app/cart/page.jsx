@@ -42,6 +42,7 @@ export default function CartPage() {
   const [couponCode, setCouponCode] = useState("");
   const [discount, setDiscount] = useState(0);
   const [appliedCoupon, setAppliedCoupon] = useState("");
+  const [isFreeShipping, setIsFreeShipping] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const { toast } = useToast();
   const debounceTimeout = useRef(null);
@@ -65,9 +66,13 @@ export default function CartPage() {
       const response = await validateCoupon(couponCode, subtotal);
       setDiscount(response.discount);
       setAppliedCoupon(couponCode.toUpperCase());
+      const freeShipping = response.isFreeShipping || false;
+      setIsFreeShipping(freeShipping);
       toast({
         title: "Coupon Applied Successfully!",
-        description: `Coupon ${couponCode.toUpperCase()} has been applied.`,
+        description: `Coupon ${couponCode.toUpperCase()} has been applied.${
+          freeShipping ? " Free delivery activated!" : ""
+        }`,
         duration: 5000,
       });
     } catch (error) {
@@ -102,6 +107,7 @@ export default function CartPage() {
     sessionStorage.setItem("cartSubtotal", subtotal.toString());
     sessionStorage.setItem("cartTotal", total.toString());
     sessionStorage.setItem("appliedCoupon", appliedCoupon);
+    sessionStorage.setItem("isFreeShipping", isFreeShipping.toString());
 
     router.push("/checkout");
     setActionLoading(false);
@@ -301,7 +307,7 @@ export default function CartPage() {
 
                   <div className="bg-primary/10 rounded-md p-3 text-sm flex items-start gap-2">
                     <Truck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                    <p>Free shipping on orders over ₹299</p>
+                    <p>{isFreeShipping ? "Free delivery activated!" : "Delivery charges applied at checkout"}</p>
                   </div>
 
                   <Button className="w-full" size="lg" onClick={handleCheckout}>

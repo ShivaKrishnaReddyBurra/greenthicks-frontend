@@ -25,7 +25,7 @@ export default function ServiceAreaAdmin() {
   const [selectedServiceArea, setSelectedServiceArea] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [mapCenter, setMapCenter] = useState({ lat: 28.6139, lng: 77.209 });
+  const [mapCenter, setMapCenter] = useState({ lat: 17.9784, lng: 79.5941 });
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [deliveryRadius, setDeliveryRadius] = useState(5);
   const [radiusUnit, setRadiusUnit] = useState("km");
@@ -38,7 +38,7 @@ export default function ServiceAreaAdmin() {
     state: "",
     isActive: true,
     centerLocation: null,
-    deliveryRadius: 0.1, // Minimum 0.1 km
+    deliveryRadius: 0.1,
     deliveryFee: 0,
     minOrderAmount: 0,
     estimatedDeliveryTime: 30,
@@ -52,9 +52,6 @@ export default function ServiceAreaAdmin() {
   const autocompleteRetryCount = useRef(0);
 
   // Converts radius from specified unit to kilometers for backend storage
-  // @param {number} value - Radius value
-  // @param {string} unit - Unit of measurement ("meters", "miles", "km")
-  // @returns {number} - Radius in kilometers
   const convertToKilometers = (value, unit) => {
     const parsedValue = Number.parseFloat(value) || 0;
     switch (unit) {
@@ -69,9 +66,6 @@ export default function ServiceAreaAdmin() {
   };
 
   // Converts radius from kilometers to specified unit for display
-  // @param {number} value - Radius value in kilometers
-  // @param {string} unit - Unit of measurement ("meters", "miles", "km")
-  // @returns {number} - Radius in specified unit
   const convertFromKilometers = (value, unit) => {
     const parsedValue = Number.parseFloat(value) || 0;
     switch (unit) {
@@ -86,10 +80,6 @@ export default function ServiceAreaAdmin() {
   };
 
   // Generates a GeoJSON Polygon for the service area geometry
-  // @param {object} center - Center coordinates { lat, lng }
-  // @param {number} radiusKm - Radius in kilometers
-  // @param {number} [numPoints=32] - Number of points to approximate circle
-  // @returns {object|null} - GeoJSON Polygon or null if center is invalid
   const generateCircularPolygon = (center, radiusKm, numPoints = 32) => {
     if (!center) return null;
     const { lat, lng } = center;
@@ -113,7 +103,6 @@ export default function ServiceAreaAdmin() {
   };
 
   // Loads Google Maps API script dynamically
-  // Runs once on component mount
   useEffect(() => {
     const loadGoogleMaps = () => {
       if (window.google) {
@@ -149,7 +138,6 @@ export default function ServiceAreaAdmin() {
   }, [currentPage]);
 
   // Initializes Google Places Autocomplete for location search
-  // Retries up to 3 times if input is not found
   const initializeAutocomplete = useCallback(() => {
     if (!window.google || !mapRef.current) {
       console.warn("Google Maps or map container not ready");
@@ -159,11 +147,11 @@ export default function ServiceAreaAdmin() {
     const input = document.getElementById("map-search");
     if (!input) {
       console.warn("Map search input not found, retrying...");
-      if (autocompleteRetryCount.current < 3) {
+      if (autocompleteRetryCount.current < 5) {
         autocompleteRetryCount.current += 1;
-        setTimeout(initializeAutocomplete, 500);
+        setTimeout(initializeAutocomplete, 300);
       } else {
-        setError("Search input not found after retries. Please click the map to select a location.");
+        setError("Search functionality is unavailable. Please click the map to select a location or enter coordinates manually.");
       }
       return;
     }
@@ -176,6 +164,30 @@ export default function ServiceAreaAdmin() {
       });
 
       autocompleteRef.current = autocomplete;
+
+      // Focus input on mobile and ensure touch events work
+      if (/Mobi|Android|iPad/i.test(navigator.userAgent)) {
+        setTimeout(() => {
+          input.focus();
+          input.addEventListener("touchstart", (e) => e.stopPropagation());
+        }, 100);
+      }
+
+      // Ensure suggestion dropdown is interactive
+      const style = document.createElement("style");
+      style.textContent = `
+        .pac-container {
+          z-index: 10000 !important;
+          pointer-events: auto !important;
+        }
+        .pac-item {
+          cursor: pointer;
+          user-select: none;
+          -webkit-user-select: none;
+          -webkit-touch-callout: none;
+        }
+      `;
+      document.head.appendChild(style);
 
       autocomplete.addListener("place_changed", () => {
         console.log("Place changed event triggered");
@@ -198,14 +210,15 @@ export default function ServiceAreaAdmin() {
             googleMapRef.current.panTo(location);
           }
           reverseGeocode(location);
+          // Do not update formData or close modal here
         } else {
           console.error("No geometry data for selected place");
-          setError("Invalid location selected. Please try again.");
+          setError("Invalid location selected. Please try again or click the map.");
         }
       });
     } catch (error) {
       console.error("Failed to initialize Autocomplete:", error);
-      setError("Failed to initialize location search. Please click the map to select a location.");
+      setError("Failed to initialize location search. Please click the map or enter coordinates manually.");
     }
   }, []);
 
@@ -246,7 +259,6 @@ export default function ServiceAreaAdmin() {
   }, [serviceAreas, filteredServiceAreas]);
 
   // Fetches service areas from the backend
-  // Updates state with paginated data
   const fetchServiceAreas = async () => {
     try {
       setIsLoading(true);
@@ -255,7 +267,7 @@ export default function ServiceAreaAdmin() {
       const response = await fetchWithAuth(`/api/service-areas?page=${currentPage}&limit=10`);
       console.log("Raw API response:", response);
 
-      const data = response.data || response; // Handle nested data
+      const data = response.data || response;
       const serviceAreasData = Array.isArray(data.serviceAreas) ? data.serviceAreas : Array.isArray(data) ? data : [];
       console.log("Parsed service areas:", serviceAreasData);
 
@@ -274,7 +286,6 @@ export default function ServiceAreaAdmin() {
   };
 
   // Initializes Google Map with marker and editable circle
-  // Sets up event listeners for map interactions
   const initializeMap = useCallback(() => {
     if (!window.google || !mapRef.current) {
       console.warn("Cannot initialize map: Google Maps not loaded or container missing");
@@ -286,7 +297,11 @@ export default function ServiceAreaAdmin() {
       zoom: 12,
       mapTypeControl: false,
       streetViewControl: false,
+      gestureHandling: "greedy",
     });
+
+    mapRef.current.addEventListener("touchstart", (e) => e.stopPropagation());
+    mapRef.current.addEventListener("touchmove", (e) => e.stopPropagation());
 
     googleMapRef.current = map;
 
@@ -308,7 +323,7 @@ export default function ServiceAreaAdmin() {
       fillOpacity: 0.1,
       map: map,
       center: selectedLocation || mapCenter,
-      radius: convertToKilometers(deliveryRadius, radiusUnit) * 1000, // Convert to meters
+      radius: convertToKilometers(deliveryRadius, radiusUnit) * 1000,
       editable: true,
     });
 
@@ -331,7 +346,7 @@ export default function ServiceAreaAdmin() {
       const radiusMeters = circle.getRadius();
       const radiusKm = radiusMeters / 1000;
       const convertedRadius = convertFromKilometers(radiusKm, radiusUnit);
-      setDeliveryRadius(Math.max(Math.round(convertedRadius * 10) / 10, unitMinRadius(radiusUnit))); // Enforce min
+      setDeliveryRadius(Math.max(Math.round(convertedRadius * 10) / 10, unitMinRadius(radiusUnit)));
       setFormData((prev) => ({
         ...prev,
         deliveryRadius: radiusKm,
@@ -353,8 +368,6 @@ export default function ServiceAreaAdmin() {
   }, [mapCenter, selectedLocation, deliveryRadius, radiusUnit]);
 
   // Performs reverse geocoding to get address details from coordinates
-  // Updates formData with city, state, and pincode
-  // @param {object} location - Coordinates { lat, lng }
   const reverseGeocode = async (location) => {
     if (!window.google) return;
 
@@ -384,7 +397,6 @@ export default function ServiceAreaAdmin() {
           city: city || prev.city,
           state: state || prev.state,
           pincode: pincode || prev.pincode,
-          centerLocation: location,
         }));
       }
     } catch (error) {
@@ -392,15 +404,13 @@ export default function ServiceAreaAdmin() {
     }
   };
 
-  // Returns minimum radius based on unit (0.1 km = 100 meters)
-  // @param {string} unit - Unit of measurement ("meters", "miles", "km")
-  // @returns {number} - Minimum radius in specified unit
+  // Returns minimum radius based on unit
   const unitMinRadius = (unit) => {
     switch (unit) {
       case "meters":
-        return 100; // 0.1 km
+        return 100;
       case "miles":
-        return 0.0621371; // 0.1 km in miles
+        return 0.0621371;
       case "km":
       default:
         return 0.1;
@@ -408,8 +418,6 @@ export default function ServiceAreaAdmin() {
   };
 
   // Handles submission of new service area form
-  // Sends POST request to create service area
-  // @param {Event} e - Form submission event
   const handleAddServiceArea = async (e) => {
     e.preventDefault();
     try {
@@ -427,7 +435,9 @@ export default function ServiceAreaAdmin() {
         centerLocation: selectedLocation,
         deliveryRadius: radiusKm,
         geometry,
-        minOrderAmount: formData.minOrderAmount,
+        minOrderAmount: Number(formData.minOrderAmount) || 0,
+        deliveryFee: Number(formData.deliveryFee) || 0,
+        estimatedDeliveryTime: Number(formData.estimatedDeliveryTime) || 30,
         active: formData.isActive,
       };
 
@@ -458,8 +468,6 @@ export default function ServiceAreaAdmin() {
   };
 
   // Handles submission of edit service area form
-  // Sends PUT request to update service area
-  // @param {Event} e - Form submission event
   const handleUpdateServiceArea = async (e) => {
     e.preventDefault();
     if (!selectedServiceArea) return;
@@ -478,7 +486,9 @@ export default function ServiceAreaAdmin() {
         centerLocation: selectedLocation,
         deliveryRadius: radiusKm,
         geometry,
-        minOrderAmount: formData.minOrderAmount,
+        minOrderAmount: Number(formData.minOrderAmount) || 0,
+        deliveryFee: Number(formData.deliveryFee) || 0,
+        estimatedDeliveryTime: Number(formData.estimatedDeliveryTime) || 30,
         active: formData.isActive,
       };
 
@@ -510,8 +520,6 @@ export default function ServiceAreaAdmin() {
   };
 
   // Deletes a service area after user confirmation
-  // Sends DELETE request to remove service area
-  // @param {string} id - MongoDB _id of the service area
   const handleDeleteServiceArea = async (id) => {
     if (!confirm("Are you sure you want to delete this service area?")) return;
     try {
@@ -535,7 +543,6 @@ export default function ServiceAreaAdmin() {
   };
 
   // Opens edit modal and populates form with service area data
-  // @param {object} serviceArea - Service area object to edit
   const openEditModal = (serviceArea) => {
     setSelectedServiceArea(serviceArea);
     setFormData({
@@ -554,7 +561,7 @@ export default function ServiceAreaAdmin() {
 
     if (serviceArea.centerLocation) {
       setSelectedLocation(serviceArea.centerLocation);
-      setMapCenter(serviceArea.centerLocation); // Fixed: Use centerLocation
+      setMapCenter(serviceArea.centerLocation);
     }
 
     setDeliveryRadius(convertFromKilometers(serviceArea.deliveryRadius || 0.1, radiusUnit));
@@ -571,7 +578,7 @@ export default function ServiceAreaAdmin() {
       state: "",
       isActive: true,
       centerLocation: null,
-      deliveryRadius: 0.1, // Minimum 0.1
+      deliveryRadius: 0.1,
       deliveryFee: 0,
       minOrderAmount: 0,
       estimatedDeliveryTime: 30,
@@ -590,8 +597,6 @@ export default function ServiceAreaAdmin() {
   };
 
   // Returns JSX for status badge based on active state
-  // @param {boolean} isActive - Whether the service area is active
-  // @returns {JSX.Element} - Status badge component
   const getStatusBadge = (isActive) => {
     return isActive ? (
       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 dark:bg-green-800 dark:text-green-400">
@@ -616,7 +621,7 @@ export default function ServiceAreaAdmin() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">
           Service Areas Management
         </h3>
@@ -682,13 +687,13 @@ export default function ServiceAreaAdmin() {
                   </div>
                 )}
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Est. Time:</span>
-                  <span className="font-medium">{area.estimatedDeliveryTime || 30} minutes</span>
+                  <span className="text-muted-foreground">Est. Delivery:</span>
+                  <span className="font-medium">{area.estimatedDeliveryTime || 30} min</span>
                 </div>
                 {area.centerLocation && (
-                  <div className="flex items-center text-sm text-green-600">
-                    <MapPin className="h-3 w-3 mr-2" />
-                    <span>Map Location Set</span>
+                  <div className="flex items-center text-sm text-green-600 dark:text-green-400">
+                    <MapPin size={12} className="mr-2" />
+                    <span>Map Location set</span>
                   </div>
                 )}
                 {area.description && (
@@ -704,69 +709,72 @@ export default function ServiceAreaAdmin() {
                     size="sm"
                     onClick={() => openEditModal(area)}
                   >
-                    <Edit size={14} />
+                    <Edit size={16} />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleDeleteServiceArea(area._id)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-red-600 hover:text-red-700 dark:hover:bg-red-900/30"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={16} />
                   </Button>
                 </div>
               </CardContent>
             </Card>
           ))
         ) : (
-          <p className="text-center text-gray-500 dark:text-gray-400 col-span-full">
-            No service areas found. Try adding a new one or adjusting the search.
+          <p className="text-center text-muted-foreground col-span-full">
+            No service areas found. Try adding a new one or adjusting your search.
           </p>
         )}
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div>
-          <Button
-            type="button"
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            variant="outline"
-          >
-            Previous
-          </Button>
-        </div>
-        <span className="text-sm text-gray-700 dark:text-gray-300">
+        <Button
+          type="button"
+          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          variant="outline"
+        >
+          Previous
+        </Button>
+        <span className="text-sm text-muted-foreground">
           Page {currentPage} of {totalPages}
         </span>
-        <div>
-          <Button
-            type="button"
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages}
-            variant="outline"
-          >
-            Next
-          </Button>
-        </div>
+        <Button
+          type="button"
+          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          variant="outline"
+        >
+          Next
+        </Button>
       </div>
 
-      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="max-w-md">
+      <Dialog
+        open={showAddModal}
+        onOpenChange={(open) => {
+          if (!open && showMapModal) return;
+          setShowAddModal(open);
+          if (!open) resetForm();
+        }}
+      >
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto p-6">
           <DialogHeader>
-            <DialogTitle>Add New Service Area</DialogTitle>
-            <DialogDescription>Create a new service area with delivery boundaries</DialogDescription>
+            <DialogTitle>Add Service Area</DialogTitle>
+            <DialogDescription>Create a new service area with delivery boundaries.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddServiceArea} className="space-y-4">
             <div>
               <Label htmlFor="name">Name *</Label>
               <Input
-                type="text"
                 id="name"
+                type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                placeholder="e.g., Downtown Service Area"
+                placeholder="e.g., Downtown Delivery"
               />
             </div>
             <div>
@@ -775,72 +783,110 @@ export default function ServiceAreaAdmin() {
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Optional description"
+                placeholder="Optional notes about the area"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="pincode">Pincode *</Label>
                 <Input
-                  type="text"
                   id="pincode"
+                  type="text"
                   value={formData.pincode}
                   onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
                   required
                   pattern="\d{5,6}"
+                  placeholder="e.g., 400001"
                 />
               </div>
               <div>
                 <Label htmlFor="city">City *</Label>
                 <Input
-                  type="text"
                   id="city"
+                  type="text"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                   required
+                  placeholder="e.g., Mumbai"
                 />
               </div>
             </div>
             <div>
               <Label htmlFor="state">State *</Label>
               <Input
-                type="text"
                 id="state"
+                type="text"
                 value={formData.state}
                 onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                 required
+                placeholder="e.g., Maharashtra"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="deliveryFee">Delivery Fee (₹)</Label>
                 <Input
-                  type="number"
                   id="deliveryFee"
+                  type="number"
                   min="0"
-                  value={formData.deliveryFee}
-                  onChange={(e) => setFormData({ ...formData, deliveryFee: Number.parseFloat(e.target.value) || 0 })}
+                  value={formData.deliveryFee === 0 ? "" : formData.deliveryFee}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({
+                      ...formData,
+                      deliveryFee: value === "" ? "" : Number.parseFloat(value) || 0,
+                    });
+                  }}
+                  onBlur={() => {
+                    if (formData.deliveryFee === "") {
+                      setFormData({ ...formData, deliveryFee: 0 });
+                    }
+                  }}
+                  placeholder="e.g., 50"
                 />
               </div>
               <div>
                 <Label htmlFor="minOrderAmount">Min Order (₹)</Label>
                 <Input
-                  type="number"
                   id="minOrderAmount"
+                  type="number"
                   min="0"
-                  value={formData.minOrderAmount}
-                  onChange={(e) => setFormData({ ...formData, minOrderAmount: Number.parseFloat(e.target.value) || 0 })}
+                  value={formData.minOrderAmount === 0 ? "" : formData.minOrderAmount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({
+                      ...formData,
+                      minOrderAmount: value === "" ? "" : Number.parseFloat(value) || 0,
+                    });
+                  }}
+                  onBlur={() => {
+                    if (formData.minOrderAmount === "") {
+                      setFormData({ ...formData, minOrderAmount: 0 });
+                    }
+                  }}
+                  placeholder="e.g., 200"
                 />
               </div>
             </div>
             <div>
-              <Label htmlFor="estimatedDeliveryTime">Estimated Delivery Time (minutes) *</Label>
+              <Label htmlFor="estimatedDeliveryTime">Est. Delivery Time (min) *</Label>
               <Input
-                type="number"
                 id="estimatedDeliveryTime"
+                type="number"
                 min="1"
-                value={formData.estimatedDeliveryTime}
-                onChange={(e) => setFormData({ ...formData, estimatedDeliveryTime: Number.parseInt(e.target.value) || 30 })}
+                value={formData.estimatedDeliveryTime === 30 ? "" : formData.estimatedDeliveryTime}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData({
+                    ...formData,
+                    estimatedDeliveryTime: value === "" ? "" : Number.parseInt(value) || 30,
+                  });
+                }}
+                onBlur={() => {
+                  if (formData.estimatedDeliveryTime === "") {
+                    setFormData({ ...formData, estimatedDeliveryTime: 30 });
+                  }
+                }}
                 required
                 placeholder="e.g., 30"
               />
@@ -851,21 +897,17 @@ export default function ServiceAreaAdmin() {
               onClick={openMapModal}
               className="w-full flex items-center gap-2"
             >
-              <MapPin className="h-4 w-4" />
+              <MapPin size={16} />
               {selectedLocation ? "Change Location & Radius" : "Set Location & Radius"}
             </Button>
             {selectedLocation && (
-              <div className="bg-green-50 dark:bg-green-950/30 p-3 rounded-md text-sm">
+              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md text-sm">
                 <p className="font-medium">Location Set:</p>
-                <p>
-                  Lat: {selectedLocation.lat.toFixed(6)}, Lng: {selectedLocation.lng.toFixed(6)}
-                </p>
-                <p>
-                  Delivery Radius: {deliveryRadius} {radiusUnit}
-                </p>
+                <p>Lat: {selectedLocation.lat.toFixed(6)}, Lng: {selectedLocation.lng.toFixed(6)}</p>
+                <p>Radius: {deliveryRadius} {radiusUnit}</p>
               </div>
             )}
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -876,27 +918,38 @@ export default function ServiceAreaAdmin() {
               >
                 Cancel
               </Button>
-              <Button type="submit">Add Service Area</Button>
+              <Button type="submit">Add Area</Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-md">
+      <Dialog
+        open={showEditModal}
+        onOpenChange={(open) => {
+          if (!open && showMapModal) return;
+          setShowEditModal(open);
+          if (!open) {
+            setSelectedServiceArea(null);
+            resetForm();
+          }
+        }}
+      >
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>Edit Service Area</DialogTitle>
-            <DialogDescription>Update service area details and boundaries</DialogDescription>
+            <DialogDescription>Update service area details and boundaries.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdateServiceArea} className="space-y-4">
             <div>
               <Label htmlFor="name">Name *</Label>
               <Input
                 id="name"
+                type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                placeholder="e.g., Downtown Service Area"
+                placeholder="e.g., Downtown Delivery"
               />
             </div>
             <div>
@@ -905,7 +958,7 @@ export default function ServiceAreaAdmin() {
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Optional description"
+                placeholder="Optional notes about the area"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -913,19 +966,23 @@ export default function ServiceAreaAdmin() {
                 <Label htmlFor="pincode">Pincode *</Label>
                 <Input
                   id="pincode"
+                  type="text"
                   value={formData.pincode}
                   onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
                   required
                   pattern="\d{5,6}"
+                  placeholder="e.g., 400001"
                 />
               </div>
               <div>
                 <Label htmlFor="city">City *</Label>
                 <Input
                   id="city"
+                  type="text"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                   required
+                  placeholder="e.g., Mumbai"
                 />
               </div>
             </div>
@@ -933,9 +990,11 @@ export default function ServiceAreaAdmin() {
               <Label htmlFor="state">State *</Label>
               <Input
                 id="state"
+                type="text"
                 value={formData.state}
                 onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                 required
+                placeholder="e.g., Maharashtra"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -945,8 +1004,20 @@ export default function ServiceAreaAdmin() {
                   id="deliveryFee"
                   type="number"
                   min="0"
-                  value={formData.deliveryFee}
-                  onChange={(e) => setFormData({ ...formData, deliveryFee: Number.parseFloat(e.target.value) || 0 })}
+                  value={formData.deliveryFee === 0 ? "" : formData.deliveryFee}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({
+                      ...formData,
+                      deliveryFee: value === "" ? "" : Number.parseFloat(value) || 0,
+                    });
+                  }}
+                  onBlur={() => {
+                    if (formData.deliveryFee === "") {
+                      setFormData({ ...formData, deliveryFee: 0 });
+                    }
+                  }}
+                  placeholder="e.g., 50"
                 />
               </div>
               <div>
@@ -955,34 +1026,57 @@ export default function ServiceAreaAdmin() {
                   id="minOrderAmount"
                   type="number"
                   min="0"
-                  value={formData.minOrderAmount}
-                  onChange={(e) => setFormData({ ...formData, minOrderAmount: Number.parseFloat(e.target.value) || 0 })}
+                  value={formData.minOrderAmount === 0 ? "" : formData.minOrderAmount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({
+                      ...formData,
+                      minOrderAmount: value === "" ? "" : Number.parseFloat(value) || 0,
+                    });
+                  }}
+                  onBlur={() => {
+                    if (formData.minOrderAmount === "") {
+                      setFormData({ ...formData, minOrderAmount: 0 });
+                    }
+                  }}
+                  placeholder="e.g., 200"
                 />
               </div>
             </div>
             <div>
-              <Label htmlFor="estimatedDeliveryTime">Estimated Delivery Time (minutes) *</Label>
+              <Label htmlFor="estimatedDeliveryTime">Est. Delivery Time (min) *</Label>
               <Input
-                type="number"
                 id="estimatedDeliveryTime"
+                type="number"
                 min="1"
-                value={formData.estimatedDeliveryTime}
-                onChange={(e) => setFormData({ ...formData, estimatedDeliveryTime: Number.parseInt(e.target.value) || 30 })}
+                value={formData.estimatedDeliveryTime === 30 ? "" : formData.estimatedDeliveryTime}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData({
+                    ...formData,
+                    estimatedDeliveryTime: value === "" ? "" : Number.parseInt(value) || 30,
+                  });
+                }}
+                onBlur={() => {
+                  if (formData.estimatedDeliveryTime === "") {
+                    setFormData({ ...formData, estimatedDeliveryTime: 30 });
+                  }
+                }}
                 required
                 placeholder="e.g., 30"
               />
             </div>
-            <div className="flex items-center space-x-2">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
+            <div className="flex items-center gap-2">
+              <Label htmlFor="isActive" className="flex items-center gap-2">
+                <Input
                   id="isActive"
+                  type="checkbox"
                   checked={formData.isActive}
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  className="rounded border-gray-300 text-green-600 shadow-sm focus:ring-green-500"
+                  className="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500"
                 />
-                <Label htmlFor="isActive">Active</Label>
-              </label>
+                Active
+              </Label>
             </div>
             <Button
               type="button"
@@ -990,21 +1084,17 @@ export default function ServiceAreaAdmin() {
               onClick={openMapModal}
               className="w-full flex items-center gap-2"
             >
-              <MapPin className="h-4 w-4" />
+              <MapPin size={16} />
               {selectedLocation ? "Change Location & Radius" : "Set Location & Radius"}
             </Button>
             {selectedLocation && (
-              <div className="bg-green-50 dark:bg-green-950/30 p-3 rounded-md text-sm">
+              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md text-sm">
                 <p className="font-medium">Location Set:</p>
-                <p>
-                  Lat: {selectedLocation.lat.toFixed(6)}, Lng: {selectedLocation.lng.toFixed(6)}
-                </p>
-                <p>
-                  Delivery Radius: {deliveryRadius} {radiusUnit}
-                </p>
+                <p>Lat: {selectedLocation.lat.toFixed(6)}, Lng: {selectedLocation.lng.toFixed(6)}</p>
+                <p>Radius: {deliveryRadius} {radiusUnit}</p>
               </div>
             )}
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -1016,53 +1106,99 @@ export default function ServiceAreaAdmin() {
               >
                 Cancel
               </Button>
-              <Button type="submit">Update Service Area</Button>
+              <Button type="submit">Update Area</Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showMapModal} onOpenChange={setShowMapModal}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto p-6">
           <DialogHeader>
-            <DialogTitle>Set Service Area Location & Delivery Radius</DialogTitle>
+            <DialogTitle>Set Location & Radius</DialogTitle>
             <DialogDescription>
-              Search or click on the map to set the service area center location and adjust the delivery radius
+              Search or click the map to set the service area center and adjust the radius.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="flex gap-2 items-center">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="map-search">Search Location</Label>
               <Input
-                type="text"
                 id="map-search"
-                placeholder="Enter a location (e.g., Mumbai, India)"
-                className="flex-1"
+                type="text"
+                placeholder="e.g., Mumbai, India"
+                className="w-full"
+                onTouchStart={(e) => e.stopPropagation()}
               />
             </div>
-            {error && error.includes("Google Maps") && (
-              <div className="text-red-500 text-sm">
-                Map search is unavailable. Please click the map to select a location or check your API key.
+            {error && error.includes("Search functionality") && (
+              <div className="space-y-2">
+                <p className="text-sm text-red-500">Enter coordinates manually:</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Latitude"
+                    onChange={(e) => {
+                      const lat = Number.parseFloat(e.target.value);
+                      if (!Number.isNaN(lat)) {
+                        setSelectedLocation((prev) => ({
+                          ...prev,
+                          lat,
+                        }));
+                        setMapCenter((prev) => ({ ...prev, lat }));
+                      }
+                    }}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Longitude"
+                    onChange={(e) => {
+                      const lng = Number.parseFloat(e.target.value);
+                      if (!Number.isNaN(lng)) {
+                        setSelectedLocation((prev) => ({
+                          ...prev,
+                          lng,
+                        }));
+                        setMapCenter((prev) => ({ ...prev, lng }));
+                      }
+                    }}
+                  />
+                </div>
               </div>
             )}
-            <div className="flex gap-2 items-center">
+            {error && error.includes("Google Maps") && (
+              <div className="text-red-500 text-sm">
+                Map search unavailable. Click the map to select a location or check your API key.
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2 items-center">
               <Label>Delivery Radius:</Label>
               <Input
                 type="number"
                 min={unitMinRadius(radiusUnit)}
                 step={radiusUnit === "meters" ? 0.1 : radiusUnit === "miles" ? 0.01 : 0.1}
                 max={radiusUnit === "meters" ? 50000 : radiusUnit === "miles" ? 31 : 50}
-                value={deliveryRadius}
+                value={deliveryRadius === unitMinRadius(radiusUnit) ? "" : deliveryRadius}
                 onChange={(e) => {
-                  const value = Number.parseFloat(e.target.value);
-                  if (value >= unitMinRadius(radiusUnit)) {
-                    setDeliveryRadius(value);
+                  const value = e.target.value;
+                  const parsedValue = value === "" ? "" : Number.parseFloat(value);
+                  if (parsedValue >= unitMinRadius(radiusUnit) || value === "") {
+                    setDeliveryRadius(parsedValue || "");
+                    if (circleRef.current && parsedValue) {
+                      circleRef.current.setRadius(convertToKilometers(parsedValue, radiusUnit) * 1000);
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  if (deliveryRadius === "" || deliveryRadius < unitMinRadius(radiusUnit)) {
+                    setDeliveryRadius(unitMinRadius(radiusUnit));
                     if (circleRef.current) {
-                      circleRef.current.setRadius(convertToKilometers(value, radiusUnit) * 1000);
+                      circleRef.current.setRadius(convertToKilometers(unitMinRadius(radiusUnit), radiusUnit) * 1000);
                     }
                   }
                 }}
                 className="w-24"
+                placeholder={unitMinRadius(radiusUnit).toString()}
               />
               <Select
                 value={radiusUnit}
@@ -1087,33 +1223,34 @@ export default function ServiceAreaAdmin() {
             </div>
             <div ref={mapRef} className="w-full h-[50vh] max-h-96 rounded-lg border" />
             {selectedLocation && (
-              <div className="bg-green-50 dark:bg-green-950/30 p-3 rounded-md text-sm">
+              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md text-sm">
                 <p className="font-medium">Selected Location:</p>
+                <p>Lat: {selectedLocation.lat.toFixed(6)}, Lng: {selectedLocation.lng.toFixed(6)}</p>
                 <p>
-                  Lat: {selectedLocation.lat.toFixed(6)}, Lng: {selectedLocation.lng.toFixed(6)}
-                </p>
-                <p>
-                  Delivery Radius: {deliveryRadius} {radiusUnit} (
-                  {convertToKilometers(deliveryRadius, radiusUnit).toFixed(2)} km)
+                  Radius: {deliveryRadius} {radiusUnit} ({convertToKilometers(deliveryRadius, radiusUnit).toFixed(2)} km)
                 </p>
               </div>
             )}
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowMapModal(false)}>
                 Cancel
               </Button>
               <Button
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setFormData((prev) => ({
                     ...prev,
                     centerLocation: selectedLocation,
-                    deliveryRadius: convertToKilometers(deliveryRadius, radiusUnit),
+                    deliveryRadius: convertToKilometers(
+                      deliveryRadius === "" ? unitMinRadius(radiusUnit) : deliveryRadius,
+                      radiusUnit
+                    ),
                   }));
                   setShowMapModal(false);
                 }}
                 disabled={!selectedLocation}
               >
-                <Save className="h-4 w-4 mr-2" />
+                <Save size={16} className="mr-2" />
                 Save Location
               </Button>
             </div>
