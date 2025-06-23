@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -154,9 +154,8 @@ export default function ProductDetailPage() {
                 }))
               : [],
             images: Array.isArray(p.images)
-  ? p.images.filter((img) => typeof img === "object" && img.primary === true)
-  : [],
-
+              ? p.images.map((img) => img?.url || "/placeholder.svg?height=300&width=300")
+              : ["/placeholder.svg?height=300&width=300"],
             nutrition: p.nutrition || { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, vitamins: [] },
             policies: p.policies || { return: "", shipping: "", availability: "" },
             tags: p.tags || [],
@@ -196,8 +195,17 @@ export default function ProductDetailPage() {
   };
 
   const handleAddToCart = async () => {
-    if (!product) return;
+    if (product.stock === 0) {
+      toast({
+        title: "Out of Stock",
+        description: "This product is currently out of stock.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const token = getAuthToken();
+    console.log("Auth token:", token); // Debug log
     if (!token) {
       const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
       setActionLoading(true);
@@ -208,20 +216,26 @@ export default function ProductDetailPage() {
         description: "You need to be logged in to add items to your cart.",
         variant: "destructive",
       });
-      setActionLoading(false);
+      setTimeout(() => setActionLoading(false), 2000); // Auto-dismiss loader
       return;
     }
+
     setActionLoading(true);
     try {
-      await addToCart(product.globalId, quantity);
+      console.log("Adding to cart:", { product, quantity }); // Debug log
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      addToCart(product, quantity);
+      console.log("Cart updated"); // Debug log
       toast({
         title: "Added to cart",
-        description: `${product.name} has been added to your cart.`,
+        description: `${quantity} x ${product.name} has been added to your cart.`,
       });
+      setQuantity(1);
     } catch (error) {
+      console.error("Error adding to cart:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to add item to cart.",
+        description: "Failed to add item to cart. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -230,26 +244,47 @@ export default function ProductDetailPage() {
   };
 
   const toggleFavorite = async () => {
-    if (!product) return;
+    const token = getAuthToken();
+    console.log("Auth token:", token); // Debug log
+    if (!token) {
+      const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
+      setActionLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      router.push(`/login?returnUrl=${returnUrl}`);
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to manage your favorites.",
+        variant: "destructive",
+      });
+      setTimeout(() => setActionLoading(false), 2000); // Auto-dismiss loader
+      return;
+    }
+
     setActionLoading(true);
     try {
+      console.log("Toggling favorite for product ID:", product.globalId); // Debug log
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       if (isFavorite(product.globalId)) {
-        await removeFromFavorites(product.globalId);
+        console.log("Removing from favorites"); // Debug log
+        removeFromFavorites(product.globalId);
         toast({
           title: "Removed from favorites",
           description: `${product.name} has been removed from your favorites.`,
         });
       } else {
-        await addToFavorites(product.globalId);
+        console.log("Adding to favorites"); // Debug log
+        addToFavorites(product);
         toast({
           title: "Added to favorites",
           description: `${product.name} has been added to your favorites.`,
         });
       }
+      console.log("Favorites updated"); // Debug log
     } catch (error) {
+      console.error("Error toggling favorite:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update favorites.",
+        description: "Failed to update favorites. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -338,7 +373,8 @@ export default function ProductDetailPage() {
       return;
     }
 
-    if (!getAuthToken()) {
+    const token = getAuthToken();
+    if (!token) {
       const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
       setActionLoading(true);
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -348,7 +384,7 @@ export default function ProductDetailPage() {
         description: "You need to be logged in to submit a review.",
         variant: "destructive",
       });
-      setActionLoading(false);
+      setTimeout(() => setActionLoading(false), 2000);
       return;
     }
 
@@ -545,7 +581,7 @@ export default function ProductDetailPage() {
             Back to products
           </Link>
         </div>
-        
+
         <div className="grid md:grid-cols-2 gap-8 mb-10">
           <div className="space-y-4">
             <div
@@ -553,26 +589,25 @@ export default function ProductDetailPage() {
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
-            <Card className="bg-muted/10 border-muted">
-              <CardContent className="aspect-square w-full max-w-[400px] mx-auto">
-                <Image
-                  src={product.images[selectedImage] || "/placeholder.svg?height=500&width=500"}
-                  alt={product.name}
-                  fill
-                  width={500}
-                  height={500}
-                  className="object-contain h-full w-full"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-4 right-4 bg-background/50 hover:bg-background/80"
-                  onClick={() => handleFullScreenToggle(true)}
-                >
-                  <ZoomIn className="h-5 w-5" />
-                </Button>
-              </CardContent>
-            </Card>
+              <Card className="bg-muted/10 border-muted">
+                <CardContent className="aspect-square w-full max-w-[400px] mx-auto">
+                  <Image
+                    src={product.images[selectedImage] || "/placeholder.svg?height=500&width=500"}
+                    alt={product.name}
+                    width={500}
+                    height={500}
+                    className="object-contain h-full w-full"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-4 right-4 bg-background/50 hover:bg-background/80"
+                    onClick={() => handleFullScreenToggle(true)}
+                  >
+                    <ZoomIn className="h-5 w-5" />
+                  </Button>
+                </CardContent>
+              </Card>
               {product.discountPercentage > 0 && (
                 <Badge className="absolute top-4 left-4 bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700">
                   -{product.discountPercentage}% OFF
@@ -590,7 +625,7 @@ export default function ProductDetailPage() {
                   </Badge>
                 </div>
               )}
-            </div>  
+            </div>
             <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide">
               {product.images.map((image, index) => (
                 <Button
@@ -658,7 +693,9 @@ export default function ProductDetailPage() {
                     />
                   ))}
                 </div>
-                <span className="text-sm text-muted-foreground">({product.reviews?.filter((r) => r.approved).length ?? 0} reviews)</span>
+                <span className="text-sm text-muted-foreground">
+                  ({product.reviews?.filter((r) => r.approved).length ?? 0} reviews)
+                </span>
               </div>
 
               <div className="flex items-center gap-3 mb-4">
@@ -740,7 +777,10 @@ export default function ProductDetailPage() {
 
             <Button
               className="flex-1 bg-primary hover:bg-primary/90 active:bg-primary/80 h-10 text-base max-w-[200px]"
-              onClick={handleAddToCart}
+              onClick={() => {
+                console.log("Add to Cart clicked (mobile)"); // Debug log
+                handleAddToCart();
+              }}
               disabled={product.stock === 0}
             >
               <ShoppingCart className="mr-2 h-4 w-4" />
@@ -751,7 +791,10 @@ export default function ProductDetailPage() {
               variant="outline"
               size="icon"
               className={`h-10 w-10 ${isFavorite(product.globalId) ? "bg-red-50 dark:bg-red-950/30" : ""} active:scale-95 active:bg-primary/10`}
-              onClick={toggleFavorite}
+              onClick={() => {
+                console.log("Favorite button clicked (mobile)"); // Debug log
+                toggleFavorite();
+              }}
             >
               <Heart
                 className={`h-5 w-5 ${isFavorite(product.globalId) ? "fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400" : ""}`}
@@ -786,7 +829,10 @@ export default function ProductDetailPage() {
 
             <Button
               className="flex-1 bg-primary hover:bg-primary/90 active:bg-primary/80 h-12 text-lg"
-              onClick={handleAddToCart}
+              onClick={() => {
+                console.log("Add to Cart clicked (desktop)"); // Debug log
+                handleAddToCart();
+              }}
               disabled={product.stock === 0}
             >
               <ShoppingCart className="mr-2 h-5 w-5" />
@@ -797,7 +843,10 @@ export default function ProductDetailPage() {
               variant="outline"
               size="icon"
               className={`h-12 w-12 ${isFavorite(product.globalId) ? "bg-red-50 dark:bg-red-950/30" : ""} active:scale-95 active:bg-primary/10`}
-              onClick={toggleFavorite}
+              onClick={() => {
+                console.log("Favorite button clicked (desktop)"); // Debug log
+                toggleFavorite();
+              }}
             >
               <Heart
                 className={`h-6 w-6 ${isFavorite(product.globalId) ? "fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400" : ""}`}
@@ -1129,7 +1178,7 @@ export default function ProductDetailPage() {
                   <Card className="h-full border-muted hover:shadow-lg transition-shadow bg-card">
                     <div className="relative aspect-square">
                       <Image
-                        src={similarProduct.images[0]?.url  || "/placeholder.svg?height=300&width=300"}
+                        src={similarProduct.images[0] || "/placeholder.svg?height=300&width=300"}
                         alt={similarProduct.name}
                         width={300}
                         height={300}

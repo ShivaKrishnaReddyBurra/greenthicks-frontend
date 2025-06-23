@@ -118,7 +118,7 @@ const ImageBanner = ({ isMobile }) => {
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
       >
         {bannerImages.map((image, index) => (
-          <div key={index} className="flex-shrink-0 w-full h-full relative">
+          <div key={index} className="flex-shrink-0 w-full h-auto relative">
             <Image
               src={image}
               alt={`Banner ${index + 1}`}
@@ -265,16 +265,16 @@ export function HeroSection() {
               </div>
             </div>
             <div className="relative">
-              <div className="absolute -inset-4 bg-primary/5 rounded-full"></div>
-              <div className="relative rounded-lg overflow-hidden aspect-square">
-                <Image
-                  src={img}
-                  alt="Fresh organic vegetables"
-                  width={1000}
-                  height={1000}
-                  className="object-cover"
-                />
-              </div>
+              <div className="absolute -inset-4 bg-primary/5 mt-0 rounded-full"></div>
+                <div className="relative rounded-lg overflow-hidden aspect-square">
+                  <Image
+                    src={img}
+                    alt="Fresh organic vegetables"
+                    width={1000}
+                    height={1000}
+                    className="object-cover rounded-lg mt-20"
+                  />
+                </div>
               <div className="fixed -bottom-0 -right-0 bg-primary/10 rounded-full p-6">
                 <div className="bg-background rounded-full p-4 shadow-lg">
                   <div className="text-center">

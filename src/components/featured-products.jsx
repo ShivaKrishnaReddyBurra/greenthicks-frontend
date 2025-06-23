@@ -7,30 +7,6 @@ import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
 import { getProducts } from "@/lib/api";
 
-const LeafLoader = () => {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <div className="leafbase">
-        <div className="lf">
-          <div className="leaf1">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="leaf2">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="leaf3">
-            <div className="leaf11"></div>
-            <div className="leaf12"></div>
-          </div>
-          <div className="tail"></div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export function FeaturedProducts() {
   const [activeTab, setActiveTab] = useState("featured");
   const [products, setProducts] = useState([]);
@@ -84,17 +60,6 @@ export function FeaturedProducts() {
       return false;
     })
     .slice(0, 8);
-
-  if (loading) {
-    return (
-      <section className="py-12 md:py-20">
-        <div className="container mx-auto px-4 flex justify-center items-center">
-          <LeafLoader />
-        </div>
-      </section>
-    );
-  }
-
   return (
     <>
       {isTabLoading && <LeafLoader />}

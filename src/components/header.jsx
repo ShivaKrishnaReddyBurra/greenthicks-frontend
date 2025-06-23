@@ -23,6 +23,7 @@ import {
   ChevronDown,
   LogOut,
   User2,
+  LeafIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -39,16 +40,26 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getAuthToken, clearAuth } from "@/lib/auth-utils";
 import logo from "@/public/logo.png";
-import { Skeleton } from "@/components/ui/skeleton";
 
-const SkeletonLoader = () => {
+// Leaf Loader Component
+const LeafLoader = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <div className="space-y-4">
-        <Skeleton className="h-12 w-12 rounded-full" />
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-[250px]" />
-          <Skeleton className="h-4 w-[200px]" />
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
         </div>
       </div>
     </div>
@@ -69,25 +80,19 @@ export default function Header() {
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
 
   useEffect(() => {
-    // Check authentication status
     const checkAuth = () => {
       const token = getAuthToken();
       setIsAuthenticated(!!token);
     };
 
-    // Initial check
     checkAuth();
-
-    // Listen for storage changes
     window.addEventListener("storage", checkAuth);
 
-    // Handle scroll for sticky header
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
     window.addEventListener("scroll", handleScroll);
 
-    // Set mounted for theme hydration
     setMounted(true);
 
     return () => {
@@ -101,29 +106,48 @@ export default function Header() {
     if (requiresAuth && !isAuthenticated) {
       alert("To see your orders, please login first.");
       setIsLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      router.push("/LoginOrRegister");
-      setIsLoading(false);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        router.push("/LoginOrRegister");
+      } finally {
+        setIsLoading(false);
+      }
       return;
     }
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    router.push(href);
-    setIsLoading(false);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      router.push(href);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogout = async () => {
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    clearAuth();
-    setIsAuthenticated(false);
-    router.push("/LoginOrRegister");
-    setIsLoading(false);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      clearAuth();
+      setIsAuthenticated(false);
+      router.push("/LoginOrRegister");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleThemeChange = async (newTheme) => {
+    setIsLoading(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setTheme(newTheme);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const navLinks = [
     { href: "/", label: "Home", icon: <Home className="h-5 w-5 mr-3" /> },
-    { href: "/products", label: "Products", icon: <Package className="h-5 w-5 mr-3" /> },
+    { href: "/products", label: "Products", icon: <LeafIcon className="h-5 w-5 mr-3" /> },
     { href: "/about", label: "About", icon: <Info className="h-5 w-5 mr-3" /> },
     { href: "/contact", label: "Contact", icon: <Phone className="h-5 w-5 mr-3" /> },
   ];
@@ -145,7 +169,7 @@ export default function Header() {
 
   return (
     <>
-      {isLoading && <SkeletonLoader />}
+      {isLoading && <LeafLoader />}
       <header
         className={`sticky top-0 z-50 w-full transition-all duration-200 ${
           isScrolled ? "bg-background/80 backdrop-blur-md shadow-sm" : "bg-background"
@@ -184,39 +208,21 @@ export default function Header() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => {
-                              setIsLoading(true);
-                              setTimeout(() => {
-                                setTheme("light");
-                                setIsLoading(false);
-                              }, 1000);
-                            }}
+                            onClick={() => handleThemeChange("light")}
                             className="flex items-center gap-2"
                           >
                             <Sun className="h-4 w-4" />
                             Light
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => {
-                              setIsLoading(true);
-                              setTimeout(() => {
-                                setTheme("dark");
-                                setIsLoading(false);
-                              }, 1000);
-                            }}
+                            onClick={() => handleThemeChange("dark")}
                             className="flex items-center gap-2"
                           >
                             <Moon className="h-4 w-4" />
                             Dark
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => {
-                              setIsLoading(true);
-                              setTimeout(() => {
-                                setTheme("system");
-                                setIsLoading(false);
-                              }, 1000);
-                            }}
+                            onClick={() => handleThemeChange("system")}
                             className="flex items-center gap-2"
                           >
                             <Laptop className="h-4 w-4" />
@@ -274,7 +280,7 @@ export default function Header() {
                         <ShoppingCart className="h-5 w-5 mr-3" />
                         Cart
                         {totalItems > 0 && (
-                          <span className="ml-auto bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                          <span className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs w-5 h-5 flex items-center justify-center rounded-bl-md">
                             {totalItems}
                           </span>
                         )}
@@ -375,39 +381,21 @@ export default function Header() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
-                      onClick={() => {
-                        setIsLoading(true);
-                        setTimeout(() => {
-                          setTheme("light");
-                          setIsLoading(false);
-                        }, 1000);
-                      }}
+                      onClick={() => handleThemeChange("light")}
                       className="flex items-center gap-2"
                     >
                       <Sun className="h-4 w-4" />
                       Light
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => {
-                        setIsLoading(true);
-                        setTimeout(() => {
-                          setTheme("dark");
-                          setIsLoading(false);
-                        }, 1000);
-                      }}
+                      onClick={() => handleThemeChange("dark")}
                       className="flex items-center gap-2"
                     >
                       <Moon className="h-4 w-4" />
                       Dark
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => {
-                        setIsLoading(true);
-                        setTimeout(() => {
-                          setTheme("system");
-                          setIsLoading(false);
-                        }, 1000);
-                      }}
+                      onClick={() => handleThemeChange("system")}
                       className="flex items-center gap-2"
                     >
                       <Laptop className="h-4 w-4" />
@@ -426,7 +414,7 @@ export default function Header() {
                   <Button variant="ghost" size="icon" className="relative">
                     <Heart className="h-5 w-5" />
                     {favorites.length > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      <span className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs w-3.5 h-3.5 flex items-center justify-center rounded-bl-md">
                         {favorites.length}
                       </span>
                     )}
@@ -491,7 +479,7 @@ export default function Header() {
                   <DropdownMenuSeparator />
                   {isAuthenticated ? (
                     <DropdownMenuItem>
-                      <button onClick={handleLogout} className="w-full flex items-center">
+                      <button onClick={() => handleLogout} className="w-full flex items-center">
                         <LogOut className="mr-2 h-4 w-4" />
                         Logout
                       </button>
@@ -514,7 +502,7 @@ export default function Header() {
                 <Button variant="ghost" size="icon" className="relative">
                   <ShoppingCart className="h-6 w-6" />
                   {totalItems > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    <span className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs w-3.5 h-3.5 flex items-center justify-center rounded-bl-md">
                       {totalItems}
                     </span>
                   )}

@@ -1,30 +1,26 @@
 import { getAuthToken } from "@/lib/auth-utils";
 import { jwtDecode } from "jwt-decode";
- // Added for decoding JWT to get user ID
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 // Centralized response handler
-const handleResponse = async (response) => {
+export async function handleResponse(response) {
   if (!response.ok) {
-    let error = {};
-    try {
-      const text = await response.text();
-      error = text ? JSON.parse(text) : { message: `Request failed with status ${response.status}` };
-    } catch (parseError) {
-      error = { message: `Request failed with status ${response.status}`, rawResponse: text };
-    }
-    const errorMessage = error.errors && Array.isArray(error.errors)
-      ? error.errors.map((err) => err.msg || err.message || "Unknown error").join("; ")
-      : error.message || `Request failed with status ${response.status}`;
-    const err = new Error(errorMessage);
+    const errorText = await response.text();
+    console.error("API error details:", {
+      url: response.url,
+      status: response.status,
+      errorText,
+    });
+
+    const err = new Error(`Request failed with status ${response.status}`);
     err.status = response.status;
-    err.response = error;
-    console.error("API error:", { url: response.url, status: response.status, error }); // Added logging
+    err.response = errorText;
     throw err;
   }
+
   return response.json();
-};
+}
 
 export const fetchWithoutAuth = async (url, options = {}) => {
   const headers = {
@@ -71,7 +67,7 @@ export const fetchWithAuth = async (url, options = {}) => {
     response = await fetch(`${API_URL}${url}`, {
       ...options,
       headers,
-      signal: controller.signal, // Added AbortController signal
+      signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
@@ -448,8 +444,6 @@ export const addProductReview = async (globalId, reviewData) => {
   return fetchWithAuthFormData(`/api/products/${globalId}/reviews`, formData, "POST");
 };
 
-
-
 export const getProductReviews = async (globalId) => {
   if (!Number.isInteger(Number(globalId)) || Number(globalId) < 1) {
     throw new Error("Invalid globalId: must be a positive integer");
@@ -558,7 +552,7 @@ export const getCart = async () => {
 };
 
 export const removeFromCart = async (productId) => {
-  return fetchWithAuth(`/api/cart/${productId}`, {
+  return fetchWithAuth(`/api/cart/item/${productId}`, {
     method: "DELETE",
   });
 };
@@ -568,6 +562,13 @@ export const clearCart = async () => {
     method: "DELETE",
   });
 };
+
+export async function updateQuantity(productId, quantity) {
+  return fetchWithAuth("/api/cart/update", {
+    method: "POST",
+    body: JSON.stringify({ productId, quantity }),
+  });
+}
 
 // User Management API functions
 export const getAllUsers = async () => {
@@ -966,7 +967,7 @@ export async function checkPincode(pincode) {
     const data = await response.json();
     const serviceArea = data.find((area) => area.active) || data[0];
     if (!serviceArea) {
-      return { available: false, message: "No active service areas found for this pincode" };
+      return { available: "No active service areas found for this pincode" };
     }
     return {
       available: true,
@@ -993,17 +994,17 @@ export async function getNearbyServiceAreas(lat, lng, maxRadiusKm = 50) {
       return { nearbyServiceAreas: [] };
     }
 
-    const userLocation = new window.google.maps.LatLng(lat, lng);
+    const userLocation = new window.googleMapsLatLng(lat, lng);
     const nearbyServiceAreas = serviceAreas
       .filter((area) => {
         if (!area.centerLocation || !area.centerLocation.lat || !area.centerLocation.lng) {
           return false;
         }
-        const areaLocation = new window.google.maps.LatLng(
+        const areaLocation = new window.googleMapsLatLng(
           area.centerLocation.lat,
           area.centerLocation.lng
         );
-        const distanceMeters = window.google.maps.geometry.spherical.computeDistanceBetween(
+        const distanceMeters = window.googleMapsService.computeDistanceBetween(
           userLocation,
           areaLocation
         );
@@ -1011,11 +1012,11 @@ export async function getNearbyServiceAreas(lat, lng, maxRadiusKm = 50) {
         return distanceKm <= maxRadiusKm && area.active;
       })
       .map((area) => {
-        const areaLocation = new window.google.maps.LatLng(
+        const areaLocation = new window.googleMapsLatLng(
           area.centerLocation.lat,
           area.centerLocation.lng
         );
-        const distanceMeters = window.google.maps.geometry.spherical.computeDistanceBetween(
+        const distanceMeters = window.googleMapsService.computeDistanceBetween(
           userLocation,
           areaLocation
         );
@@ -1026,21 +1027,21 @@ export async function getNearbyServiceAreas(lat, lng, maxRadiusKm = 50) {
           estimatedDeliveryTime: formatDeliveryTime(area.estimatedDeliveryTime),
         };
       })
-      .sort((a, b) => a.distance - b.distance);
+      return sort((a, b) => a.distance - b.distance);
 
-    return { nearbyServiceAreas };
+    return nearbyServiceAreas();
   } catch (error) {
     console.error("Error fetching nearby service areas:", error);
     return { nearbyServiceAreas: [] };
   }
 }
 
-// Helper to format estimatedDeliveryTime
+// Helper function to format estimated delivery time
 function formatDeliveryTime(minutes) {
   if (typeof minutes !== "number" || isNaN(minutes)) {
     return "12-24 hours";
   }
-  const lower = Math.max(15, minutes - 5);
+  const lower = Math.max(15, - 5);
   const upper = minutes + 5;
   return `${lower}-${upper} minutes`;
 }
