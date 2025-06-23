@@ -5,7 +5,7 @@ import { User, Mail, Phone, Calendar, Shield, Edit, Save, X, Camera, Key } from 
 import { getUserProfile, updateUser } from "@/lib/fetch-without-auth"
 
 export default function AdminProfile() {
-  const [profile, setProfile] = useState(null)
+  const [profile, setProfile] = useState({ name: "Loading...", email: "Loading...", phone: "Loading..." });
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)

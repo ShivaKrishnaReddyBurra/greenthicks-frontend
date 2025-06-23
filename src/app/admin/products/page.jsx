@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { getProducts, deleteProduct } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 export default function AdminProducts() {
   const { toast } = useToast();
@@ -280,28 +281,28 @@ export default function AdminProducts() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">Product</h1>
         <div className="flex flex-wrap gap-2">
-          <Link
+          <Button
             href="/admin/products/add"
             className="flex items-center px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
           >
             <Plus className="h-4 w-4 mr-1" />
             Add
-          </Link>
-          <button
+          </Button>
+          <Button
             className="flex items-center px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={selectedProducts.length === 0}
             onClick={handleDeleteSelected}
           >
             <Trash2 className="h-4 w-4 mr-1" />
             Delete
-          </button>
-          <button
+          </Button>
+          <Button
             className="flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             onClick={handleExport}
           >
             <Download className="h-4 w-4 mr-1" />
             Export
-          </button>
+          </Button>
           <label className="flex items-center px-3 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors cursor-pointer">
             <Upload className="h-4 w-4 mr-1" />
             Import

@@ -19,8 +19,11 @@ import {
   XCircle,
   ChevronRight,
   Store,
+  Import,
 } from "lucide-react"
 import { getAdminStats, getRecentOrders, getTopProducts, getSalesTrend } from "@/lib/api" // Updated import
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card" 
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -143,14 +146,14 @@ export default function AdminDashboard() {
           <p className="text-gray-500 dark:text-gray-400 mt-1">Welcome back, Admin</p>
         </div>
         <div className="mt-4 md:mt-0 flex space-x-2">
-          <button className="flex items-center px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
+          <Button className="flex items-center px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
             <Calendar className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
             Today
-          </button>
-          <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+          </Button>
+          <Button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm">
             <Download className="h-4 w-4 mr-2" />
             Export Report
-          </button>
+          </Button>
         </div>
       </div>
 

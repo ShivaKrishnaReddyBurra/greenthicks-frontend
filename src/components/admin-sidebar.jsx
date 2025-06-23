@@ -30,6 +30,7 @@ import {
   MessageSquareShareIcon,
 } from "lucide-react";
 import { clearAuth } from "@/lib/auth-utils";
+import { getUserProfile } from "@/lib/fetch-without-auth";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,6 +68,7 @@ const LeafLoader = () => {
 export default function AdminSidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState({ name: "Loading...", email: "Loading..." });
   const pathname = usePathname();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -74,6 +76,20 @@ export default function AdminSidebar() {
 
   useEffect(() => {
     setMounted(true);
+    const fetchProfile = async () => {
+      try {
+        const data = await getUserProfile();
+        setUser({
+          name: data.user?.name || data.name || "Admin User",
+          email: data.user?.email || data.email || "greenthickss@gmail.com",
+        });
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        setUser({ name: "Admin User", email: "greenthickss@gmail.com" });
+      }
+    };
+
+    fetchProfile();
   }, []);
 
   const handleNavigation = async (e, href) => {
@@ -91,6 +107,15 @@ export default function AdminSidebar() {
     clearAuth();
     router.push("/login");
     setIsLoading(false);
+  };
+
+  const handleProfileClick = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    router.push("/admin/profile");
+    setIsLoading(false);
+    setIsOpen(false);
   };
 
   const handleThemeChange = async (newTheme) => {
@@ -127,12 +152,12 @@ export default function AdminSidebar() {
       <header className="fixed top-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-b h-16 flex items-center px-4 md:px-6 shadow-sm">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center">
-            <button
+            <Button
               className="md:hidden mr-2 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
               onClick={() => setIsOpen(!isOpen)}
             >
               {isOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            </Button>
             <Link
               href="/admin/dashboard"
               onClick={(e) => handleNavigation(e, "/admin/dashboard")}
@@ -149,7 +174,9 @@ export default function AdminSidebar() {
                   />
                 )}
               </div>
-              <span className="ml-0 text-lg font-semibold hidden md:inline">Admin</span>
+              <span className="ml-0 text-lg font-semibold hidden md:inline">
+                {user.name} (Admin)
+              </span>
             </Link>
           </div>
           <div className="flex items-center space-x-4">
@@ -238,16 +265,22 @@ export default function AdminSidebar() {
             </ul>
           </nav>
           <div className="p-4 border-t dark:border-gray-800">
-            <div className="flex items-center">
+            <div
+              className="flex items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md p-2"
+              onClick={handleProfileClick}
+            >
               <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 font-semibold">
-                A
+                {user.name.charAt(0).toUpperCase()}
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Admin User</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">greenthickss@gmail.com</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
               </div>
               <button
-                onClick={handleLogout}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent profile click when clicking logout
+                  handleLogout();
+                }}
                 className="ml-auto p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
               >
                 <LogOut size={16} />
