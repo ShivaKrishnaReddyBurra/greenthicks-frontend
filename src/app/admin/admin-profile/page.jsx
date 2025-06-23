@@ -3,10 +3,8 @@
 import { useState, useEffect } from "react"
 import { User, Mail, Phone, Calendar, Shield, Edit, Save, X, Camera, Key } from "lucide-react"
 import { getUserProfile, updateUser } from "@/lib/fetch-without-auth"
-import { LeafLoader } from "@/components/LeafLoader"
 
 export default function AdminProfile() {
-  const [isTabLoading, setIsTabLoading] = useState(false);
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -120,20 +118,9 @@ export default function AdminProfile() {
     })
   }
 
-  if (loading) {
-    return (
-      <section className="py-12 md:py-20">
-        <div className="container mx-auto px-4 flex justify-center items-center">
-          <LeafLoader />
-        </div>
-      </section>
-    );
-  }
-
   if (error && !profile) {
     return (
-      <div className="p-8 text-center">
-      {isTabLoading && <LeafLoader />}  
+      <div className="p-8 text-center">  
         <div className="text-red-500 mb-4">
           <User size={48} className="mx-auto mb-2" />
           <p className="text-lg font-medium">Error loading profile</p>
