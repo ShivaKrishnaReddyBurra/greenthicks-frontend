@@ -59,6 +59,50 @@ const LeafLoader = () => {
   );
 };
 
+// Responsive Skeleton Loader for ProductDetailPage
+const ProductDetailSkeleton = () => {
+  return (
+    <div className="container mx-auto px-4 py-6 sm:py-8 max-w-screen-2xl animate-pulse">
+      <div className="mb-4 sm:mb-6 h-5 w-24 sm:h-6 sm:w-32 bg-muted rounded"></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-10">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="relative rounded-xl overflow-hidden border bg-muted aspect-square w-full max-w-[400px] mx-auto"></div>
+          <div className="flex gap-2 sm:gap-3 overflow-x-auto scrollbar-hide">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="w-16 h-16 sm:w-20 sm:h-20 bg-muted rounded-md flex-shrink-0"></div>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-3 sm:space-y-4">
+          <div className="h-6 sm:h-8 w-3/4 bg-muted rounded"></div>
+          <div className="flex gap-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-4 w-4 sm:h-5 sm:w-5 bg-muted rounded-full"></div>
+            ))}
+          </div>
+          <div className="h-8 sm:h-10 w-1/2 bg-muted rounded"></div>
+          <div className="h-3 sm:h-4 w-full bg-muted rounded"></div>
+          <div className="h-3 sm:h-4 w-full bg-muted rounded"></div>
+          <div className="h-3 sm:h-4 w-2/3 bg-muted rounded"></div>
+          <div className="h-10 sm:h-12 w-3/4 bg-muted rounded"></div>
+        </div>
+      </div>
+      <div className="space-y-3 sm:space-y-4">
+        <div className="h-6 sm:h-8 w-1/3 bg-muted rounded"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="relative aspect-square w-full bg-muted rounded-lg"></div>
+              <div className="h-4 sm:h-5 w-3/4 bg-muted rounded"></div>
+              <div className="h-3 sm:h-4 w-1/2 bg-muted rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function ProductDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -107,7 +151,7 @@ export default function ProductDetailPage() {
           carbs: 0,
           fat: 0,
           fiber: 0,
-          vitamins: [],
+          badges: [],
         };
         foundProduct.policies = foundProduct.policies || {
           return: "",
@@ -156,7 +200,7 @@ export default function ProductDetailPage() {
             images: Array.isArray(p.images)
               ? p.images.map((img) => img?.url || "/placeholder.svg?height=300&width=300")
               : ["/placeholder.svg?height=300&width=300"],
-            nutrition: p.nutrition || { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, vitamins: [] },
+            nutrition: p.nutrition || { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, badges: [] },
             policies: p.policies || { return: "", shipping: "", availability: "" },
             tags: p.tags || [],
             sku: p.sku || `PROD-${p.globalId}`,
@@ -205,7 +249,6 @@ export default function ProductDetailPage() {
     }
 
     const token = getAuthToken();
-    console.log("Auth token:", token); // Debug log
     if (!token) {
       const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
       setActionLoading(true);
@@ -216,16 +259,14 @@ export default function ProductDetailPage() {
         description: "You need to be logged in to add items to your cart.",
         variant: "destructive",
       });
-      setTimeout(() => setActionLoading(false), 2000); // Auto-dismiss loader
+      setTimeout(() => setActionLoading(false), 2000);
       return;
     }
 
     setActionLoading(true);
     try {
-      console.log("Adding to cart:", { product, quantity }); // Debug log
       await new Promise((resolve) => setTimeout(resolve, 1000));
       addToCart(product, quantity);
-      console.log("Cart updated"); // Debug log
       toast({
         title: "Added to cart",
         description: `${quantity} x ${product.name} has been added to your cart.`,
@@ -245,7 +286,6 @@ export default function ProductDetailPage() {
 
   const toggleFavorite = async () => {
     const token = getAuthToken();
-    console.log("Auth token:", token); // Debug log
     if (!token) {
       const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
       setActionLoading(true);
@@ -256,30 +296,26 @@ export default function ProductDetailPage() {
         description: "You need to be logged in to manage your favorites.",
         variant: "destructive",
       });
-      setTimeout(() => setActionLoading(false), 2000); // Auto-dismiss loader
+      setTimeout(() => setActionLoading(false), 2000);
       return;
     }
 
     setActionLoading(true);
     try {
-      console.log("Toggling favorite for product ID:", product.globalId); // Debug log
       await new Promise((resolve) => setTimeout(resolve, 1000));
       if (isFavorite(product.globalId)) {
-        console.log("Removing from favorites"); // Debug log
         removeFromFavorites(product.globalId);
         toast({
           title: "Removed from favorites",
           description: `${product.name} has been removed from your favorites.`,
         });
       } else {
-        console.log("Adding to favorites"); // Debug log
         addToFavorites(product);
         toast({
           title: "Added to favorites",
           description: `${product.name} has been added to your favorites.`,
         });
       }
-      console.log("Favorites updated"); // Debug log
     } catch (error) {
       console.error("Error toggling favorite:", error);
       toast({
@@ -362,8 +398,10 @@ export default function ProductDetailPage() {
     fileInputRef.current?.click();
   };
 
+  // Submit review with verified/approved status based on purchase history
   const submitReview = async (e) => {
     e.preventDefault();
+    // Validate required fields
     if (!reviewData.rating || !reviewData.review) {
       toast({
         title: "Error",
@@ -373,6 +411,7 @@ export default function ProductDetailPage() {
       return;
     }
 
+    // Check if user is authenticated
     const token = getAuthToken();
     if (!token) {
       const returnUrl = encodeURIComponent(`/products/${product.globalId}`);
@@ -390,6 +429,7 @@ export default function ProductDetailPage() {
 
     setActionLoading(true);
     try {
+      // Submit review to API; backend determines verified/approved status based on purchase history
       const response = await addProductReview(product.globalId, {
         name: reviewData.name || null,
         rating: reviewData.rating,
@@ -397,17 +437,20 @@ export default function ProductDetailPage() {
         images: reviewImages,
       });
 
+      // Notify user based on review status
       toast({
         title: "Review submitted",
         description: response.review.verified
-          ? "Thanks for your review"
-          : "You didn’t buy this product, so Greenthicks support team will check your review and then it will publish",
+          ? "Thanks for your review! It has been published."
+          : "Your review has been submitted and is pending approval by our team.",
       });
 
+      // Reset form and hide it
       setShowReviewForm(false);
       setReviewImages([]);
       setReviewData({ name: "", rating: 0, review: "", images: [] });
 
+      // Refresh product data to include new review
       const updatedProduct = await getProductById(Number.parseInt(id));
       if (updatedProduct) {
         setProduct({
@@ -492,20 +535,18 @@ export default function ProductDetailPage() {
   };
 
   if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[60vh]">
-        <LeafLoader />
-      </div>
-    );
+    return <ProductDetailSkeleton />;
   }
 
   if (!product) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <h1 className="text-2xl font-bold mb-4">Product Not Found</h1>
-        <p className="text-muted-foreground mb-6">The product you're looking for doesn't exist or has been removed.</p>
+      <div className="container mx-auto px-4 py-6 sm:py-8 text-center max-w-screen-2xl">
+        <h1 className="text-xl sm:text-2xl font-bold mb-4">Product Not Found</h1>
+        <p className="text-muted-foreground mb-6 text-sm sm:text-base">
+          The product you're looking for doesn't exist or has been removed.
+        </p>
         <Link href="/products" onClick={(e) => handleNavigation(e, "/products")}>
-          <Button>Browse Products</Button>
+          <Button className="text-sm sm:text-base">Browse Products</Button>
         </Link>
       </div>
     );
@@ -513,17 +554,17 @@ export default function ProductDetailPage() {
 
   return (
     <>
-      {(actionLoading || loading) && <LeafLoader />}
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      {actionLoading && <LeafLoader />}
+      <div className="container mx-auto px-4 py-6 sm:py-8 max-w-screen-2xl">
         {isFullScreen && (
           <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
             <Button
               variant="ghost"
               size="icon"
-              className="absolute top-4 right-4 text-white"
+              className="absolute top-2 sm:top-4 right-2 sm:right-4 text-white"
               onClick={() => handleFullScreenToggle(false)}
             >
-              <X className="h-6 w-6" />
+              <X className="h-5 sm:h-6 w-5 sm:w-6" />
             </Button>
             <Image
               src={product.images[selectedImage] || "/placeholder.svg?height=500&width=500"}
@@ -540,57 +581,57 @@ export default function ProductDetailPage() {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute top-4 right-4 text-white"
+              className="absolute top-2 sm:top-4 right-2 sm:right-4 text-white"
               onClick={closeGalleryView}
             >
-              <X className="h-6 w-6" />
+              <X className="h-5 sm:h-6 w-5 sm:w-6" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white"
+              className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 text-white"
               onClick={() => navigateGallery(-1)}
             >
-              <ChevronLeft className="h-8 w-8" />
+              <ChevronLeft className="h-6 sm:h-8 w-6 sm:w-8" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white"
+              className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 text-white"
               onClick={() => navigateGallery(1)}
             >
-              <ChevronRight className="h-8 w-8" />
+              <ChevronRight className="h-6 sm:h-8 w-6 sm:w-8" />
             </Button>
             <Image
               src={galleryView.images[galleryView.currentIndex] || "/placeholder.svg?height=500&width=500"}
               alt={`Review image ${galleryView.currentIndex + 1}`}
               width={800}
               height={800}
-              className="object-contain max-h-auto w-auto"
+              className="object-contain max-h-[90vh] w-auto"
             />
           </div>
         )}
 
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <Link
             href="/products"
             onClick={(e) => handleNavigation(e, "/products")}
-            className="inline-flex items-center text-primary hover:underline"
+            className="inline-flex items-center text-primary hover:underline text-sm sm:text-base"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to products
           </Link>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-10">
-          <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-10">
+          <div className="space-y-3 sm:space-y-4">
             <div
               className="relative rounded-xl overflow-hidden border bg-background"
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
               <Card className="bg-muted/10 border-muted">
-                <CardContent className="aspect-square w-full max-w-[400px] mx-auto">
+                <CardContent className="aspect-square w-full max-w-[400px] mx-auto p-4 sm:p-6">
                   <Image
                     src={product.images[selectedImage] || "/placeholder.svg?height=500&width=500"}
                     alt={product.name}
@@ -601,36 +642,36 @@ export default function ProductDetailPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-4 right-4 bg-background/50 hover:bg-background/80"
+                    className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-background/50 hover:bg-background/80"
                     onClick={() => handleFullScreenToggle(true)}
                   >
-                    <ZoomIn className="h-5 w-5" />
+                    <ZoomIn className="h-4 sm:h-5 w-4 sm:w-5" />
                   </Button>
                 </CardContent>
               </Card>
               {product.discountPercentage > 0 && (
-                <Badge className="absolute top-4 left-4 bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700">
+                <Badge className="absolute top-2 sm:top-4 left-2 sm:left-4 bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-xs sm:text-sm">
                   -{product.discountPercentage}% OFF
                 </Badge>
               )}
               {product.stock <= 5 && product.stock > 0 && (
-                <Badge variant="outline" className="absolute bottom-4 left-4 bg-background/80 backdrop-blur-sm">
+                <Badge variant="outline" className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 bg-background/80 backdrop-blur-sm text-xs sm:text-sm">
                   Only {product.stock} left
                 </Badge>
               )}
               {product.stock === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-                  <Badge variant="outline" className="bg-background text-lg px-4 py-2">
+                  <Badge variant="outline" className="bg-background text-sm sm:text-lg px-3 sm:px-4 py-1 sm:py-2">
                     Out of Stock
                   </Badge>
                 </div>
               )}
             </div>
-            <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide">
+            <div className="flex overflow-x-auto gap-2 sm:gap-3 pb-2 scrollbar-hide">
               {product.images.map((image, index) => (
                 <Button
                   key={index}
-                  className={`flex-shrink-0 w-20 h-20 rounded-md border ${
+                  className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-md border ${
                     selectedImage === index ? "ring-2 ring-primary ring-offset-2" : "opacity-70 hover:opacity-100"
                   } bg-background transition-opacity`}
                   onClick={() => handleImageSelect(index)}
@@ -649,8 +690,8 @@ export default function ProductDetailPage() {
           </div>
 
           <div>
-            <div className="mb-6">
-              <div className="flex flex-row flex-wrap items-center gap-1.5 mb-3 w-full max-w-full overflow-x-auto scrollbar-hide">
+            <div className="mb-4 sm:mb-6">
+              <div className="flex flex-row flex-wrap items-center gap-1.5 mb-3 w-full overflow-x-auto scrollbar-hide">
                 <Badge variant="outline" className="text-primary border-primary text-xs sm:text-sm px-2 py-0.5">
                   {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
                 </Badge>
@@ -674,56 +715,56 @@ export default function ProductDetailPage() {
                 ))}
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-bold mb-3">{product.name}</h1>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3">{product.name}</h1>
 
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-3 sm:mb-4">
                 <div className="flex">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-4 w-4 ${
+                      className={`h-4 sm:h-5 w-4 sm:w-5 ${
                         i <
                         Math.round(
-                          (product.reviews?.filter((r) => r.approved).reduce((sum, r) => sum + r.rating, 0) ?? 0) /
+                          (product.reviews?.filter((r) => r.approved).reduce((sum, r) => sum + r?.rating || 0, 0) || 0) /
                             (product.reviews?.filter((r) => r.approved).length || 1)
                         )
-                          ? "fill-yellow-400 text-yellow-400"
+                          ? "fill-yellow-400 text-yellow-600"
                           : "fill-muted text-muted"
                       }`}
                     />
                   ))}
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  ({product.reviews?.filter((r) => r.approved).length ?? 0} reviews)
+                <span className="text-xs sm:text-sm text-muted-foreground">
+                  ({product.reviews?.filter((r) => r.approved).length || 0} reviews)
                 </span>
               </div>
 
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-2xl sm:text-3xl font-bold text-primary">{formatCurrency(product.price)}</span>
+              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                <span className="text-xl sm:text-2xl md:text-3xl font-bold text-primary">{formatCurrency(product.price)}</span>
                 {product.originalPrice && product.originalPrice > product.price && (
-                  <span className="text-lg sm:text-xl text-muted-foreground line-through">
+                  <span className="text-sm sm:text-lg md:text-xl text-muted-foreground line-through">
                     {formatCurrency(product.originalPrice)}
                   </span>
                 )}
-                <span className="text-sm text-muted-foreground">/ {product.unit}</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">/ {product.unit}</span>
               </div>
 
-              <div className="flex items-center gap-3 mb-4">
-                <span className="font-medium min-w-[100px] sm:min-w-[120px] text-sm sm:text-base">SKU:</span>
-                <span className="text-sm sm:text-base">{product.sku}</span>
+              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                <span className="font-medium min-w-[80px] sm:min-w-[100px] md:min-w-[120px] text-xs sm:text-sm md:text-base">SKU:</span>
+                <span className="text-xs sm:text-sm md:text-base">{product.sku}</span>
               </div>
 
-              <p className="text-muted-foreground mb-6 leading-relaxed text-sm sm:text-base">{product.description}</p>
+              <p className="text-muted-foreground mb-4 sm:mb-6 leading-relaxed text-xs sm:text-sm md:text-base">{product.description}</p>
 
-              <Separator className="my-6" />
+              <Separator className="my-4 sm:my-6" />
 
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <span className="font-medium min-w-[100px] sm:min-w-[120px] text-sm sm:text-base">Availability:</span>
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="font-medium min-w-[80px] sm:min-w-[100px] md:min-w-[120px] text-xs sm:text-sm md:text-base">Availability:</span>
                   <span
                     className={`flex items-center gap-1 ${
                       product.stock > 0 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"
-                    } text-sm sm:text-base`}
+                    } text-xs sm:text-sm md:text-base`}
                   >
                     {product.stock > 0 ? (
                       <>
@@ -735,193 +776,205 @@ export default function ProductDetailPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <span className="font-medium min-w-[100px] sm:min-w-[120px] text-sm sm:text-base">Category:</span>
-                  <span className="text-sm sm:text-base">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="font-medium min-w-[80px] sm:min-w-[100px] md:min-w-[120px] text-xs sm:text-sm md:text-base">Category:</span>
+                  <span className="text-xs sm:text-sm md:text-base">
                     {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <span className="font-medium min-w-[100px] sm:min-w-[120px] text-sm sm:text-base">Unit:</span>
-                  <span className="text-sm sm:text-base">{product.unit}</span>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="font-medium min-w-[80px] sm:min-w-[100px] md:min-w-[120px] text-xs sm:text-sm md:text-base">Unit:</span>
+                  <span className="text-xs sm:text-sm md:text-base">{product.unit}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 bg-background border-t md:hidden p-2 z-40 max-w-screen">
-          <div className="flex items-center gap-2 max-w-7xl mx-auto">
+        <div className="hidden md:block space-y-3 sm:space-y-4 mb-6 sm:mb-8">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="flex items-center border rounded-md shadow-sm bg-background">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 rounded-r-none active:scale-95 active:bg-primary/10"
+                className="h-10 sm:h-12 w-10 sm:w-12 rounded-r-none active:scale-95 active:bg-primary/10"
                 onClick={decrementQuantity}
                 disabled={quantity <= 1}
               >
-                <Minus className="h-4 w-4" />
+                <Minus className="h-4 sm:h-5 w-4 sm:w-5" />
               </Button>
-              <span className="w-12 text-center font-medium text-base">{quantity}</span>
+              <span className="w-12 sm:w-16 text-center font-medium text-base sm:text-lg">{quantity}</span>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 rounded-l-none active:scale-95 active:bg-primary/10"
+                className="h-10 sm:h-12 w-10 sm:w-12 rounded-l-none active:scale-95 active:bg-primary/10"
                 onClick={incrementQuantity}
                 disabled={quantity >= product.stock}
               >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <Button
-              className="flex-1 bg-primary hover:bg-primary/90 active:bg-primary/80 h-10 text-base max-w-[200px]"
-              onClick={() => {
-                console.log("Add to Cart clicked (mobile)"); // Debug log
-                handleAddToCart();
-              }}
-              disabled={product.stock === 0}
-            >
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              Add to Cart
-            </Button>
-
-            <Button
-              variant="outline"
-              size="icon"
-              className={`h-10 w-10 ${isFavorite(product.globalId) ? "bg-red-50 dark:bg-red-950/30" : ""} active:scale-95 active:bg-primary/10`}
-              onClick={() => {
-                console.log("Favorite button clicked (mobile)"); // Debug log
-                toggleFavorite();
-              }}
-            >
-              <Heart
-                className={`h-5 w-5 ${isFavorite(product.globalId) ? "fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400" : ""}`}
-              />
-            </Button>
-          </div>
-        </div>
-
-        <div className="hidden md:block space-y-4 mb-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center border rounded-md shadow-sm bg-background">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-12 w-12 rounded-r-none active:scale-95 active:bg-primary/10"
-                onClick={decrementQuantity}
-                disabled={quantity <= 1}
-              >
-                <Minus className="h-5 w-5" />
-              </Button>
-              <span className="w-16 text-center font-medium text-lg">{quantity}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-12 w-12 rounded-l-none active:scale-95 active:bg-primary/10"
-                onClick={incrementQuantity}
-                disabled={quantity >= product.stock}
-              >
-                <Plus className="h-5 w-5" />
+                <Plus className="h-4 sm:h-5 w-4 sm:w-5" />
               </Button>
             </div>
 
             <Button
               className="flex-1 bg-primary hover:bg-primary/90 active:bg-primary/80 h-12 text-lg"
               onClick={() => {
-                console.log("Add to Cart clicked (desktop)"); // Debug log
+                console.log("Add to Cart clicked (desktop)");
                 handleAddToCart();
               }}
               disabled={product.stock === 0}
             >
-              <ShoppingCart className="mr-2 h-5 w-5" />
+              <ShoppingCart className="mr-2 h-4 sm:h-5 w-4 sm:w-5" />
               Add to Cart
             </Button>
 
             <Button
               variant="outline"
               size="icon"
-              className={`h-12 w-12 ${isFavorite(product.globalId) ? "bg-red-50 dark:bg-red-950/30" : ""} active:scale-95 active:bg-primary/10`}
+              className={`h-10 sm:h-12 w-10 sm:w-12 ${
+                isFavorite(product.globalId) ? "bg-red-50 dark:bg-red-950/30" : ""
+              } active:scale-95 active:bg-primary/10`}
               onClick={() => {
-                console.log("Favorite button clicked (desktop)"); // Debug log
+                console.log("Favorite button clicked (desktop)");
                 toggleFavorite();
               }}
             >
               <Heart
-                className={`h-6 w-6 ${isFavorite(product.globalId) ? "fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400" : ""}`}
+                className={`h-5 sm:h-6 w-5 sm:w-6 ${
+                  isFavorite(product.globalId)
+                    ? "fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400"
+                    : ""
+                }`}
               />
             </Button>
           </div>
 
           <Card className="bg-muted/40 border-muted">
-            <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <CardContent className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
               <div className="flex items-center gap-2 py-1">
                 <div className="bg-primary/10 p-2 rounded-full">
-                  <Truck className="h-5 w-5 text-primary" />
+                  <Truck className="h-4 sm:h-5 w-4 sm:w-5 text-primary" />
                 </div>
-                <span className="text-sm">Free delivery over ₹200</span>
+                <span className="text-xs sm:text-sm">Free delivery starting over ₹200</span>
               </div>
               <div className="flex items-center gap-2 py-1">
                 <div className="bg-primary/10 p-2 rounded-full">
-                  <Shield className="h-5 w-5 text-primary" />
+                  <Shield className="h-4 sm:h-5 w-4 sm:w-5 text-primary" />
                 </div>
-                <span className="text-sm">100% organic certified</span>
+                <span className="text-xs sm:text-sm">100% organic certified</span>
               </div>
               <div className="flex items-center gap-2 py-1">
                 <div className="bg-primary/10 p-2 rounded-full">
-                  <RotateCcw className="h-5 w-5 text-primary" />
+                  <RotateCcw className="h-4 sm:h-5 w-4 sm:w-5 text-primary" />
                 </div>
-                <span className="text-sm">6-hours replacement policy</span>
+                <span className="text-xs sm:text-sm">6-hours replacement policy</span>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="mb-12">
+        <div className="fixed bottom-0 left-0 right-0 bg-background border-t md:hidden p-2 z-40">
+          <div className="flex items-center gap-2 max-w-screen-2xl mx-auto">
+            <div className="flex items-center border rounded-md shadow-sm bg-background">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-r-none active:scale-95 active:bg-primary/10"
+                onClick={decrementQuantity}
+                disabled={quantity <= 1}
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <span className="w-10 text-center font-medium text-sm">{quantity}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-l-none active:scale-95 active:bg-primary/10"
+                onClick={incrementQuantity}
+                disabled={quantity >= product.stock}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+
+            <Button
+              className="flex-1 bg-primary hover:bg-primary/90 active:bg-primary/80 h-9 text-sm max-w-[180px]"
+              onClick={() => {
+                console.log("Add to Cart clicked (mobile)");
+                handleAddToCart();
+              }}
+              disabled={product.stock === 0}
+            >
+              <ShoppingCart className="mr-1 h-3 w-3" />
+              Add to Cart
+            </Button>
+
+            <Button
+              variant="outline"
+              size="icon"
+              className={`h-9 w-9 ${
+                isFavorite(product.globalId) ? "bg-red-50 dark:bg-red-950/30" : ""
+              } active:scale-95 active:bg-primary/10`}
+              onClick={() => {
+                console.log("Favorite button clicked (mobile)");
+                toggleFavorite();
+              }}
+            >
+              <Heart
+                className={`h-4 w-4 ${
+                  isFavorite(product.globalId)
+                    ? "fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400"
+                    : ""
+                }`}
+              />
+            </Button>
+          </div>
+        </div>
+
+        <div className="mb-8 sm:mb-12 pb-16 md:pb-0">
           <Tabs defaultValue="description" value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full flex overflow-x-auto border-b rounded-none bg-transparent h-auto p-0 mb-0 scrollbar-sm-hide">
               <TabsTrigger
                 value="description"
-                className="flex-shrink-0 rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none py-3 px-4 sm:px-6 text-sm sm:text-base"
+                className="flex-shrink-0 rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none py-2 sm:py-3 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base"
               >
                 Description
               </TabsTrigger>
               <TabsTrigger
                 value="nutrition"
-                className="flex-shrink-0 rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none py-3 px-4 sm:px-6 text-sm sm:text-base"
+                className="flex-shrink-0 rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none py-2 sm:py-3 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base"
               >
                 Nutrition Facts
               </TabsTrigger>
               <TabsTrigger
                 value="policies"
-                className="flex-shrink-0 rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none py-3 px-4 sm:px-6 text-sm sm:text-base"
+                className="flex-shrink-0 rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none py-2 sm:py-3 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base"
               >
                 Policies
               </TabsTrigger>
               <TabsTrigger
                 value="reviews"
-                className="flex-shrink-0 rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none py-3 px-4 sm:px-6 text-sm sm:text-base"
+                className="flex-shrink-0 rounded-b-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none py-2 sm:py-3 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base"
               >
                 Reviews ({product.reviews?.filter((r) => r.approved).length ?? 0})
               </TabsTrigger>
             </TabsList>
-            <div className="p-4 sm:p-6 border border-t-0 rounded-b-lg bg-card text-card-foreground">
+            <div className="p-3 sm:p-4 md:p-6 border border-t-0 rounded-b-lg bg-card text-card-foreground">
               <TabsContent value="description" className="mt-0">
-                <div className="prose prose-green dark:prose-invert max-w-none text-sm sm:text-base">
-                  <h3 className="text-lg sm:text-xl font-semibold mb-4">Product Description</h3>
+                <div className="prose prose-green dark:prose-invert max-w-none text-xs sm:text-sm md:text-base">
+                  <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Product Description</h3>
                   <p>{product.description}</p>
-                  <h4 className="text-base sm:text-lg font-medium mt-6 mb-2">Growing Conditions</h4>
+                  <h4 className="text-sm sm:text-base md:text-lg font-medium mt-4 sm:mt-6 mb-2">Growing Conditions</h4>
                   <p>
                     Our farmers use sustainable farming practices that protect the environment and produce the most
                     flavorful products. No synthetic pesticides or fertilizers are used.
                   </p>
-                  <h4 className="text-base sm:text-lg font-medium mt-6 mb-2">Harvesting and Delivery</h4>
+                  <h4 className="text-sm sm:text-base md:text-lg font-medium mt-4 sm:mt-6 mb-2">Harvesting and Delivery</h4>
                   <p>
                     All our products are harvested at peak ripeness and delivered to your door within 24-48 hours,
                     preserving maximum freshness and nutritional value.
                   </p>
-                  <h4 className="text-base sm:text-lg font-medium mt-6 mb-2">Storage Tips</h4>
+                  <h4 className="text-sm sm:text-base md:text-lg font-medium mt-4 sm:mt-6 mb-2">Storage Tips</h4>
                   <p>
                     For optimal freshness, store your {product.name} in the refrigerator. For leafy greens, wrap them
                     loosely in a damp paper towel before refrigerating.
@@ -929,17 +982,17 @@ export default function ProductDetailPage() {
                 </div>
               </TabsContent>
               <TabsContent value="nutrition" className="mt-0">
-                <div className="prose prose-green dark:prose-invert max-w-none text-sm sm:text-base">
-                  <h3 className="text-lg sm:text-xl font-semibold mb-4">Nutrition Information</h3>
-                  <p className="mb-6">
-                    Our {product.name} is not only delicious but also packed with essential nutrients to support your
-                    health and wellbeing.
+                <div className="prose prose-green dark:prose-invert max-w-none text-xs sm:text-sm md:text-base">
+                  <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Nutrition Information</h3>
+                  <p className="mb-4 sm:mb-6">
+                    Our {product.name} is not only delicious but also packed with essential nutrients to support your health
+                    and wellbeing.
                   </p>
-                  <div className="border rounded-lg p-4 sm:p-5 max-w-md shadow-sm bg-muted/40">
-                    <h4 className="text-base sm:text-lg font-bold mb-2">Nutrition Facts</h4>
+                  <div className="border rounded-lg p-3 sm:p-4 md:p-5 max-w-md shadow-sm bg-muted/40">
+                    <h4 className="text-sm sm:text-base md:text-lg font-bold mb-2">Nutrition Facts</h4>
                     <p className="text-xs sm:text-sm text-muted-foreground mb-2">Serving Size: 100g</p>
                     <Separator />
-                    <div className="space-y-2 mt-3 text-xs sm:text-sm">
+                    <div className="space-y-2 mt-2 sm:mt-3 text-xs sm:text-sm">
                       <div className="flex justify-between py-1">
                         <span className="font-medium">Calories</span>
                         <span>{product.nutrition.calories} kcal</span>
@@ -963,13 +1016,15 @@ export default function ProductDetailPage() {
                         <span className="font-medium">Protein</span>
                         <span>{product.nutrition.protein}g</span>
                       </div>
-                      {product.nutrition.vitamins.length > 0 && (
+                      {product.nutrition.vitamins?.length > 0 && (
                         <>
                           <Separator />
                           {product.nutrition.vitamins.map((vitamin, index) => (
                             <div key={index} className="flex justify-between py-1">
                               <span>{vitamin.name}</span>
-                              <span>{vitamin.amount} ({vitamin.daily})</span>
+                              <span>
+                                {vitamin.amount} ({vitamin.daily})
+                              </span>
                             </div>
                           ))}
                         </>
@@ -979,50 +1034,50 @@ export default function ProductDetailPage() {
                 </div>
               </TabsContent>
               <TabsContent value="policies" className="mt-0">
-                <div className="prose prose-green dark:prose-invert max-w-none text-sm sm:text-base">
-                  <h3 className="text-lg sm:text-xl font-semibold mb-4">Product Policies</h3>
-                  <div className="space-y-4">
+                <div className="prose prose-green dark:prose-invert max-w-none text-xs sm:text-sm md:text-base">
+                  <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Product Policies</h3>
+                  <div className="space-y-3 sm:space-y-4">
                     <div>
-                      <h4 className="text-base sm:text-lg font-medium mb-2">Return Policy</h4>
-                      <p>{product.policies.return || "No return policy specified."}</p>
+                      <h4 className="text-sm sm:text-base md:text-lg font-medium mb-2">Return Policy</h4>
+                      <p>{product.policies?.return || "No return policy specified."}</p>
                     </div>
                     <div>
-                      <h4 className="text-base sm:text-lg font-medium mb-2">Shipping Policy</h4>
-                      <p>{product.policies.shipping || "No shipping policy specified."}</p>
+                      <h4 className="text-sm sm:text-base md:text-lg font-medium mb-2">Shipping Policy</h4>
+                      <p>{product.policies?.shipping || "No shipping policy specified."}</p>
                     </div>
                     <div>
-                      <h4 className="text-base sm:text-lg font-medium mb-2">Availability</h4>
-                      <p>{product.policies.availability || "No availability information specified."}</p>
+                      <h4 className="text-sm sm:text-base md:text-lg font-medium mb-2">Availability</h4>
+                      <p>{product.policies?.availability || "No availability information specified."}</p>
                     </div>
                   </div>
                 </div>
               </TabsContent>
               <TabsContent value="reviews" className="mt-0">
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center">
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
                     <h3 className="text-lg sm:text-xl font-semibold">Customer Reviews</h3>
                     <Button
                       onClick={() => setShowReviewForm(true)}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-black text-xs sm:text-sm"
                     >
-                      <Star className="mr-2 h-4 w-4" />
+                      <Star className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
                       Write a Review
                     </Button>
                   </div>
                   {showReviewForm && (
-                    <form onSubmit={submitReview} className="space-y-4">
+                    <form onSubmit={submitReview} className="space-y-3 sm:space-y-4">
                       <div>
-                        <Label htmlFor="reviewName">Your Name (Optional)</Label>
+                        <Label htmlFor="reviewName" className="text-xs sm:text-sm">Your Name (Optional)</Label>
                         <Input
                           id="reviewName"
                           value={reviewData.name}
                           onChange={(e) => setReviewData({ ...reviewData, name: e.target.value })}
                           placeholder="Enter your name (optional)"
-                          className="mt-1"
+                          className="mt-1 text-xs sm:text-sm"
                         />
                       </div>
                       <div>
-                        <Label>Rating *</Label>
+                        <Label className="text-xs sm:text-sm">Rating *</Label>
                         <div className="flex gap-1 mt-1">
                           {[1, 2, 3, 4, 5].map((star) => (
                             <button
@@ -1034,28 +1089,28 @@ export default function ProductDetailPage() {
                               }`}
                             >
                               <Star
-                                className={`h-5 w-5 ${star <= reviewData.rating ? "fill-yellow-400" : "fill-none"}`}
+                                className={`h-4 sm:h-5 w-4 sm:w-5 ${star <= reviewData.rating ? "fill-yellow-400" : "fill-none"}`}
                               />
                             </button>
                           ))}
                         </div>
                       </div>
                       <div>
-                        <Label htmlFor="reviewText">Your Review *</Label>
+                        <Label htmlFor="reviewText" className="text-xs sm:text-sm">Your Review *</Label>
                         <Textarea
                           id="reviewText"
                           value={reviewData.review}
                           onChange={(e) => setReviewData({ ...reviewData, review: e.target.value })}
                           placeholder="Share your experience with this product"
                           required
-                          className="mt-1"
+                          className="mt-1 text-xs sm:text-sm"
                         />
                       </div>
                       <div>
-                        <Label>Upload Images (Optional, max 3MB each)</Label>
+                        <Label className="text-xs sm:text-sm">Upload Images (Optional, max 3MB each)</Label>
                         <div className="mt-1">
-                          <Button type="button" variant="outline" onClick={triggerFileInput}>
-                            <Camera className="mr-2 h-4 w-4" />
+                          <Button type="button" variant="outline" onClick={triggerFileInput} className="text-xs sm:text-sm">
+                            <Camera className="mr-1 sm:mr-2 h-3 sm:h-4 w-3 sm:w-4" />
                             Add Images
                           </Button>
                           <input
@@ -1070,7 +1125,7 @@ export default function ProductDetailPage() {
                         {reviewImages.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
                             {reviewImages.map((img, idx) => (
-                              <div key={idx} className="relative w-16 h-16">
+                              <div key={idx} className="relative w-14 h-14 sm:w-16 sm:h-16">
                                 <Image
                                   src={img}
                                   alt={`Review image preview ${idx + 1}`}
@@ -1082,7 +1137,7 @@ export default function ProductDetailPage() {
                                   type="button"
                                   variant="ghost"
                                   size="icon"
-                                  className="absolute -top-2 -right-2 bg-background/80 rounded-full h-6 w-6"
+                                  className="absolute -top-2 -right-2 bg-background/80 rounded-full h-5 sm:h-6 w-5 sm:w-6"
                                   onClick={() => removeImage(idx)}
                                 >
                                   <X className="h-3 w-3" />
@@ -1093,13 +1148,14 @@ export default function ProductDetailPage() {
                         )}
                       </div>
                       <div className="flex gap-2">
-                        <Button type="submit" disabled={actionLoading}>
+                        <Button type="submit" disabled={actionLoading} className="text-xs sm:text-sm">
                           Submit Review
                         </Button>
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => setShowReviewForm(false)}
+                          className="text-xs sm:text-sm"
                         >
                           Cancel
                         </Button>
@@ -1110,33 +1166,33 @@ export default function ProductDetailPage() {
                     product.reviews
                       .filter((r) => r.approved)
                       .map((review, index) => (
-                        <div key={index} className="border-b pb-4">
+                        <div key={index} className="border-b pb-3 sm:pb-4">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="flex">
                               {[...Array(5)].map((_, i) => (
                                 <Star
                                   key={i}
-                                  className={`h-4 w-4 ${
+                                  className={`h-3 sm:h-4 w-3 sm:w-4 ${
                                     i < review.rating ? "fill-yellow-400 text-yellow-400" : "fill-muted text-muted"
                                   }`}
                                 />
                               ))}
                             </div>
-                            <span className="text-sm font-medium">{review.customer.name}</span>
+                            <span className="text-xs sm:text-sm font-medium">{review.customer.name}</span>
                             {review.verified && review.approved && (
                               <Badge className="bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm">
                                 Verified Buyer
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm">{review.review}</p>
+                          <p className="text-xs sm:text-sm">{review.review}</p>
                           {review.images && review.images.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-2">
                               {review.images.map((img, idx) => (
                                 <button
                                   key={idx}
                                   onClick={() => openGalleryView(review.images, idx)}
-                                  className="relative w-16 h-16"
+                                  className="relative w-14 h-14 sm:w-16 sm:h-16"
                                 >
                                   <Image
                                     src={img}
@@ -1156,7 +1212,9 @@ export default function ProductDetailPage() {
                         </div>
                       ))
                   ) : (
-                    <p className="text-muted-foreground text-sm sm:text-base">No approved reviews yet. Be the first to review!</p>
+                    <p className="text-muted-foreground text-xs sm:text-sm md:text-base">
+                      No approved reviews yet. Be the first to review!
+                    </p>
                   )}
                 </div>
               </TabsContent>
@@ -1165,9 +1223,9 @@ export default function ProductDetailPage() {
         </div>
 
         {similarProducts.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-xl sm:text-2xl font-bold mb-6">Similar Products</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6">
+          <div className="mb-8 sm:mb-12">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-6">Similar Products</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               {similarProducts.map((similarProduct) => (
                 <Link
                   key={similarProduct.globalId}
@@ -1207,12 +1265,12 @@ export default function ProductDetailPage() {
                         </Badge>
                       )}
                     </div>
-                    <CardContent className="p-3 sm:p-4">
-                      <h3 className="text-sm sm:text-base font-semibold truncate group-hover:text-primary transition-colors">
+                    <CardContent className="p-2 sm:p-3 md:p-4">
+                      <h3 className="text-xs sm:text-sm md:text-base font-semibold truncate group-hover:text-primary transition-colors">
                         {similarProduct.name}
                       </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-sm sm:text-base font-bold text-primary">
+                      <div className="flex items-center gap-1 sm:gap-2 mt-1">
+                        <span className="text-xs sm:text-sm md:text-base font-bold text-primary">
                           ₹{similarProduct.price.toFixed(2)}
                         </span>
                         {similarProduct.originalPrice > similarProduct.price && (
@@ -1225,10 +1283,10 @@ export default function ProductDetailPage() {
                         {[...Array(5)].map((_, i) => (
                           <Star
                             key={i}
-                            className={`h-3 w-3 sm:h-4 sm:w-4 ${
+                            className={`h-3 sm:h-4 w-3 sm:w-4 ${
                               i <
                               Math.round(
-                                (similarProduct.reviews?.filter((r) => r.approved).reduce((sum, r) => sum + r.rating, 0) ?? 0) /
+                                (similarProduct.reviews?.filter((r) => r.approved).reduce((sum, r) => sum + r?.rating || 0, 0) || 0) /
                                   (similarProduct.reviews?.filter((r) => r.approved).length || 1)
                               )
                                 ? "fill-yellow-400 text-yellow-400"
@@ -1237,7 +1295,7 @@ export default function ProductDetailPage() {
                           />
                         ))}
                         <span className="text-xs sm:text-sm text-muted-foreground">
-                          ({similarProduct.reviews?.filter((r) => r.approved).length ?? 0})
+                          ({similarProduct.reviews?.filter((r) => r.approved).length || 0})
                         </span>
                       </div>
                     </CardContent>

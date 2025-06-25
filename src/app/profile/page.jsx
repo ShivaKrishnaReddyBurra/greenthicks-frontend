@@ -15,6 +15,7 @@ import {
   X,
   Phone,
   Lock,
+  Mail,
 } from "lucide-react";
 import coverPhoto from "@/public/coverpage.png";
 import coverPhoto1 from "@/public/coverpage1.png";
@@ -57,7 +58,10 @@ export default function ProfilePage() {
   const [showAddressPrompt, setShowAddressPrompt] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [showResetPassword, setShowResetPassword] = useState(false);
-  const [resetPasswordEmail, setResetPasswordEmail] = useState("");
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [showPhoneVerification, setShowPhoneVerification] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -197,6 +201,96 @@ export default function ProfilePage() {
     });
   };
 
+  const handleEmailVerification = async (e) => {
+    e.preventDefault();
+    setActionLoading(true);
+    try {
+      await fetchWithAuth("/api/auth/verify-contact", {
+        method: "POST",
+        body: JSON.stringify({
+          registeredEmail: user.email,
+          registeredPhone: user.phone,
+          newEmail,
+          action: "email-change",
+        }),
+      });
+      toast({
+        title: "Success",
+        description: "Verification links/messages sent to your registered email and phone via email, SMS, and WhatsApp.",
+      });
+      setShowEmailVerification(false);
+      setNewEmail("");
+    } catch (error) {
+      console.error("Error sending email verification:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send verification. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handlePhoneVerification = async (e) => {
+    e.preventDefault();
+    setActionLoading(true);
+    try {
+      await fetchWithAuth("/api/auth/verify-contact", {
+        method: "POST",
+        body: JSON.stringify({
+          registeredEmail: user.email,
+          registeredPhone: user.phone,
+          newPhone,
+          action: "phone-change",
+        }),
+      });
+      toast({
+        title: "Success",
+        description: "Verification links/messages sent to your registered email and phone via email, SMS, and WhatsApp.",
+      });
+      setShowPhoneVerification(false);
+      setNewPhone("");
+    } catch (error) {
+      console.error("Error sending phone verification:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send verification. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    setActionLoading(true);
+    try {
+      await fetchWithAuth("/api/auth/verify-contact", {
+        method: "POST",
+        body: JSON.stringify({
+          registeredEmail: user.email,
+          registeredPhone: user.phone,
+          action: "reset-password",
+        }),
+      });
+      toast({
+        title: "Success",
+        description: "Password reset links/messages sent to your registered email and phone via email, SMS, and WhatsApp.",
+      });
+      setShowResetPassword(false);
+    } catch (error) {
+      console.error("Error sending password reset:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send password reset links/messages. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     clearTimeout(actionTimeout.current);
@@ -209,18 +303,14 @@ export default function ProfilePage() {
             firstName: formData.firstName,
             lastName: formData.lastName,
             username: formData.username,
-            email: formData.email,
-            phone: formData.phone,
           }),
         });
         setUser((prev) => ({
           ...prev,
           name: `${formData.firstName} ${formData.lastName}`.trim(),
           username: formData.username,
-          email: formData.email,
           firstName: formData.firstName,
           lastName: formData.lastName,
-          phone: formData.phone,
         }));
         setIsEditingProfile(false);
         toast({
@@ -251,21 +341,33 @@ export default function ProfilePage() {
     actionTimeout.current = setTimeout(async () => {
       setActionLoading(true);
       try {
+        const payload = {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode,
+          isPrimary: formData.isPrimary,
+        };
+
+        if (
+          formData.mapLocation &&
+          typeof formData.mapLocation.lat === "number" &&
+          typeof formData.mapLocation.lng === "number"
+        ) {
+          payload.mapLocation = {
+            lat: formData.mapLocation.lat,
+            lng: formData.mapLocation.lng,
+          };
+        }
+
         if (selectedAddressId) {
           const updatedAddress = await fetchWithAuth(`/api/addresses/${selectedAddressId}`, {
             method: "PUT",
-            body: JSON.stringify({
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-              email: formData.email,
-              phone: formData.phone,
-              address: formData.address,
-              city: formData.city,
-              state: formData.state,
-              zipCode: formData.zipCode,
-              isPrimary: formData.isPrimary,
-              mapLocation: formData.mapLocation,
-            }),
+            body: JSON.stringify(payload),
           });
           setAddresses((prev) =>
             prev.map((addr) =>
@@ -277,25 +379,15 @@ export default function ProfilePage() {
         } else {
           const newAddress = await fetchWithAuth("/api/addresses", {
             method: "POST",
-            body: JSON.stringify({
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-              email: formData.email,
-              phone: formData.phone,
-              address: formData.address,
-              city: formData.city,
-              state: formData.state,
-              zipCode: formData.zipCode,
-              isPrimary: formData.isPrimary,
-              mapLocation: formData.mapLocation,
-            }),
+            body: JSON.stringify(payload),
           });
           setAddresses((prev) => [
             ...prev.map((addr) => ({ ...addr, isPrimary: formData.isPrimary ? false : addr.isPrimary })),
-            { ...newAddress.address, isPrimary: formData.isPrimary }
+            { ...newAddress.address, isPrimary: formData.isPrimary },
           ]);
           setSelectedAddressId(newAddress.address.addressId);
         }
+
         await fetchUserData();
         setIsEditingAddress(false);
         setShowAddressPrompt(false);
@@ -315,35 +407,6 @@ export default function ProfilePage() {
           clearAuth();
           router.push("/login");
         }
-      } finally {
-        setActionLoading(false);
-      }
-    }, 500);
-  };
-
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    clearTimeout(actionTimeout.current);
-    actionTimeout.current = setTimeout(async () => {
-      setActionLoading(true);
-      try {
-        await fetchWithAuth("/api/auth/reset-password", {
-          method: "POST",
-          body: JSON.stringify({ email: resetPasswordEmail }),
-        });
-        toast({
-          title: "Success",
-          description: "Password reset link sent to your email.",
-        });
-        setShowResetPassword(false);
-        setResetPasswordEmail("");
-      } catch (error) {
-        console.error("Error sending password reset:", error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to send password reset link. Please try again.",
-          variant: "destructive",
-        });
       } finally {
         setActionLoading(false);
       }
@@ -435,10 +498,30 @@ export default function ProfilePage() {
         if (!addressToUpdate) {
           throw new Error("Address not found");
         }
+
+        const payload = {
+          ...addressToUpdate,
+          isPrimary: true,
+        };
+
+        if (
+          addressToUpdate.mapLocation &&
+          typeof addressToUpdate.mapLocation.lat === "number" &&
+          typeof addressToUpdate.mapLocation.lng === "number"
+        ) {
+          payload.mapLocation = {
+            lat: addressToUpdate.mapLocation.lat,
+            lng: addressToUpdate.mapLocation.lng,
+          };
+        } else {
+          delete payload.mapLocation;
+        }
+
         const updatedAddress = await fetchWithAuth(`/api/addresses/${addressId}`, {
           method: "PUT",
-          body: JSON.stringify({ ...addressToUpdate, isPrimary: true }),
+          body: JSON.stringify(payload),
         });
+
         setAddresses((prev) =>
           prev.map((addr) =>
             addr.addressId === addressId
@@ -446,6 +529,7 @@ export default function ProfilePage() {
               : { ...addr, isPrimary: false }
           )
         );
+
         setSelectedAddressId(addressId);
         setFormData({
           firstName: updatedAddress.address.firstName,
@@ -461,6 +545,7 @@ export default function ProfilePage() {
           mapLocation: updatedAddress.address.mapLocation,
           useCurrentLocation: false,
         });
+
         await fetchUserData();
         toast({
           title: "Success",
@@ -566,19 +651,73 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-12">
-        <Skeleton className="h-48 md:h-64 w-full mb-8" />
-        <div className="flex items-center gap-4 mb-8">
-          <Skeleton className="h-32 w-32 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-4 w-24" />
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-12">
+          {/* Cover Photo Skeleton */}
+          <Skeleton className="h-48 md:h-64 w-full rounded-lg mb-8" />
+
+          {/* Profile Header Skeleton */}
+          <div className="relative -mt-16 md:-mt-20 mb-8">
+            <div className="flex flex-col md:flex-row md:items-end gap-4">
+              <Skeleton className="h-32 w-32 rounded-full" />
+              <div className="space-y-2 w-full max-w-xs">
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-1/3" />
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-96 md:col-span-2" />
-          <Skeleton className="h-64" />
+
+          {/* Tabs and Content Skeleton */}
+          <div className="space-y-6">
+            {/* Tabs Skeleton */}
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-28 rounded-lg" />
+              <Skeleton className="h-10 w-28 rounded-lg" />
+            </div>
+
+            {/* Content Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Main Card Skeleton */}
+              <div className="md:col-span-2 space-y-4">
+                <Skeleton className="h-16 w-full rounded-lg" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-5 w-2/3" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-5 w-2/3" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-5 w-2/3" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-5 w-2/3" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Sidebar Card Skeleton */}
+              <div className="space-y-4">
+                <Skeleton className="h-16 w-full rounded-lg" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-5 w-2/3" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-5 w-2/3" />
+                </div>
+                <Skeleton className="h-10 w-full rounded-md" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -611,7 +750,6 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Cover Photo and Profile Header */}
       <div className="relative">
         <div className="h-48 md:h-64 w-full bg-muted overflow-hidden">
           <img
@@ -646,7 +784,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="container mx-auto px-4 pb-12">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
           <div className="flex overflow-x-auto pb-2 md:pb-0">
@@ -668,10 +805,8 @@ export default function ProfilePage() {
             </TabsList>
           </div>
 
-          {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Personal Information */}
               <Card className="md:col-span-2">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
@@ -679,6 +814,7 @@ export default function ProfilePage() {
                     <CardDescription>Manage your personal details</CardDescription>
                   </div>
                   <Button
+                    type="button"
                     variant="ghost"
                     size="icon"
                     onClick={() => setIsEditingProfile(!isEditingProfile)}
@@ -731,38 +867,123 @@ export default function ProfilePage() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="email">Email Address</Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          placeholder="Your email address"
-                          required
-                          disabled={actionLoading}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="email"
+                            name="email"
+                            type="email"
+                            value={formData.email}
+                            disabled
+                          />
+                          <Dialog open={showEmailVerification} onOpenChange={setShowEmailVerification}>
+                            <DialogTrigger asChild>
+                              <Button type="button" variant="outline" size="icon" disabled={actionLoading}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Change Email Address</DialogTitle>
+                                <DialogDescription>
+                                  Enter your new email address. Verification links/messages will be sent to your registered email ({user.email}) and phone ({user.phone || "Not set"}) via email, SMS, and WhatsApp.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <form onSubmit={handleEmailVerification} className="grid gap-4 py-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="newEmail">New Email</Label>
+                                  <Input
+                                    id="newEmail"
+                                    type="email"
+                                    value={newEmail}
+                                    onChange={(e) => setNewEmail(e.target.value)}
+                                    placeholder="Your new email address"
+                                    required
+                                    disabled={actionLoading}
+                                  />
+                                </div>
+                                <DialogFooter>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setShowEmailVerification(false)}
+                                    disabled={actionLoading}
+                                  >
+                                    <X className="h-4 w-4 mr-2" />
+                                    Cancel
+                                  </Button>
+                                  <Button type="submit" disabled={actionLoading || !newEmail}>
+                                    <Mail className="h-4 w-4 mr-2" />
+                                    Send Verification
+                                  </Button>
+                                </DialogFooter>
+                              </form>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="phone">Phone Number</Label>
-                        <Input
-                          id="phone"
-                          name="phone"
-                          value={formData.phone}
-                          onChange={handleInputChange}
-                          placeholder="+91 912345678901"
-                          pattern="^(?:\+91\s?)?\d{10}$"
-                          title="Phone number must be in Indian format (e.g., +91 92345678901)"
-                          required
-                          disabled={actionLoading}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="phone"
+                            name="phone"
+                            value={formData.phone}
+                            disabled
+                          />
+                          <Dialog open={showPhoneVerification} onOpenChange={setShowPhoneVerification}>
+                            <DialogTrigger asChild>
+                              <Button type="button" variant="outline" size="icon" disabled={actionLoading}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Change Phone Number</DialogTitle>
+                                <DialogDescription>
+                                  Enter your new phone number. Verification links/messages will be sent to your registered email ({user.email}) and phone ({user.phone || "Not set"}) via email, SMS, and WhatsApp.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <form onSubmit={handlePhoneVerification} className="grid gap-4 py-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="newPhone">New Phone Number</Label>
+                                  <Input
+                                    id="newPhone"
+                                    value={newPhone}
+                                    onChange={(e) => setNewPhone(e.target.value)}
+                                    placeholder="+91 9123456789"
+                                    pattern="^(?:\+91\s?)?\d{10}$"
+                                    title="Phone number must be in Indian format (e.g., +91 9123456789)"
+                                    required
+                                    disabled={actionLoading}
+                                  />
+                                </div>
+                                <DialogFooter>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setShowPhoneVerification(false)}
+                                    disabled={actionLoading}
+                                  >
+                                    <X className="h-4 w-4 mr-2" />
+                                    Cancel
+                                  </Button>
+                                  <Button type="submit" disabled={actionLoading || !newPhone}>
+                                    <Phone className="h-4 w-4 mr-2" />
+                                    Send Verification
+                                  </Button>
+                                </DialogFooter>
+                              </form>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
                         <p className="text-xs text-muted-foreground">
-                          Use international format (e.g., +91 2345678901)
+                          Use Indian format (e.g., +91 9123456789)
                         </p>
                       </div>
                       <div className="flex justify-end gap-2">
                         <Button
-                          variant="outline"
                           type="button"
+                          variant="outline"
                           onClick={handleCancelProfile}
                           disabled={actionLoading}
                         >
@@ -822,7 +1043,6 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
 
-              {/* Account Overview */}
               <Card>
                 <CardHeader>
                   <CardTitle>Account Overview</CardTitle>
@@ -840,9 +1060,9 @@ export default function ProfilePage() {
                   <Dialog open={showResetPassword} onOpenChange={setShowResetPassword}>
                     <DialogTrigger asChild>
                       <Button
+                        type="button"
                         variant="outline"
                         className="w-full justify-start"
-                        onClick={() => setResetPasswordEmail(user.email)}
                         disabled={actionLoading}
                       >
                         <Lock className="h-4 w-4 mr-2" />
@@ -853,22 +1073,10 @@ export default function ProfilePage() {
                       <DialogHeader>
                         <DialogTitle>Reset Password</DialogTitle>
                         <DialogDescription>
-                          Enter your email address to receive a password reset link.
+                          Verification links/messages will be sent to your registered email ({user.email}) and phone ({user.phone || "Not set"}) via email, SMS, and WhatsApp to reset your password.
                         </DialogDescription>
                       </DialogHeader>
-                      <form onSubmit={handleResetPassword} className="grid gap-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="resetEmail">Email</Label>
-                          <Input
-                            id="resetEmail"
-                            type="email"
-                            value={resetPasswordEmail}
-                            onChange={(e) => setResetPasswordEmail(e.target.value)}
-                            placeholder="Your email address"
-                            required
-                            disabled={actionLoading}
-                          />
-                        </div>
+                      <div className="grid gap-4 py-4">
                         <DialogFooter>
                           <Button
                             type="button"
@@ -879,15 +1087,16 @@ export default function ProfilePage() {
                             <X className="h-4 w-4 mr-2" />
                             Cancel
                           </Button>
-                          <Button type="submit" disabled={actionLoading}>
+                          <Button type="button" onClick={handleResetPassword} disabled={actionLoading}>
                             <Lock className="h-4 w-4 mr-2" />
-                            Send Reset Link
+                            Send Reset Links
                           </Button>
                         </DialogFooter>
-                      </form>
+                      </div>
                     </DialogContent>
                   </Dialog>
                   <Button
+                    type="button"
                     variant="outline"
                     className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
                     onClick={() =>
@@ -906,13 +1115,12 @@ export default function ProfilePage() {
             </div>
           </TabsContent>
 
-          {/* Addresses Tab */}
           <TabsContent value="addresses" className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Your Addresses</h2>
               <Dialog open={isEditingAddress} onOpenChange={setIsEditingAddress}>
                 <DialogTrigger asChild>
-                  <Button onClick={handleAddNewAddress} disabled={actionLoading}>
+                  <Button type="button" onClick={handleAddNewAddress} disabled={actionLoading}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add New Address
                   </Button>
@@ -951,34 +1159,121 @@ export default function ProfilePage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="Email address"
-                        required
-                        disabled={actionLoading}
-                      />
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          disabled
+                        />
+                        <Dialog open={showEmailVerification} onOpenChange={setShowEmailVerification}>
+                          <DialogTrigger asChild>
+                            <Button type="button" variant="outline" size="icon" disabled={actionLoading}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Change Email Address</DialogTitle>
+                              <DialogDescription>
+                                Enter your new email address. Verification links/messages will be sent to your registered email ({user.email}) and phone ({user.phone || "Not set"}) via email, SMS, and WhatsApp.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleEmailVerification} className="grid gap-4 py-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="newEmail">New Email</Label>
+                                <Input
+                                  id="newEmail"
+                                  type="email"
+                                  value={newEmail}
+                                  onChange={(e) => setNewEmail(e.target.value)}
+                                  placeholder="Your new email address"
+                                  required
+                                  disabled={actionLoading}
+                                />
+                              </div>
+                              <DialogFooter>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => setShowEmailVerification(false)}
+                                  disabled={actionLoading}
+                                >
+                                  <X className="h-4 w-4 mr-2" />
+                                  Cancel
+                                </Button>
+                                <Button type="submit" disabled={actionLoading || !newEmail}>
+                                  <Mail className="h-4 w-4 mr-2" />
+                                  Send Verification
+                                </Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                     </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="+91 92345678901"
-                        pattern="^(?:\+91\s?)?\d{10}$"
-                        title="Phone number must be in Indian format (e.g., +91 92345678901)"
-                        required
-                        disabled={actionLoading}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Use international format (e.g., +91 92345678901)
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="phone"
+                          name="phone"
+                          value={formData.phone}
+                          disabled
+                        />
+                        <Dialog open={showPhoneVerification} onOpenChange={setShowPhoneVerification}>
+                          <DialogTrigger asChild>
+                            <Button type="button" variant="outline" size="icon" disabled={actionLoading}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Change Phone Number</DialogTitle>
+                              <DialogDescription>
+                                Enter your new phone number. Verification links/messages will be sent to your registered email ({user.email}) and phone ({user.phone || "Not set"}) via email, SMS, and WhatsApp.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handlePhoneVerification} className="grid gap-4 py-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="newPhone">New Phone Number</Label>
+                                <Input
+                                  id="newPhone"
+                                  value={newPhone}
+                                  onChange={(e) => setNewPhone(e.target.value)}
+                                  placeholder="+91 9123456789"
+                                  pattern="^(?:\+91\s?)?\d{10}$"
+                                  title="Phone number must be in Indian format (e.g., +91 9123456789)"
+                                  required
+                                  disabled={actionLoading}
+                                />
+                              </div>
+                              <DialogFooter>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => setShowPhoneVerification(false)}
+                                  disabled={actionLoading}
+                                >
+                                  <X className="h-4 w-4 mr-2" />
+                                  Cancel
+                                </Button>
+                                <Button type="submit" disabled={actionLoading || !newPhone}>
+                                  <Phone className="h-4 w-4 mr-2" />
+                                  Send Verification
+                                </Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                        <p className="text-xs text-muted-foreground">
+                          Use Indian format (e.g., +91 9123456789)
+                        </p>
+                      </div>
                     </div>
+
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="address">Address</Label>
@@ -1034,6 +1329,7 @@ export default function ProfilePage() {
                             }}
                             disabled={actionLoading}
                           />
+                          <Label htmlFor="useCurrentLocation">Use Current Location</Label>
                         </div>
                       </div>
                       <CheckoutMapComponent
@@ -1051,12 +1347,11 @@ export default function ProfilePage() {
                         disabled={actionLoading}
                       />
                       {formData.useCurrentLocation && formData.currentLocation && (
-                        <div className="bg-primary/10 p-2 rounded-md text-sm flex items-center">
+                        <div className="bg-primary/10 p-2 rounded-md text-sm">
                           <MapPin className="h-4 w-4 text-primary inline mr-2 flex-shrink-0" />
                           <span>Location shared for precise delivery</span>
                         </div>
                       )}
-                      
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -1099,15 +1394,15 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Checkbox
-                        id="isPrimary"
-                        checked={formData.isPrimary}
-                        onCheckedChange={(checked) => setFormData({ ...formData, isPrimary: checked })}
-                        disabled={actionLoading}
-                      />
-                      <Label htmlFor="isPrimary" className="ml-2">
-                        Set as primary address
-                      </Label>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="isPrimary"
+                          checked={formData.isPrimary}
+                          onCheckedChange={(checked) => setFormData({ ...formData, isPrimary: checked })}
+                          disabled={actionLoading}
+                        />
+                        <Label htmlFor="isPrimary">Set as primary address</Label>
+                      </div>
                     </div>
                     <DialogFooter>
                       <Button
@@ -1129,7 +1424,7 @@ export default function ProfilePage() {
               </Dialog>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {addresses.map((address) => (
                 <Card key={address.addressId} className={address.isPrimary ? "border-primary" : ""}>
                   <CardHeader className="pb-2">
@@ -1138,12 +1433,14 @@ export default function ProfilePage() {
                         {address.isPrimary && <Badge>Primary</Badge>}
                         {address.mapLocation && (
                           <span className="text-green-600 flex items-center text-xs">
-                            <MapPin className="h-3 w-3 mr-1" /> Map Location
+                            <MapPin className="h-3 w-3 mr-1" />
+                            Map Location
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
+                          type="button"
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
@@ -1174,6 +1471,7 @@ export default function ProfilePage() {
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
+                          type="button"
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive"
@@ -1199,6 +1497,7 @@ export default function ProfilePage() {
                   <CardFooter>
                     {!address.isPrimary && (
                       <Button
+                        type="button"
                         variant="outline"
                         size="sm"
                         className="w-full"
@@ -1216,8 +1515,8 @@ export default function ProfilePage() {
                   <CardContent className="text-center py-12">
                     <MapPin className="h-12 w-12 mx-auto text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium">No addresses added</h3>
-                    <p className="mt-1 text-muted-foreground">Add an address to get started</p>
-                    <Button onClick={handleAddNewAddress} disabled={actionLoading}>
+                    <p className="mt-1 text-sm text-muted-foreground">Add an address to get started.</p>
+                    <Button type="button" onClick={handleAddNewAddress} disabled={actionLoading}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Address
                     </Button>
