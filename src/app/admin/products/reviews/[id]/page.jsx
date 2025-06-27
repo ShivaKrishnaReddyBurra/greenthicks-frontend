@@ -1,16 +1,10 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { use, useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import Image from "next/image"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,13 +15,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Star, X, ArrowLeft, Trash2, Check, XCircle } from "lucide-react";
-import { getProductById, deleteReview, updateReviewStatus } from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
+} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+import { Star, X, ArrowLeft, Trash2, Check, XCircle } from "lucide-react"
+import { getProductById, deleteReview, updateReviewStatus } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
-// Component to display a loading skeleton while fetching data
+// SkeletonLoader component - displays loading skeleton while fetching data
 const SkeletonLoader = () => (
   <div className="space-y-4 animate-pulse">
     <div className="h-8 w-64 bg-gray-200 rounded"></div>
@@ -37,120 +31,175 @@ const SkeletonLoader = () => (
       ))}
     </div>
   </div>
-);
+)
 
-// Main component to manage and display product reviews
+// ProductReviews component - main component to manage and display product reviews
 export default function ProductReviews({ params }) {
-  const { id } = params;
-  const router = useRouter();
-  const { toast } = useToast();
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedReviewImage, setSelectedReviewImage] = useState(null);
+  const { id } = use(params)
+  const router = useRouter()
+  const { toast } = useToast()
+  const [product, setProduct] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [selectedReviewImage, setSelectedReviewImage] = useState(null)
 
-  // Fetch product data with reviews when component mounts or ID changes
+  // fetchProductDetails function - fetch product data with reviews when component mounts or ID changes
   useEffect(() => {
     const fetchProductDetails = async () => {
       try {
-        setLoading(true);
-        const data = await getProductById(Number(id));
+        setLoading(true)
+        const data = await getProductById(Number(id))
         setProduct({
           ...data,
           reviews: data.reviews || [],
-        });
+        })
       } catch (error) {
         toast({
           title: "Error",
           description: "Failed to load product data. Please try again.",
           variant: "destructive",
-        });
+        })
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    if (id) fetchProductDetails();
-  }, [id, toast]);
+    if (id) fetchProductDetails()
+  }, [id, toast])
 
-  // Approve a review and update the product state
+  // approveReview function - approve a review and update the product state
   const approveReview = async (reviewId) => {
     try {
-      await updateReviewStatus(Number(id), reviewId, true);
+      // Check if the review exists first
+      const reviewExists = product.reviews.find((review) => review._id === reviewId)
+      if (!reviewExists) {
+        toast({
+          title: "Error",
+          description: "Review not found",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Try to update the review status
+      await updateReviewStatus(Number(id), reviewId, true)
+
+      // Update local state - mark as approved instead of removing
       setProduct({
         ...product,
-        reviews: product.reviews.filter((review) => review._id !== reviewId),
-      });
+        reviews: product.reviews.map((review) => (review._id === reviewId ? { ...review, approved: true } : review)),
+      })
+
       toast({
         title: "Success",
         description: "Review approved successfully",
-      });
+      })
     } catch (error) {
-      console.error("Error approving review:", error);
-      const errorMessage =
-        error?.response?.data?.message || error?.message || "An unknown error occurred";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    }
-  };
+      console.error("Error approving review:", error)
 
-  // Reject a review and update the product state
+      // Handle 404 errors specifically
+      if (error.status === 404) {
+        toast({
+          title: "Feature Not Available",
+          description: "Review approval feature is not currently available. Please contact support.",
+          variant: "destructive",
+        })
+      } else {
+        const errorMessage = error?.response?.data?.message || error?.message || "An unknown error occurred"
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+  // rejectReview function - reject a review and update the product state
   const rejectReview = async (reviewId) => {
     try {
-      await updateReviewStatus(Number(id), reviewId, false);
+      // Check if the review exists first
+      const reviewExists = product.reviews.find((review) => review._id === reviewId)
+      if (!reviewExists) {
+        toast({
+          title: "Error",
+          description: "Review not found",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Try to update the review status
+      await updateReviewStatus(Number(id), reviewId, false)
+
+      // Update local state - mark as rejected
       setProduct({
         ...product,
-        reviews: product.reviews.map((review) =>
-          review._id === reviewId ? { ...review, approved: false } : review
-        ),
-      });
+        reviews: product.reviews.map((review) => (review._id === reviewId ? { ...review, approved: false } : review)),
+      })
+
       toast({
         title: "Success",
         description: "Review rejected successfully",
-      });
+      })
     } catch (error) {
-      console.error("Error rejecting review:", error);
-      const errorMessage =
-        error?.response?.data?.message || error?.message || "An unknown error occurred";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    }
-  };
+      console.error("Error rejecting review:", error)
 
-  // Delete a review and update the product state
+      // Handle 404 errors specifically
+      if (error.status === 404) {
+        toast({
+          title: "Feature Not Available",
+          description: "Review rejection feature is not currently available. Please contact support.",
+          variant: "destructive",
+        })
+      } else {
+        const errorMessage = error?.response?.data?.message || error?.message || "An unknown error occurred"
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+  // removeReview function - delete a review and update the product state
   const removeReview = async (reviewId) => {
     try {
-      await deleteReview(Number(id), reviewId);
+      await deleteReview(Number(id), reviewId)
       setProduct({
         ...product,
         reviews: product.reviews.filter((review) => review._id !== reviewId),
-      });
+      })
       toast({
         title: "Success",
         description: "Review deleted successfully",
-      });
+      })
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete review.",
-        variant: "destructive",
-      });
+      // Handle 404 errors specifically
+      if (error.status === 404) {
+        toast({
+          title: "Feature Not Available",
+          description: "Review deletion feature is not currently available. Please contact support.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to delete review.",
+          variant: "destructive",
+        })
+      }
     }
-  };
+  }
 
-  // Format a date string into a readable format
+  // formatDate function - format a date string into a readable format
   const formatDate = (dateString) => {
-    const options = { year: "numeric", month: "long", day: "numeric" };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
+    const options = { year: "numeric", month: "long", day: "numeric" }
+    return new Date(dateString).toLocaleDateString(undefined, options)
+  }
 
   // Render loading skeleton while data is being fetched
-  if (loading) return <SkeletonLoader />;
+  if (loading) return <SkeletonLoader />
 
   // Render message if product is not found
   if (!product) {
@@ -163,7 +212,7 @@ export default function ProductReviews({ params }) {
           Back to Products
         </Button>
       </div>
-    );
+    )
   }
 
   // Render the product reviews UI
@@ -217,7 +266,7 @@ export default function ProductReviews({ params }) {
                           className="w-16 h-16 rounded-md overflow-hidden border"
                         >
                           <Image
-                            src={img}
+                            src={img || "/placeholder.svg"}
                             alt={`Review image ${idx + 1}`}
                             width={64}
                             height={64}
@@ -262,9 +311,7 @@ export default function ProductReviews({ params }) {
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => removeReview(review._id)}>
-                          Delete
-                        </AlertDialogAction>
+                        <AlertDialogAction onClick={() => removeReview(review._id)}>Delete</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -276,7 +323,7 @@ export default function ProductReviews({ params }) {
       </div>
 
       {selectedReviewImage && (
-        <div className="fixed inset-0 bg fertilizer-80 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
           <Button
             variant="ghost"
             size="icon"
@@ -287,9 +334,9 @@ export default function ProductReviews({ params }) {
           </Button>
           <Image
             src={
-              product.reviews
-                .find((r) => r._id === selectedReviewImage.reviewId)
-                ?.images[selectedReviewImage.index] || "/placeholder.png"
+              product.reviews.find((r) => r._id === selectedReviewImage.reviewId)?.images[selectedReviewImage.index] ||
+              "/placeholder.svg?height=800&width=800" ||
+              "/placeholder.svg"
             }
             alt="Review image"
             width={800}
@@ -313,5 +360,5 @@ export default function ProductReviews({ params }) {
         </div>
       )}
     </div>
-  );
+  )
 }

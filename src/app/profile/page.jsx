@@ -1,36 +1,17 @@
-"use client";
+"use client"
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { fetchWithAuth, createOrder } from "@/lib/api";
-import { getAuthToken, clearAuth } from "@/lib/auth-utils";
-import {
-  Bell,
-  Edit,
-  MapPin,
-  Plus,
-  Save,
-  Trash,
-  User,
-  X,
-  Phone,
-  Lock,
-  Mail,
-} from "lucide-react";
-import coverPhoto from "@/public/coverpage.png";
-import coverPhoto1 from "@/public/coverpage1.png";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
+import { fetchWithAuth } from "@/lib/api"
+import { getAuthToken, clearAuth } from "@/lib/auth-utils"
+import { Bell, Edit, MapPin, Plus, Save, Trash, User, X, Phone, Lock, Mail } from "lucide-react"
+import coverPhoto from "@/public/coverpage.png"
+import coverPhoto1 from "@/public/coverpage1.png"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -39,29 +20,29 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/components/ui/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
-import LeafLoader from "@/components/LeafLoader";
-import CheckoutMapComponent from "@/components/checkout-map-component";
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { toast } from "@/components/ui/use-toast"
+import { Skeleton } from "@/components/ui/skeleton"
+import LeafLoader from "@/components/LeafLoader"
+import CheckoutMapComponent from "@/components/checkout-map-component"
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const [user, setUser] = useState(null);
-  const [addresses, setAddresses] = useState([]);
-  const [activeTab, setActiveTab] = useState("profile");
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [isEditingAddress, setIsEditingAddress] = useState(false);
-  const [showAddressPrompt, setShowAddressPrompt] = useState(false);
-  const [selectedAddressId, setSelectedAddressId] = useState(null);
-  const [showResetPassword, setShowResetPassword] = useState(false);
-  const [showEmailVerification, setShowEmailVerification] = useState(false);
-  const [showPhoneVerification, setShowPhoneVerification] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
-  const [newPhone, setNewPhone] = useState("");
+  const router = useRouter()
+  const [user, setUser] = useState(null)
+  const [addresses, setAddresses] = useState([])
+  const [activeTab, setActiveTab] = useState("profile")
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [isEditingAddress, setIsEditingAddress] = useState(false)
+  const [showAddressPrompt, setShowAddressPrompt] = useState(false)
+  const [selectedAddressId, setSelectedAddressId] = useState(null)
+  const [showResetPassword, setShowResetPassword] = useState(false)
+  const [showEmailVerification, setShowEmailVerification] = useState(false)
+  const [showPhoneVerification, setShowPhoneVerification] = useState(false)
+  const [newEmail, setNewEmail] = useState("")
+  const [newPhone, setNewPhone] = useState("")
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -76,31 +57,33 @@ export default function ProfilePage() {
     currentLocation: null,
     mapLocation: null,
     useCurrentLocation: false,
-  });
-  const [actionLoading, setActionLoading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const actionTimeout = useRef(null);
+  })
+  const [actionLoading, setActionLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
+  const actionTimeout = useRef(null)
 
   // Mobile detection
   useEffect(() => {
     const checkMobile = () => {
-      const isMobileDevice = window.matchMedia("(max-width: 640px)").matches;
-      setIsMobile(isMobileDevice);
-    };
+      const isMobileDevice = window.matchMedia("(max-width: 640px)").matches
+      setIsMobile(isMobileDevice)
+    }
 
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
+  // fetchUserData function - fetches user profile and addresses
   const fetchUserData = async () => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
       const [profileData, addressesData] = await Promise.all([
         fetchWithAuth("/api/auth/profile"),
         fetchWithAuth("/api/addresses"),
-      ]);
+      ])
+      console.log("Fetched addresses:", JSON.stringify(addressesData, null, 2))
       const userData = {
         ...profileData,
         globalId: profileData.globalId,
@@ -112,13 +95,13 @@ export default function ProfilePage() {
         totalSpent: profileData.totalSpent || 0,
         totalOrders: profileData.totalOrders || 0,
         phone: profileData.phone || "Not set",
-      };
-      setUser(userData);
-      setAddresses(addressesData);
-      setShowAddressPrompt(addressesData.length === 0);
-      const primaryAddress = addressesData.find((addr) => addr.isPrimary) || addressesData[0];
+      }
+      setUser(userData)
+      setAddresses(addressesData)
+      setShowAddressPrompt(addressesData.length === 0)
+      const primaryAddress = addressesData.find((addr) => addr.isPrimary) || addressesData[0]
       if (primaryAddress) {
-        setSelectedAddressId(primaryAddress.addressId);
+        setSelectedAddressId(primaryAddress.addressId)
         setFormData({
           firstName: primaryAddress.firstName || "",
           lastName: primaryAddress.lastName || "",
@@ -133,7 +116,7 @@ export default function ProfilePage() {
           currentLocation: primaryAddress.location || null,
           mapLocation: primaryAddress.mapLocation || null,
           useCurrentLocation: false,
-        });
+        })
       } else {
         setFormData({
           firstName: profileData.firstName || "",
@@ -149,42 +132,44 @@ export default function ProfilePage() {
           currentLocation: null,
           mapLocation: null,
           useCurrentLocation: false,
-        });
+        })
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching data:", error)
       toast({
         title: "Error",
         description: error.message || "Failed to load profile or addresses. Please try again.",
         variant: "destructive",
-      });
+      })
       if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        clearAuth();
-        router.push("/login");
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        clearAuth()
+        router.push("/login")
       }
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   useEffect(() => {
-    const token = getAuthToken();
+    const token = getAuthToken()
     if (!token) {
-      setIsLoading(true);
+      setIsLoading(true)
       setTimeout(() => {
-        router.push("/login");
-      }, 1000);
-      return;
+        router.push("/login")
+      }, 1000)
+      return
     }
-    fetchUserData();
-  }, [router]);
+    fetchUserData()
+  }, [router])
 
+  // handleInputChange function - handles form input changes
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
 
+  // handleMapLocationSelect function - handles map location selection
   const handleMapLocationSelect = (location, address, addressComponents) => {
     setFormData((prev) => ({
       ...prev,
@@ -193,109 +178,144 @@ export default function ProfilePage() {
       city: addressComponents.city || prev.city,
       state: addressComponents.state || prev.state,
       zipCode: addressComponents.zipCode || prev.zipCode,
-    }));
+    }))
 
     toast({
       title: "Location Selected",
       description: "Your delivery location has been updated.",
-    });
-  };
+    })
+  }
 
+  // handleEmailVerification function - handles email verification request
   const handleEmailVerification = async (e) => {
-    e.preventDefault();
-    setActionLoading(true);
+    e.preventDefault()
+    setActionLoading(true)
     try {
-      await fetchWithAuth("/api/auth/verify-contact", {
+      // Try the forgot password endpoint for email change
+      const response = await fetchWithAuth("/api/auth/forgot-password", {
         method: "POST",
         body: JSON.stringify({
-          registeredEmail: user.email,
-          registeredPhone: user.phone,
-          newEmail,
-          action: "email-change",
+          email: user.email,
+          type: "email-change",
+          newEmail: newEmail,
         }),
-      });
+      })
+
       toast({
         title: "Success",
-        description: "Verification links/messages sent to your registered email and phone via email, SMS, and WhatsApp.",
-      });
-      setShowEmailVerification(false);
-      setNewEmail("");
+        description: "Email verification link sent to your registered email address.",
+      })
+      setShowEmailVerification(false)
+      setNewEmail("")
     } catch (error) {
-      console.error("Error sending email verification:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send verification. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(false);
-    }
-  };
+      console.error("Error sending email verification:", error)
 
+      // If the specific endpoint doesn't exist, try a generic approach
+      if (error.status === 404) {
+        toast({
+          title: "Feature Not Available",
+          description: "Email change feature is not currently available. Please contact support.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to send verification. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // handlePhoneVerification function - handles phone verification request
   const handlePhoneVerification = async (e) => {
-    e.preventDefault();
-    setActionLoading(true);
+    e.preventDefault()
+    setActionLoading(true)
     try {
-      await fetchWithAuth("/api/auth/verify-contact", {
+      // Try the update phone endpoint
+      const response = await fetchWithAuth("/api/auth/update-phone", {
         method: "POST",
         body: JSON.stringify({
-          registeredEmail: user.email,
-          registeredPhone: user.phone,
-          newPhone,
-          action: "phone-change",
+          email: user.email,
+          newPhone: newPhone,
         }),
-      });
+      })
+
       toast({
         title: "Success",
-        description: "Verification links/messages sent to your registered email and phone via email, SMS, and WhatsApp.",
-      });
-      setShowPhoneVerification(false);
-      setNewPhone("");
+        description: "Phone verification link sent to your registered email address.",
+      })
+      setShowPhoneVerification(false)
+      setNewPhone("")
     } catch (error) {
-      console.error("Error sending phone verification:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send verification. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(false);
-    }
-  };
+      console.error("Error sending phone verification:", error)
 
+      // If the specific endpoint doesn't exist, try a generic approach
+      if (error.status === 404) {
+        toast({
+          title: "Feature Not Available",
+          description: "Phone change feature is not currently available. Please contact support.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to send verification. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // handleResetPassword function - handles password reset request
   const handleResetPassword = async () => {
-    setActionLoading(true);
+    setActionLoading(true)
     try {
-      await fetchWithAuth("/api/auth/verify-contact", {
+      // Use the standard forgot password endpoint
+      const response = await fetchWithAuth("/api/auth/forgot-password", {
         method: "POST",
         body: JSON.stringify({
-          registeredEmail: user.email,
-          registeredPhone: user.phone,
-          action: "reset-password",
+          email: user.email,
         }),
-      });
+      })
+
       toast({
         title: "Success",
-        description: "Password reset links/messages sent to your registered email and phone via email, SMS, and WhatsApp.",
-      });
-      setShowResetPassword(false);
+        description: "Password reset link sent to your registered email address.",
+      })
+      setShowResetPassword(false)
     } catch (error) {
-      console.error("Error sending password reset:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send password reset links/messages. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(false);
-    }
-  };
+      console.error("Error sending password reset:", error)
 
+      // If the endpoint doesn't exist, provide helpful feedback
+      if (error.status === 404) {
+        toast({
+          title: "Feature Not Available",
+          description: "Password reset feature is not currently available. Please contact support.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to send password reset link. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  // handleProfileSubmit function - handles profile form submission
   const handleProfileSubmit = async (e) => {
-    e.preventDefault();
-    clearTimeout(actionTimeout.current);
+    e.preventDefault()
+    clearTimeout(actionTimeout.current)
     actionTimeout.current = setTimeout(async () => {
-      setActionLoading(true);
+      setActionLoading(true)
       try {
         await fetchWithAuth(`/api/auth/user/${user.globalId}`, {
           method: "PUT",
@@ -304,42 +324,43 @@ export default function ProfilePage() {
             lastName: formData.lastName,
             username: formData.username,
           }),
-        });
+        })
         setUser((prev) => ({
           ...prev,
           name: `${formData.firstName} ${formData.lastName}`.trim(),
           username: formData.username,
           firstName: formData.firstName,
           lastName: formData.lastName,
-        }));
-        setIsEditingProfile(false);
+        }))
+        setIsEditingProfile(false)
         toast({
           title: "Success",
           description: "Profile updated successfully.",
-        });
+        })
       } catch (error) {
-        console.error("Error updating profile:", error);
+        console.error("Error updating profile:", error)
         toast({
           title: "Error",
           description: error.message || "Failed to update profile. Please try again.",
           variant: "destructive",
-        });
+        })
         if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          clearAuth();
-          router.push("/login");
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+          clearAuth()
+          router.push("/login")
         }
       } finally {
-        setActionLoading(false);
+        setActionLoading(false)
       }
-    }, 500);
-  };
+    }, 500)
+  }
 
+  // handleAddressSubmit function - handles address form submission
   const handleAddressSubmit = async (e) => {
-    e.preventDefault();
-    clearTimeout(actionTimeout.current);
+    e.preventDefault()
+    clearTimeout(actionTimeout.current)
     actionTimeout.current = setTimeout(async () => {
-      setActionLoading(true);
+      setActionLoading(true)
       try {
         const payload = {
           firstName: formData.firstName,
@@ -351,7 +372,7 @@ export default function ProfilePage() {
           state: formData.state,
           zipCode: formData.zipCode,
           isPrimary: formData.isPrimary,
-        };
+        }
 
         if (
           formData.mapLocation &&
@@ -361,60 +382,61 @@ export default function ProfilePage() {
           payload.mapLocation = {
             lat: formData.mapLocation.lat,
             lng: formData.mapLocation.lng,
-          };
+          }
         }
 
         if (selectedAddressId) {
           const updatedAddress = await fetchWithAuth(`/api/addresses/${selectedAddressId}`, {
             method: "PUT",
             body: JSON.stringify(payload),
-          });
+          })
           setAddresses((prev) =>
             prev.map((addr) =>
               addr.addressId === selectedAddressId
                 ? { ...updatedAddress.address, isPrimary: formData.isPrimary }
-                : { ...addr, isPrimary: formData.isPrimary ? false : addr.isPrimary }
-            )
-          );
+                : { ...addr, isPrimary: formData.isPrimary ? false : addr.isPrimary },
+            ),
+          )
         } else {
           const newAddress = await fetchWithAuth("/api/addresses", {
             method: "POST",
             body: JSON.stringify(payload),
-          });
+          })
           setAddresses((prev) => [
             ...prev.map((addr) => ({ ...addr, isPrimary: formData.isPrimary ? false : addr.isPrimary })),
             { ...newAddress.address, isPrimary: formData.isPrimary },
-          ]);
-          setSelectedAddressId(newAddress.address.addressId);
+          ])
+          setSelectedAddressId(newAddress.address.addressId)
         }
 
-        await fetchUserData();
-        setIsEditingAddress(false);
-        setShowAddressPrompt(false);
+        await fetchUserData()
+        setIsEditingAddress(false)
+        setShowAddressPrompt(false)
         toast({
           title: "Success",
           description: selectedAddressId ? "Address updated successfully." : "Address added successfully.",
-        });
+        })
       } catch (error) {
-        console.error("Error saving address:", error);
+        console.error("Error saving address:", error)
         toast({
           title: "Error",
           description: error.message || "Failed to save address. Please try again.",
           variant: "destructive",
-        });
+        })
         if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          clearAuth();
-          router.push("/login");
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+          clearAuth()
+          router.push("/login")
         }
       } finally {
-        setActionLoading(false);
+        setActionLoading(false)
       }
-    }, 500);
-  };
+    }, 500)
+  }
 
+  // handleCancelProfile function - cancels profile editing
   const handleCancelProfile = () => {
-    setIsEditingProfile(false);
+    setIsEditingProfile(false)
     setFormData((prev) => ({
       ...prev,
       firstName: user?.firstName || user?.name?.split(" ")[0] || "",
@@ -422,14 +444,15 @@ export default function ProfilePage() {
       username: user?.username || "",
       email: user?.email || "",
       phone: user?.phone || "",
-    }));
-  };
+    }))
+  }
 
+  // handleCancelAddress function - cancels address editing
   const handleCancelAddress = () => {
-    setIsEditingAddress(false);
-    const primaryAddress = addresses.find((addr) => addr.isPrimary) || addresses[0];
+    setIsEditingAddress(false)
+    const primaryAddress = addresses.find((addr) => addr.isPrimary) || addresses[0]
     if (primaryAddress) {
-      setSelectedAddressId(primaryAddress.addressId);
+      setSelectedAddressId(primaryAddress.addressId)
       setFormData((prev) => ({
         ...prev,
         firstName: primaryAddress.firstName || "",
@@ -444,9 +467,9 @@ export default function ProfilePage() {
         isPrimary: primaryAddress.isPrimary || false,
         mapLocation: primaryAddress.mapLocation || null,
         useCurrentLocation: false,
-      }));
+      }))
     } else {
-      setSelectedAddressId(null);
+      setSelectedAddressId(null)
       setFormData((prev) => ({
         ...prev,
         firstName: user?.firstName || user?.name?.split(" ")[0] || "",
@@ -461,15 +484,16 @@ export default function ProfilePage() {
         isPrimary: false,
         mapLocation: null,
         useCurrentLocation: false,
-      }));
+      }))
     }
-  };
+  }
 
+  // handleAddNewAddress function - initiates adding new address
   const handleAddNewAddress = () => {
-    setActionLoading(true);
+    setActionLoading(true)
     setTimeout(() => {
-      setIsEditingAddress(true);
-      setSelectedAddressId(null);
+      setIsEditingAddress(true)
+      setSelectedAddressId(null)
       setFormData((prev) => ({
         ...prev,
         firstName: user?.firstName || user?.name?.split(" ")[0] || "",
@@ -484,104 +508,134 @@ export default function ProfilePage() {
         isPrimary: true,
         mapLocation: null,
         useCurrentLocation: false,
-      }));
-      setActionLoading(false);
-    }, 500);
-  };
+      }))
+      setActionLoading(false)
+    }, 500)
+  }
 
+  // handleSetPrimary function - sets an address as primary
   const handleSetPrimary = async (addressId) => {
-    clearTimeout(actionTimeout.current);
+    clearTimeout(actionTimeout.current)
     actionTimeout.current = setTimeout(async () => {
-      setActionLoading(true);
+      setActionLoading(true)
       try {
-        const addressToUpdate = addresses.find((addr) => addr.addressId === addressId);
-        if (!addressToUpdate) {
-          throw new Error("Address not found");
+        // Validate addressId
+        if (!Number.isInteger(Number(addressId)) || addressId < 1) {
+          throw new Error("Invalid addressId: must be a positive integer")
         }
 
-        const payload = {
-          ...addressToUpdate,
-          isPrimary: true,
-        };
+        const addressToUpdate = addresses.find((addr) => addr.addressId === addressId)
+        if (!addressToUpdate) {
+          throw new Error("Address not found")
+        }
 
+        // Construct sanitized payload
+        const payload = {
+          isPrimary: true,
+        }
+        // Only include fields if they exist and are valid
+        if (addressToUpdate.firstName?.trim()) payload.firstName = addressToUpdate.firstName.trim()
+        if (addressToUpdate.lastName?.trim()) payload.lastName = addressToUpdate.lastName.trim()
+        if (addressToUpdate.address?.trim()) payload.address = addressToUpdate.address.trim()
+        if (addressToUpdate.city?.trim()) payload.city = addressToUpdate.city.trim()
+        if (addressToUpdate.state?.trim()) payload.state = addressToUpdate.state.trim()
+        if (addressToUpdate.zipCode?.trim() && /^\d{5,6}$/.test(addressToUpdate.zipCode.trim())) {
+          payload.zipCode = addressToUpdate.zipCode.trim()
+        }
+        if (addressToUpdate.email?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addressToUpdate.email.trim())) {
+          payload.email = addressToUpdate.email.trim()
+        }
+        if (addressToUpdate.phone?.trim() && /^(?:\+91\s?)?[6-9]\d{9}$/.test(addressToUpdate.phone.trim())) {
+          payload.phone = addressToUpdate.phone.trim()
+        }
         if (
           addressToUpdate.mapLocation &&
           typeof addressToUpdate.mapLocation.lat === "number" &&
-          typeof addressToUpdate.mapLocation.lng === "number"
+          typeof addressToUpdate.mapLocation.lng === "number" &&
+          addressToUpdate.mapLocation.lat >= -90 &&
+          addressToUpdate.mapLocation.lat <= 90 &&
+          addressToUpdate.mapLocation.lng >= -180 &&
+          addressToUpdate.mapLocation.lng <= 180
         ) {
           payload.mapLocation = {
             lat: addressToUpdate.mapLocation.lat,
             lng: addressToUpdate.mapLocation.lng,
-          };
-        } else {
-          delete payload.mapLocation;
+          }
         }
+
+        console.log("Sending payload to updateAddress:", JSON.stringify(payload, null, 2))
 
         const updatedAddress = await fetchWithAuth(`/api/addresses/${addressId}`, {
           method: "PUT",
           body: JSON.stringify(payload),
-        });
+        })
 
         setAddresses((prev) =>
           prev.map((addr) =>
             addr.addressId === addressId
               ? { ...updatedAddress.address, isPrimary: true }
-              : { ...addr, isPrimary: false }
-          )
-        );
+              : { ...addr, isPrimary: false },
+          ),
+        )
 
-        setSelectedAddressId(addressId);
+        setSelectedAddressId(addressId)
         setFormData({
-          firstName: updatedAddress.address.firstName,
-          lastName: updatedAddress.address.lastName,
-          email: updatedAddress.address.email,
-          address: updatedAddress.address.address,
-          city: updatedAddress.address.city,
-          state: updatedAddress.address.state,
-          zipCode: updatedAddress.address.zipCode,
-          phone: updatedAddress.address.phone,
+          firstName: updatedAddress.address.firstName || "",
+          lastName: updatedAddress.address.lastName || "",
+          email: updatedAddress.address.email || "",
+          address: updatedAddress.address.address || "",
+          city: updatedAddress.address.city || "",
+          state: updatedAddress.address.state || "",
+          zipCode: updatedAddress.address.zipCode || "",
+          phone: updatedAddress.address.phone || "",
           isPrimary: true,
           username: user?.username || "",
-          mapLocation: updatedAddress.address.mapLocation,
+          mapLocation: updatedAddress.address.mapLocation || null,
           useCurrentLocation: false,
-        });
+        })
 
-        await fetchUserData();
+        await fetchUserData()
         toast({
           title: "Success",
           description: "Primary address updated successfully.",
-        });
+        })
       } catch (error) {
-        console.error("Error setting primary address:", error);
+        console.error("Error setting primary address:", {
+          message: error.message,
+          status: error.status,
+          response: error.response,
+        })
         toast({
           title: "Error",
           description: error.message || "Failed to set primary address. Please try again.",
           variant: "destructive",
-        });
+        })
         if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          clearAuth();
-          router.push("/login");
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+          clearAuth()
+          router.push("/login")
         }
       } finally {
-        setActionLoading(false);
+        setActionLoading(false)
       }
-    }, 500);
-  };
+    }, 500)
+  }
 
+  // handleDeleteAddress function - deletes an address
   const handleDeleteAddress = async (addressId) => {
-    clearTimeout(actionTimeout.current);
+    clearTimeout(actionTimeout.current)
     actionTimeout.current = setTimeout(async () => {
-      setActionLoading(true);
+      setActionLoading(true)
       try {
         await fetchWithAuth(`/api/addresses/${addressId}`, {
           method: "DELETE",
-        });
-        setAddresses((prev) => prev.filter((addr) => addr.addressId !== addressId));
+        })
+        setAddresses((prev) => prev.filter((addr) => addr.addressId !== addressId))
         if (selectedAddressId === addressId) {
-          const primaryAddress = addresses.find((addr) => addr.isPrimary && addr.addressId !== addressId) || addresses[0];
+          const primaryAddress =
+            addresses.find((addr) => addr.isPrimary && addr.addressId !== addressId) || addresses[0]
           if (primaryAddress) {
-            setSelectedAddressId(primaryAddress.addressId);
+            setSelectedAddressId(primaryAddress.addressId)
             setFormData({
               firstName: primaryAddress.firstName,
               lastName: primaryAddress.lastName,
@@ -595,9 +649,9 @@ export default function ProfilePage() {
               username: user?.username || "",
               mapLocation: primaryAddress.mapLocation,
               useCurrentLocation: false,
-            });
+            })
           } else {
-            setSelectedAddressId(null);
+            setSelectedAddressId(null)
             setFormData((prev) => ({
               ...prev,
               firstName: user?.firstName || user?.name?.split(" ")[0] || "",
@@ -612,42 +666,43 @@ export default function ProfilePage() {
               isPrimary: false,
               mapLocation: null,
               useCurrentLocation: false,
-            }));
+            }))
           }
         }
-        await fetchUserData();
-        setShowAddressPrompt(addresses.length === 1);
+        await fetchUserData()
+        setShowAddressPrompt(addresses.length === 1)
         toast({
           title: "Success",
           description: "Address deleted successfully.",
-        });
+        })
       } catch (error) {
-        console.error("Error deleting address:", error);
+        console.error("Error deleting address:", error)
         toast({
           title: "Error",
           description: error.message || "Failed to delete address. Please try again.",
           variant: "destructive",
-        });
+        })
         if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          clearAuth();
-          router.push("/login");
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+          clearAuth()
+          router.push("/login")
         }
       } finally {
-        setActionLoading(false);
+        setActionLoading(false)
       }
-    }, 500);
-  };
+    }, 500)
+  }
 
+  // handleNavigation function - handles navigation with loading state
   const handleNavigation = async (callback) => {
-    clearTimeout(actionTimeout.current);
+    clearTimeout(actionTimeout.current)
     actionTimeout.current = setTimeout(async () => {
-      setActionLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      callback();
-      setActionLoading(false);
-    }, 500);
-  };
+      setActionLoading(true)
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      callback()
+      setActionLoading(false)
+    }, 500)
+  }
 
   if (isLoading) {
     return (
@@ -720,11 +775,11 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   if (!user) {
-    return null;
+    return null
   }
 
   return (
@@ -738,8 +793,8 @@ export default function ProfilePage() {
             className="mt-2"
             onClick={() =>
               handleNavigation(() => {
-                setActiveTab("addresses");
-                handleAddNewAddress();
+                setActiveTab("addresses")
+                handleAddNewAddress()
               })
             }
             disabled={actionLoading}
@@ -752,11 +807,7 @@ export default function ProfilePage() {
 
       <div className="relative">
         <div className="h-48 md:h-64 w-full bg-muted overflow-hidden">
-          <img
-            src={isMobile ? coverPhoto1.src : coverPhoto.src}
-            alt="Cover"
-            className="w-full h-full object-cover"
-          />
+          <img src={isMobile ? coverPhoto1.src : coverPhoto.src} alt="Cover" className="w-full h-full object-cover" />
         </div>
 
         <div className="container mx-auto px-4">
@@ -764,7 +815,7 @@ export default function ProfilePage() {
             <div className="flex flex-col md:flex-row md:items-end gap-4">
               <div className="relative">
                 <Avatar className="h-32 w-32 border-4 border-background">
-                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
                   <AvatarFallback className="text-4xl">
                     {user.name
                       .split(" ")
@@ -868,13 +919,7 @@ export default function ProfilePage() {
                       <div className="space-y-2">
                         <Label htmlFor="email">Email Address</Label>
                         <div className="flex items-center gap-2">
-                          <Input
-                            id="email"
-                            name="email"
-                            type="email"
-                            value={formData.email}
-                            disabled
-                          />
+                          <Input id="email" name="email" type="email" value={formData.email} disabled />
                           <Dialog open={showEmailVerification} onOpenChange={setShowEmailVerification}>
                             <DialogTrigger asChild>
                               <Button type="button" variant="outline" size="icon" disabled={actionLoading}>
@@ -885,7 +930,8 @@ export default function ProfilePage() {
                               <DialogHeader>
                                 <DialogTitle>Change Email Address</DialogTitle>
                                 <DialogDescription>
-                                  Enter your new email address. Verification links/messages will be sent to your registered email ({user.email}) and phone ({user.phone || "Not set"}) via email, SMS, and WhatsApp.
+                                  Enter your new email address. A verification link will be sent to your current email
+                                  address.
                                 </DialogDescription>
                               </DialogHeader>
                               <form onSubmit={handleEmailVerification} className="grid gap-4 py-4">
@@ -924,12 +970,7 @@ export default function ProfilePage() {
                       <div className="space-y-2">
                         <Label htmlFor="phone">Phone Number</Label>
                         <div className="flex items-center gap-2">
-                          <Input
-                            id="phone"
-                            name="phone"
-                            value={formData.phone}
-                            disabled
-                          />
+                          <Input id="phone" name="phone" value={formData.phone} disabled />
                           <Dialog open={showPhoneVerification} onOpenChange={setShowPhoneVerification}>
                             <DialogTrigger asChild>
                               <Button type="button" variant="outline" size="icon" disabled={actionLoading}>
@@ -940,7 +981,7 @@ export default function ProfilePage() {
                               <DialogHeader>
                                 <DialogTitle>Change Phone Number</DialogTitle>
                                 <DialogDescription>
-                                  Enter your new phone number. Verification links/messages will be sent to your registered email ({user.email}) and phone ({user.phone || "Not set"}) via email, SMS, and WhatsApp.
+                                  Enter your new phone number. A verification link will be sent to your email address.
                                 </DialogDescription>
                               </DialogHeader>
                               <form onSubmit={handlePhoneVerification} className="grid gap-4 py-4">
@@ -976,17 +1017,10 @@ export default function ProfilePage() {
                             </DialogContent>
                           </Dialog>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          Use Indian format (e.g., +91 9123456789)
-                        </p>
+                        <p className="text-xs text-muted-foreground">Use Indian format (e.g., +91 9123456789)</p>
                       </div>
                       <div className="flex justify-end gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleCancelProfile}
-                          disabled={actionLoading}
-                        >
+                        <Button type="button" variant="outline" onClick={handleCancelProfile} disabled={actionLoading}>
                           <X className="h-4 w-4 mr-2" />
                           Cancel
                         </Button>
@@ -1035,7 +1069,11 @@ export default function ProfilePage() {
                         </div>
                         <div>
                           <h3 className="text-sm font-medium text-muted-foreground">Total Spent</h3>
-                          <p>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(user.totalSpent)}</p>
+                          <p>
+                            {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(
+                              user.totalSpent,
+                            )}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1062,7 +1100,7 @@ export default function ProfilePage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full justify-start"
+                        className="w-full justify-start bg-transparent"
                         disabled={actionLoading}
                       >
                         <Lock className="h-4 w-4 mr-2" />
@@ -1073,7 +1111,7 @@ export default function ProfilePage() {
                       <DialogHeader>
                         <DialogTitle>Reset Password</DialogTitle>
                         <DialogDescription>
-                          Verification links/messages will be sent to your registered email ({user.email}) and phone ({user.phone || "Not set"}) via email, SMS, and WhatsApp to reset your password.
+                          A password reset link will be sent to your registered email address ({user.email}).
                         </DialogDescription>
                       </DialogHeader>
                       <div className="grid gap-4 py-4">
@@ -1089,7 +1127,7 @@ export default function ProfilePage() {
                           </Button>
                           <Button type="button" onClick={handleResetPassword} disabled={actionLoading}>
                             <Lock className="h-4 w-4 mr-2" />
-                            Send Reset Links
+                            Send Reset Link
                           </Button>
                         </DialogFooter>
                       </div>
@@ -1098,11 +1136,11 @@ export default function ProfilePage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 bg-transparent"
                     onClick={() =>
                       handleNavigation(() => {
-                        clearAuth();
-                        router.push("/login");
+                        clearAuth()
+                        router.push("/login")
                       })
                     }
                     disabled={actionLoading}
@@ -1160,13 +1198,7 @@ export default function ProfilePage() {
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
                       <div className="flex items-center gap-2">
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          disabled
-                        />
+                        <Input id="email" name="email" type="email" value={formData.email} disabled />
                         <Dialog open={showEmailVerification} onOpenChange={setShowEmailVerification}>
                           <DialogTrigger asChild>
                             <Button type="button" variant="outline" size="icon" disabled={actionLoading}>
@@ -1177,7 +1209,8 @@ export default function ProfilePage() {
                             <DialogHeader>
                               <DialogTitle>Change Email Address</DialogTitle>
                               <DialogDescription>
-                                Enter your new email address. Verification links/messages will be sent to your registered email ({user.email}) and phone ({user.phone || "Not set"}) via email, SMS, and WhatsApp.
+                                Enter your new email address. A verification link will be sent to your current email
+                                address.
                               </DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleEmailVerification} className="grid gap-4 py-4">
@@ -1217,12 +1250,7 @@ export default function ProfilePage() {
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone Number</Label>
                       <div className="flex items-center gap-2">
-                        <Input
-                          id="phone"
-                          name="phone"
-                          value={formData.phone}
-                          disabled
-                        />
+                        <Input id="phone" name="phone" value={formData.phone} disabled />
                         <Dialog open={showPhoneVerification} onOpenChange={setShowPhoneVerification}>
                           <DialogTrigger asChild>
                             <Button type="button" variant="outline" size="icon" disabled={actionLoading}>
@@ -1233,7 +1261,7 @@ export default function ProfilePage() {
                             <DialogHeader>
                               <DialogTitle>Change Phone Number</DialogTitle>
                               <DialogDescription>
-                                Enter your new phone number. Verification links/messages will be sent to your registered email ({user.email}) and phone ({user.phone || "Not set"}) via email, SMS, and WhatsApp.
+                                Enter your new phone number. A verification link will be sent to your email address.
                               </DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handlePhoneVerification} className="grid gap-4 py-4">
@@ -1268,9 +1296,7 @@ export default function ProfilePage() {
                             </form>
                           </DialogContent>
                         </Dialog>
-                        <p className="text-xs text-muted-foreground">
-                          Use Indian format (e.g., +91 9123456789)
-                        </p>
+                        <p className="text-xs text-muted-foreground">Use Indian format (e.g., +91 9123456789)</p>
                       </div>
                     </div>
 
@@ -1282,7 +1308,7 @@ export default function ProfilePage() {
                             id="useCurrentLocation"
                             checked={formData.useCurrentLocation}
                             onCheckedChange={async (checked) => {
-                              setActionLoading(true);
+                              setActionLoading(true)
                               if (checked) {
                                 if (navigator.geolocation) {
                                   navigator.geolocation.getCurrentPosition(
@@ -1294,37 +1320,37 @@ export default function ProfilePage() {
                                           latitude: position.coords.latitude,
                                           longitude: position.coords.longitude,
                                         },
-                                      });
+                                      })
                                       toast({
                                         title: "Location shared",
                                         description: "Your current location has been added to help with delivery.",
-                                      });
-                                      setActionLoading(false);
+                                      })
+                                      setActionLoading(false)
                                     },
                                     async (error) => {
                                       toast({
                                         title: "Location error",
                                         description: "Could not get your current location. Please check permissions.",
                                         variant: "destructive",
-                                      });
-                                      setActionLoading(false);
-                                    }
-                                  );
+                                      })
+                                      setActionLoading(false)
+                                    },
+                                  )
                                 } else {
                                   toast({
                                     title: "Geolocation unavailable",
                                     description: "Your browser does not support geolocation.",
                                     variant: "destructive",
-                                  });
-                                  setActionLoading(false);
+                                  })
+                                  setActionLoading(false)
                                 }
                               } else {
                                 setFormData({
                                   ...formData,
                                   useCurrentLocation: false,
                                   currentLocation: null,
-                                });
-                                setActionLoading(false);
+                                })
+                                setActionLoading(false)
                               }
                             }}
                             disabled={actionLoading}
@@ -1405,12 +1431,7 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleCancelAddress}
-                        disabled={actionLoading}
-                      >
+                      <Button type="button" variant="outline" onClick={handleCancelAddress} disabled={actionLoading}>
                         <X className="h-4 w-4 mr-2" />
                         Cancel
                       </Button>
@@ -1445,10 +1466,10 @@ export default function ProfilePage() {
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => {
-                            setActionLoading(true);
+                            setActionLoading(true)
                             setTimeout(() => {
-                              setIsEditingAddress(true);
-                              setSelectedAddressId(address.addressId);
+                              setIsEditingAddress(true)
+                              setSelectedAddressId(address.addressId)
                               setFormData({
                                 firstName: address.firstName,
                                 lastName: address.lastName,
@@ -1462,9 +1483,9 @@ export default function ProfilePage() {
                                 username: user?.username || "",
                                 mapLocation: address.mapLocation,
                                 useCurrentLocation: false,
-                              });
-                              setActionLoading(false);
-                            }, 500);
+                              })
+                              setActionLoading(false)
+                            }, 500)
                           }}
                           disabled={actionLoading}
                         >
@@ -1500,7 +1521,7 @@ export default function ProfilePage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="w-full"
+                        className="w-full bg-transparent"
                         onClick={() => handleSetPrimary(address.addressId)}
                         disabled={actionLoading}
                       >
@@ -1528,5 +1549,5 @@ export default function ProfilePage() {
         </Tabs>
       </div>
     </div>
-  );
+  )
 }
