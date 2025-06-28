@@ -707,12 +707,18 @@ export const getUserDetails = async (globalId, page = 1, limit = 50) => {
 
 // Coupon API functions
 // validateCoupon function - validate coupon code
-export const validateCoupon = async (couponCode, subtotal) => {
-  return fetchWithAuth("/api/coupons/validate", {
+export const validateCoupon = async (couponCode) => {
+  return await fetchWithAuth("/api/coupons/validate", {
     method: "POST",
-    body: JSON.stringify({ couponCode, subtotal }),
-  })
-}
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      code: couponCode,
+      subtotal: parseFloat(sessionStorage.getItem("cartSubtotal") || "0")
+    }),
+  });
+};
 
 // Invoice API functions
 // getInvoices function - get invoices

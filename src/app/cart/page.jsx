@@ -50,16 +50,61 @@ export default function CartPage() {
   const subtotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
   const total = subtotal - discount;
 
-  const handleApplyCoupon = async () => {
-    if (!couponCode) {
-      toast({
-        title: "No Coupon Code Entered",
-        description: "Please enter a coupon code to apply.",
-        variant: "destructive",
-        duration: 5000,
-      });
-      return;
-    }
+const handleApplyCoupon = async () => {
+  if (!couponCode) {
+    toast({
+      title: "No Coupon Code Entered",
+      description: "Please enter a coupon code to apply.",
+      variant: "destructive",
+      duration: 5000,
+    });
+    return;
+  }
+
+  try {
+  const response = await validateCoupon(couponCode);
+
+  let discountAmount = 0;
+if (response.discountType === "percentage") {
+  discountAmount = (orderSummary.subtotal * response.discountValue) / 100;
+} else if (response.discountType === "fixed") {
+  discountAmount = response.discountValue;
+}
+
+// ✅ Apply free delivery if it exists
+const isFreeDelivery = response.isFreeDelivery;
+
+// ✅ Update session storage
+sessionStorage.setItem("cartDiscount", discountAmount.toString());
+sessionStorage.setItem("appliedCoupon", couponCode);
+sessionStorage.setItem("isFreeShipping", isFreeShipping.toString());
+
+// ✅ Update Order Summary
+sessionStorage.setItem("isFreeShipping", response.isFreeDelivery?.toString());
+
+
+
+    // ✅ Coupon applied successfully
+    toast({
+      title: "Coupon Applied",
+      description: `You got a ${response.discount}% discount!`,
+      variant: "success",
+      duration: 5000,
+    });
+
+    // Optionally update price/total state here
+    setDiscount(response.discount); // Example
+  } catch (error) {
+    console.error("Coupon validation failed:", error);
+
+    // ❌ Handle invalid coupon or backend error
+    toast({
+      title: "Invalid Coupon",
+      description: error?.error || "This coupon is not valid.",
+      variant: "destructive",
+      duration: 5000,
+    });
+  }
 
     setActionLoading(true);
     try {
@@ -296,18 +341,27 @@ export default function CartPage() {
                 <div className="space-y-4">
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Coupon code"
+                      type="text"
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value)}
+                      placeholder="Enter coupon code"
+                      className="border p-2 rounded"
                     />
                     <Button variant="outline" onClick={handleApplyCoupon}>
                       Apply
                     </Button>
                   </div>
 
+                  {/* ✅ Free Delivery Message */}
+                  {typeof window !== "undefined" && sessionStorage.getItem("isFreeShipping") === "true" && (
+                    <div className="text-green-600 text-sm border border-green-300 rounded p-2 bg-green-50 mt-2">
+                      ✅ You’ve activated <strong>Free Delivery</strong> with your coupon!
+                    </div>
+                  )}
+
                   <div className="bg-primary/10 rounded-md p-3 text-sm flex items-start gap-2">
                     <Truck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                    <p>{isFreeShipping ? "Free delivery activated!" : "Delivery charges applied at checkout"}</p>
+                    <p>{sessionStorage.getItem("isFreeShipping") === "true" ? "Free delivery activated!" : "Delivery charges applied at checkout"}</p>
                   </div>
 
                   <Button className="w-full" size="lg" onClick={handleCheckout}>

@@ -93,107 +93,134 @@ export default function CheckoutPage() {
   }, [cart, toast, isProcessing, router]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setActionLoading(true);
-      try {
-        const [profile, addressData] = await Promise.all([
-          fetchWithAuth("/api/auth/profile"),
-          fetchWithAuth("/api/addresses"),
-        ]);
-        setAddresses(addressData);
-        const primaryAddress = addressData.find((addr) => addr.isPrimary) || addressData[0];
-        if (primaryAddress) {
-          setSelectedAddressId(primaryAddress.addressId);
-          setFormData({
-            firstName: primaryAddress.firstName || "",
-            lastName: primaryAddress.lastName || "",
-            email: profile.email || "",
-            phone: profile.phone || "",
-            address: primaryAddress.address || "",
-            city: primaryAddress.city || "",
-            state: primaryAddress.state || "",
-            zipCode: primaryAddress.zipCode || "",
-            lat: primaryAddress.lat || null,
-            lng: primaryAddress.lng || null,
-            useCurrentLocation: false,
-            currentLocation: primaryAddress.location || null,
-            mapLocation: primaryAddress.mapLocation || null,
+  const fetchData = async () => {
+    setActionLoading(true);
+    try {
+      const [profile, addressData] = await Promise.all([
+        fetchWithAuth("/api/auth/profile"),
+        fetchWithAuth("/api/addresses"),
+      ]);
+
+      setAddresses(addressData);
+
+      const primaryAddress = addressData.find((addr) => addr.isPrimary) || addressData[0];
+
+      if (primaryAddress) {
+        setSelectedAddressId(primaryAddress.addressId);
+        setFormData({
+          firstName: primaryAddress.firstName || "",
+          lastName: primaryAddress.lastName || "",
+          email: profile.email || "",
+          phone: profile.phone || "",
+          address: primaryAddress.address || "",
+          city: primaryAddress.city || "",
+          state: primaryAddress.state || "",
+          zipCode: primaryAddress.zipCode || "",
+          lat: primaryAddress.lat || null,
+          lng: primaryAddress.lng || null,
+          useCurrentLocation: false,
+          currentLocation: primaryAddress.location || null,
+          mapLocation: primaryAddress.mapLocation || null,
+        });
+
+        if (
+          !primaryAddress.mapLocation ||
+          !primaryAddress.mapLocation.lat ||
+          !primaryAddress.mapLocation.lng
+        ) {
+          console.error("Invalid mapLocation:", primaryAddress.mapLocation);
+          toast({
+            title: "Invalid Location",
+            description: "Please select a valid delivery location.",
+            variant: "destructive",
+          });
+          setIsServiceAvailable(false);
+          setOrderSummary((prev) => ({
+            ...prev,
+            shipping: 0,
+            total: prev.subtotal - prev.discount,
+          }));
+          setActionLoading(false);
+          return;
+        }
+
+        // ✅ Run service area check (but only if needed)
+        await checkServiceAvailability(primaryAddress.zipCode, primaryAddress.mapLocation);
+        console.log("Selected Address ID:", primaryAddress.addressId);
+        console.log("Service Available:", isServiceAvailable);
+      } else {
+        setIsAddingAddress(true);
+        console.log("No primary address found, prompting to add new address");
+      }
+
+      // ✅ Move this AFTER address validation
+      const subtotal = parseFloat(sessionStorage.getItem("cartSubtotal") || "0");
+      const discount = parseFloat(sessionStorage.getItem("cartDiscount") || "0");
+      const appliedCoupon = sessionStorage.getItem("appliedCoupon") || "";
+      const isFreeShipping = sessionStorage.getItem("isFreeShipping") === "true";
+      
+      let shipping = 0;
+
+      if (isFreeShipping) {
+        shipping = 0; // ✅ Free delivery coupon
+      } else if (primaryAddress) {
+        try {
+          const serviceAreaResponse = await fetchWithAuth("/api/service-areas/check-location", {
+            method: "POST",
+            body: JSON.stringify({
+              location: {
+                lat: parseFloat(primaryAddress.mapLocation?.lat),
+                lng: parseFloat(primaryAddress.mapLocation?.lng),
+              },
+            }),
           });
 
-          if (!primaryAddress.mapLocation || !primaryAddress.mapLocation.lat || !primaryAddress.mapLocation.lng) {
-            console.error("Invalid mapLocation:", primaryAddress.mapLocation);
-            toast({
-              title: "Invalid Location",
-              description: "Please select a valid delivery location.",
-              variant: "destructive",
-            });
-            setIsServiceAvailable(false);
-            setOrderSummary((prev) => ({
-              ...prev,
-              shipping: 0,
-              total: prev.subtotal - prev.discount,
-            }));
-            setActionLoading(false);
-            return;
-          }
+          console.log("Service area response:", serviceAreaResponse);
 
-          await checkServiceAvailability(primaryAddress.zipCode, primaryAddress.mapLocation);
-          console.log("Selected Address ID:", primaryAddress.addressId);
-          console.log("Service Available:", isServiceAvailable);
-        } else {
-          setIsAddingAddress(true);
-          console.log("No primary address found, prompting to add new address");
+          shipping = subtotal > 299
+            ? 0
+            : (serviceAreaResponse.isValid
+              ? serviceAreaResponse.serviceArea?.deliveryFee || 0
+              : 0);
+        } catch (error) {
+          console.error("Failed to fetch service area:", error);
+          shipping = 0;
         }
-
-        const subtotal = Number.parseFloat(sessionStorage.getItem("cartSubtotal") || "0");
-        const discount = Number.parseFloat(sessionStorage.getItem("cartDiscount") || "0");
-        const appliedCoupon = sessionStorage.getItem("appliedCoupon") || "";
-        const isFreeShipping = sessionStorage.getItem("isFreeShipping") === "true";
-
-        let shipping = 0;
-        if (primaryAddress && !isFreeShipping) {
-          try {
-            const serviceAreaResponse = await fetchWithAuth("/api/service-areas/check-location", {
-              method: "POST",
-              body: JSON.stringify({
-                location: {
-                  lat: parseFloat(primaryAddress.mapLocation?.lat),
-                  lng: parseFloat(primaryAddress.mapLocation?.lng),
-                },
-              }),
-            });
-            console.log("Service area response:", serviceAreaResponse);
-            shipping = subtotal > 299 ? 0 : (serviceAreaResponse.isValid ? serviceAreaResponse.serviceArea?.deliveryFee || 0 : 0);
-          } catch (error) {
-            console.error("Failed to fetch service area:", error);
-            shipping = 0;
-          }
-        }
-
-        const total = subtotal + shipping - discount;
-
-        setOrderSummary({
-          subtotal,
-          shipping,
-          discount,
-          total,
-          appliedCoupon,
-          isFreeShipping,
-        });
-      } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load user profile or addresses.",
-          variant: "destructive",
-        });
-      } finally {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setActionLoading(false);
       }
-    };
-    fetchData();
-  }, []);
+
+      const total = subtotal + shipping - discount;
+
+      console.log("Order Summary =>", {
+        subtotal,
+        shipping,
+        discount,
+        total,
+        isFreeShipping,
+      });
+
+      setOrderSummary({
+        subtotal,
+        shipping,
+        discount,
+        total,
+        appliedCoupon,
+        isFreeShipping,
+      });
+    } catch (error) {
+      console.error("Failed to fetch user data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load user profile or addresses.",
+        variant: "destructive",
+      });
+    } finally {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setActionLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
 
   const checkServiceAvailability = async (pincode, mapLocation = null) => {
     setActionLoading(true);
