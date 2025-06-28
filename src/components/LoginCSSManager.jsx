@@ -8,7 +8,7 @@ export default function LoginCSSManager() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const isAuthPage = ["/login", "/register", "/LoginOrRegister"].includes(pathname);
+    const isAuthPage = ["/login", "/register", "/LoginOrRegister", "/signin", "/forgot-password", "/reset-password", "/verify-email", "/verify-phone"].includes(pathname);
     if (isAuthPage) {
       import("../app/login.css").then(() => {
         if (loginCSSRef.current) {

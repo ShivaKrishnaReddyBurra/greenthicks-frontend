@@ -798,43 +798,43 @@ export const forgotPassword = async (email) => {
 }
 
 // resetPassword function - reset password with token
-export const resetPassword = async (email, token, newPassword) => {
-  return fetchWithoutAuth("/api/auth/reset-password", {
+export const resetPassword = async (payload) => {
+  return await fetchWithoutAuth("/api/auth/reset-password", {
     method: "POST",
-    body: JSON.stringify({ email, token, newPassword }),
+    body: JSON.stringify(payload),
+  });
+};
+
+// requestEmailUpdate function - request email update (FIXED)
+export const requestEmailUpdate = async (newEmail) => {
+  return fetchWithAuth("/api/auth/request-email-update", {
+    method: "POST",
+    body: JSON.stringify({ newEmail }),
   })
 }
 
-// updateEmail function - update user email
-export const updateEmail = async (email, newEmail) => {
-  return fetchWithAuth("/api/auth/update-email", {
-    method: "POST",
-    body: JSON.stringify({ email, newEmail }),
-  })
-}
-
-// verifyEmailUpdate function - verify email update
+// verifyEmailUpdate function - verify email update (FIXED)
 export const verifyEmailUpdate = async (email, token) => {
-  return fetchWithoutAuth("/api/auth/verify-email-update", {
+  return fetchWithoutAuth(
+    `/api/auth/verify-email-update?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`,
+    { method: "GET" },
+  )
+}
+
+// requestPhoneUpdate function - request phone update (FIXED)
+export const requestPhoneUpdate = async (newPhone) => {
+  return fetchWithAuth("/api/auth/request-phone-update", {
     method: "POST",
-    body: JSON.stringify({ email, token }),
+    body: JSON.stringify({ newPhone }),
   })
 }
 
-// updatePhone function - update user phone
-export const updatePhone = async (email, newPhone) => {
-  return fetchWithAuth("/api/auth/update-phone", {
-    method: "POST",
-    body: JSON.stringify({ email, newPhone }),
-  })
-}
-
-// verifyPhoneUpdate function - verify phone update
+// verifyPhoneUpdate function - verify phone update (FIXED)
 export const verifyPhoneUpdate = async (email, token) => {
-  return fetchWithoutAuth("/api/auth/verify-phone-update", {
-    method: "POST",
-    body: JSON.stringify({ email, token }),
-  })
+  return fetchWithoutAuth(
+    `/api/auth/verify-phone-update?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`,
+    { method: "GET" },
+  )
 }
 
 // deliveryLogin function - delivery partner login with role validation

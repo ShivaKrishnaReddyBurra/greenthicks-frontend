@@ -136,11 +136,7 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error("Error fetching data:", error)
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load profile or addresses. Please try again.",
-        variant: "destructive",
-      })
+      window.alert(error.message || "Failed to load profile or addresses. Please try again.")
       if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
         await new Promise((resolve) => setTimeout(resolve, 1000))
         clearAuth()
@@ -191,8 +187,7 @@ export default function ProfilePage() {
     e.preventDefault()
     setActionLoading(true)
     try {
-      // Try the forgot password endpoint for email change
-      const response = await fetchWithAuth("/api/auth/forgot-password", {
+      const response = await fetchWithAuth("/api/auth/request-email-update", {
         method: "POST",
         body: JSON.stringify({
           email: user.email,
@@ -201,28 +196,15 @@ export default function ProfilePage() {
         }),
       })
 
-      toast({
-        title: "Success",
-        description: "Email verification link sent to your registered email address.",
-      })
+      window.alert("Email verification link sent to your registered email address.")
       setShowEmailVerification(false)
       setNewEmail("")
     } catch (error) {
       console.error("Error sending email verification:", error)
-
-      // If the specific endpoint doesn't exist, try a generic approach
       if (error.status === 404) {
-        toast({
-          title: "Feature Not Available",
-          description: "Email change feature is not currently available. Please contact support.",
-          variant: "destructive",
-        })
+        window.alert("Email change feature is not currently available. Please contact support.")
       } else {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to send verification. Please try again.",
-          variant: "destructive",
-        })
+        window.alert(error.message || "Failed to send verification. Please try again.")
       }
     } finally {
       setActionLoading(false)
@@ -234,37 +216,22 @@ export default function ProfilePage() {
     e.preventDefault()
     setActionLoading(true)
     try {
-      // Try the update phone endpoint
-      const response = await fetchWithAuth("/api/auth/update-phone", {
+      const response = await fetchWithAuth("/api/auth/request-phone-update", {
         method: "POST",
         body: JSON.stringify({
-          email: user.email,
           newPhone: newPhone,
         }),
       })
 
-      toast({
-        title: "Success",
-        description: "Phone verification link sent to your registered email address.",
-      })
+      window.alert("Phone verification link sent to your registered email address.")
       setShowPhoneVerification(false)
       setNewPhone("")
     } catch (error) {
       console.error("Error sending phone verification:", error)
-
-      // If the specific endpoint doesn't exist, try a generic approach
       if (error.status === 404) {
-        toast({
-          title: "Feature Not Available",
-          description: "Phone change feature is not currently available. Please contact support.",
-          variant: "destructive",
-        })
+        window.alert("Phone change feature is not currently available. Please contact support.")
       } else {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to send verification. Please try again.",
-          variant: "destructive",
-        })
+        window.alert(error.message || "Failed to send verification. Please try again.")
       }
     } finally {
       setActionLoading(false)
@@ -275,7 +242,6 @@ export default function ProfilePage() {
   const handleResetPassword = async () => {
     setActionLoading(true)
     try {
-      // Use the standard forgot password endpoint
       const response = await fetchWithAuth("/api/auth/forgot-password", {
         method: "POST",
         body: JSON.stringify({
@@ -283,27 +249,14 @@ export default function ProfilePage() {
         }),
       })
 
-      toast({
-        title: "Success",
-        description: "Password reset link sent to your registered email address.",
-      })
+      window.alert("Password reset link sent to your registered email address.")
       setShowResetPassword(false)
     } catch (error) {
       console.error("Error sending password reset:", error)
-
-      // If the endpoint doesn't exist, provide helpful feedback
       if (error.status === 404) {
-        toast({
-          title: "Feature Not Available",
-          description: "Password reset feature is not currently available. Please contact support.",
-          variant: "destructive",
-        })
+        window.alert("Password reset feature is not currently available. Please contact support.")
       } else {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to send password reset link. Please try again.",
-          variant: "destructive",
-        })
+        window.alert(error.message || "Failed to send password reset link. Please try again.")
       }
     } finally {
       setActionLoading(false)
@@ -339,11 +292,7 @@ export default function ProfilePage() {
         })
       } catch (error) {
         console.error("Error updating profile:", error)
-        toast({
-          title: "Error",
-          description: error.message || "Failed to update profile. Please try again.",
-          variant: "destructive",
-        })
+        window.alert(error.message || "Failed to update profile. Please try again.")
         if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
           await new Promise((resolve) => setTimeout(resolve, 1000))
           clearAuth()
@@ -418,11 +367,7 @@ export default function ProfilePage() {
         })
       } catch (error) {
         console.error("Error saving address:", error)
-        toast({
-          title: "Error",
-          description: error.message || "Failed to save address. Please try again.",
-          variant: "destructive",
-        })
+        window.alert(error.message || "Failed to save address. Please try again.")
         if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
           await new Promise((resolve) => setTimeout(resolve, 1000))
           clearAuth()
@@ -519,7 +464,6 @@ export default function ProfilePage() {
     actionTimeout.current = setTimeout(async () => {
       setActionLoading(true)
       try {
-        // Validate addressId
         if (!Number.isInteger(Number(addressId)) || addressId < 1) {
           throw new Error("Invalid addressId: must be a positive integer")
         }
@@ -529,11 +473,9 @@ export default function ProfilePage() {
           throw new Error("Address not found")
         }
 
-        // Construct sanitized payload
         const payload = {
           isPrimary: true,
         }
-        // Only include fields if they exist and are valid
         if (addressToUpdate.firstName?.trim()) payload.firstName = addressToUpdate.firstName.trim()
         if (addressToUpdate.lastName?.trim()) payload.lastName = addressToUpdate.lastName.trim()
         if (addressToUpdate.address?.trim()) payload.address = addressToUpdate.address.trim()
@@ -605,11 +547,7 @@ export default function ProfilePage() {
           status: error.status,
           response: error.response,
         })
-        toast({
-          title: "Error",
-          description: error.message || "Failed to set primary address. Please try again.",
-          variant: "destructive",
-        })
+        window.alert(error.message || "Failed to set primary address. Please try again.")
         if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
           await new Promise((resolve) => setTimeout(resolve, 1000))
           clearAuth()
@@ -677,11 +615,7 @@ export default function ProfilePage() {
         })
       } catch (error) {
         console.error("Error deleting address:", error)
-        toast({
-          title: "Error",
-          description: error.message || "Failed to delete address. Please try again.",
-          variant: "destructive",
-        })
+        window.alert(error.message || "Failed to delete address. Please try again.")
         if (error.message.includes("Unauthorized") || error.message.includes("Token expired")) {
           await new Promise((resolve) => setTimeout(resolve, 1000))
           clearAuth()
@@ -708,10 +642,7 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-12">
-          {/* Cover Photo Skeleton */}
           <Skeleton className="h-48 md:h-64 w-full rounded-lg mb-8" />
-
-          {/* Profile Header Skeleton */}
           <div className="relative -mt-16 md:-mt-20 mb-8">
             <div className="flex flex-col md:flex-row md:items-end gap-4">
               <Skeleton className="h-32 w-32 rounded-full" />
@@ -723,18 +654,12 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-
-          {/* Tabs and Content Skeleton */}
           <div className="space-y-6">
-            {/* Tabs Skeleton */}
             <div className="flex gap-2">
               <Skeleton className="h-10 w-28 rounded-lg" />
               <Skeleton className="h-10 w-28 rounded-lg" />
             </div>
-
-            {/* Content Skeleton */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Main Card Skeleton */}
               <div className="md:col-span-2 space-y-4">
                 <Skeleton className="h-16 w-full rounded-lg" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -756,8 +681,6 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
-
-              {/* Sidebar Card Skeleton */}
               <div className="space-y-4">
                 <Skeleton className="h-16 w-full rounded-lg" />
                 <div className="space-y-2">
@@ -919,7 +842,7 @@ export default function ProfilePage() {
                       <div className="space-y-2">
                         <Label htmlFor="email">Email Address</Label>
                         <div className="flex items-center gap-2">
-                          <Input id="email" name="email" type="email" value={formData.email} disabled />
+                          <Input id="email" name="email" type="email" value={user.email} disabled />
                           <Dialog open={showEmailVerification} onOpenChange={setShowEmailVerification}>
                             <DialogTrigger asChild>
                               <Button type="button" variant="outline" size="icon" disabled={actionLoading}>
@@ -970,7 +893,7 @@ export default function ProfilePage() {
                       <div className="space-y-2">
                         <Label htmlFor="phone">Phone Number</Label>
                         <div className="flex items-center gap-2">
-                          <Input id="phone" name="phone" value={formData.phone} disabled />
+                          <Input id="phone" name="phone" value={user.phone} disabled />
                           <Dialog open={showPhoneVerification} onOpenChange={setShowPhoneVerification}>
                             <DialogTrigger asChild>
                               <Button type="button" variant="outline" size="icon" disabled={actionLoading}>
@@ -1304,58 +1227,6 @@ export default function ProfilePage() {
                       <div className="flex items-center justify-between">
                         <Label htmlFor="address">Address</Label>
                         <div className="flex items-center gap-2">
-                          <Checkbox
-                            id="useCurrentLocation"
-                            checked={formData.useCurrentLocation}
-                            onCheckedChange={async (checked) => {
-                              setActionLoading(true)
-                              if (checked) {
-                                if (navigator.geolocation) {
-                                  navigator.geolocation.getCurrentPosition(
-                                    async (position) => {
-                                      setFormData({
-                                        ...formData,
-                                        useCurrentLocation: true,
-                                        currentLocation: {
-                                          latitude: position.coords.latitude,
-                                          longitude: position.coords.longitude,
-                                        },
-                                      })
-                                      toast({
-                                        title: "Location shared",
-                                        description: "Your current location has been added to help with delivery.",
-                                      })
-                                      setActionLoading(false)
-                                    },
-                                    async (error) => {
-                                      toast({
-                                        title: "Location error",
-                                        description: "Could not get your current location. Please check permissions.",
-                                        variant: "destructive",
-                                      })
-                                      setActionLoading(false)
-                                    },
-                                  )
-                                } else {
-                                  toast({
-                                    title: "Geolocation unavailable",
-                                    description: "Your browser does not support geolocation.",
-                                    variant: "destructive",
-                                  })
-                                  setActionLoading(false)
-                                }
-                              } else {
-                                setFormData({
-                                  ...formData,
-                                  useCurrentLocation: false,
-                                  currentLocation: null,
-                                })
-                                setActionLoading(false)
-                              }
-                            }}
-                            disabled={actionLoading}
-                          />
-                          <Label htmlFor="useCurrentLocation">Use Current Location</Label>
                         </div>
                       </div>
                       <CheckoutMapComponent

@@ -81,7 +81,7 @@ export default function ProductReviews({ params }) {
       }
 
       // Try to update the review status
-      await updateReviewStatus(Number(id), reviewId, true)
+      await updateReviewStatus(Number(id), reviewId, "approved");
 
       // Update local state - mark as approved instead of removing
       setProduct({
@@ -129,7 +129,7 @@ export default function ProductReviews({ params }) {
       }
 
       // Try to update the review status
-      await updateReviewStatus(Number(id), reviewId, false)
+      await updateReviewStatus(Number(id), reviewId, "rejected");
 
       // Update local state - mark as rejected
       setProduct({

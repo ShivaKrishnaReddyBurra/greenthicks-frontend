@@ -124,7 +124,12 @@ export default function ClientLogin() {
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {error && (
+            {error && typeof error === "string" && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                {error}
+              </div>
+            )}
+            {error && typeof error !== "string" && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                 {error}
               </div>
@@ -169,6 +174,17 @@ export default function ClientLogin() {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </div>
                 </div>
+                {error && (
+                  <p className="text-sm text-right text-muted-foreground">
+                    <Link
+                      href="/forgot-password"
+                      onClick={(e) => handleNavigation(e, "/forgot-password")}
+                      className="text-primary font-medium hover:underline"
+                    >
+                      Forgot Password?
+                    </Link>
+                  </p>
+                )}
               </div>
 
               <Button
