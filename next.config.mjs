@@ -7,6 +7,11 @@ const nextConfig = {
         hostname: 'greenthicksstorage.blob.core.windows.net',
         pathname: '/product-images/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'greenthicksstorage.blob.core.windows.net',
+        pathname: '/banner-images/**',
+      },
     ],
   },
 };

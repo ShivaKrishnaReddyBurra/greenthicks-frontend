@@ -203,6 +203,74 @@ export const fetchWithAuthFile = async (url, options = {}) => {
   return response
 }
 
+// Banner Images API functions
+// getBannerImages function - get banner images by type
+export const getBannerImages = async (type = "desktop", admin = false) => {
+  const params = new URLSearchParams({ type })
+  if (admin) params.append("admin", "true")
+
+  if (admin) {
+    return fetchWithAuth(`/api/banners?${params.toString()}`)
+  } else {
+    return fetchWithoutAuth(`/api/banners?${params.toString()}`)
+  }
+}
+
+// createBannerImage function - create new banner image
+export const createBannerImage = async (bannerData, imageFile) => {
+  if (!imageFile) {
+    throw new Error("Image file is required")
+  }
+
+  const formData = new FormData()
+  formData.append("image", imageFile)
+  formData.append("title", bannerData.title || "")
+  formData.append("altText", bannerData.altText || "")
+  formData.append("link", bannerData.link || "")
+  formData.append("type", bannerData.type || "desktop")
+  formData.append("isActive", bannerData.isActive !== false)
+  formData.append("order", bannerData.order || 0)
+
+  return fetchWithAuthFormData("/api/banners", formData, "POST")
+}
+
+// updateBannerImage function - update banner image
+export const updateBannerImage = async (bannerId, bannerData, imageFile = null) => {
+  const formData = new FormData()
+
+  if (imageFile) {
+    formData.append("image", imageFile)
+  }
+
+  formData.append("title", bannerData.title || "")
+  formData.append("altText", bannerData.altText || "")
+  formData.append("link", bannerData.link || "")
+  formData.append("type", bannerData.type || "desktop")
+  formData.append("isActive", bannerData.isActive !== false)
+  formData.append("order", bannerData.order || 0)
+
+  return fetchWithAuthFormData(`/api/banners/${bannerId}`, formData, "PUT")
+}
+
+// deleteBannerImage function - delete banner image
+export const deleteBannerImage = async (bannerId) => {
+  return fetchWithAuth(`/api/banners/${bannerId}`, { method: "DELETE" })
+}
+
+// reorderBannerImages function - reorder banner images
+export const reorderBannerImages = async (orderUpdates) => {
+  return fetchWithAuth("/api/banners/reorder", {
+    method: "POST",
+    body: JSON.stringify({ orderUpdates }),
+  })
+}
+
+// getBannerImage function - get single banner image
+export const getBannerImage = async (bannerId) => {
+  return fetchWithAuth(`/api/banners/${bannerId}`)
+}
+
+
 // Product API functions
 // getProducts function - get all products
 export const getProducts = async () => {

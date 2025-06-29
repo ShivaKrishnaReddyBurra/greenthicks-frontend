@@ -1,19 +1,12 @@
-"use client";
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
-import img from "@/public/hero.jpg";
-import bnimg1 from "@/public/Free delivery.png";
-import bnimg2 from "@/public/Free delivery 1.png";
-import bnimg3 from "@/public/Free delivery.png";
-import bnimg4 from "@/public/Free delivery 1.png";
-import mobilebnimg1 from "@/public/mobile Free delivery .png";
-import mobilebnimg2 from "@/public/mobile Free delivery 1.png";
-import mobilebnimg3 from "@/public/mobile Free delivery .png";
-import mobilebnimg4 from "@/public/mobile Free delivery 1.png";
+"use client"
+import { useState, useEffect } from "react"
+import Image from "next/image"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
+import { getBannerImages } from "@/lib/api"
+import img from "@/public/hero.jpg"
 
 // LeafLoader component (used only for button actions)
 const LeafLoader = () => {
@@ -37,8 +30,8 @@ const LeafLoader = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
 // Skeleton Loader component for HeroSection
 const SkeletonLoader = () => {
@@ -90,107 +83,273 @@ const SkeletonLoader = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-// ImageBanner component (unchanged)
+// Enhanced ImageBanner component with backend integration and swipe functionality
 const ImageBanner = ({ isMobile }) => {
-  const bannerImages = isMobile
-    ? [mobilebnimg1, mobilebnimg2, mobilebnimg3, mobilebnimg4]
-    : [bnimg1, bnimg2, bnimg3, bnimg4];
+  const [bannerImages, setBannerImages] = useState([])
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [touchStart, setTouchStart] = useState(null)
+  const [touchEnd, setTouchEnd] = useState(null)
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true)
 
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50
 
+  // Fetch banner images from backend
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) =>
-        prevIndex === bannerImages.length - 1 ? 0 : prevIndex + 1
-      );
-    }, 5000);
+    const fetchBannerImages = async () => {
+      try {
+        setIsLoading(true)
+        const response = await getBannerImages(isMobile ? "mobile" : "desktop")
+        setBannerImages(response.images || [])
+        setError(null)
+      } catch (err) {
+        console.error("Failed to fetch banner images:", err)
+        setError("Failed to load banner images")
+        // Fallback to empty array
+        setBannerImages([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-    return () => clearInterval(interval);
-  }, [bannerImages.length]);
+    fetchBannerImages()
+  }, [isMobile])
+
+  // Auto-slide functionality
+  useEffect(() => {
+    if (!isAutoPlaying || bannerImages.length <= 1) return
+
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex === bannerImages.length - 1 ? 0 : prevIndex + 1))
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [bannerImages.length, isAutoPlaying])
+
+  // Touch handlers for swipe functionality
+  const onTouchStart = (e) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+    setIsAutoPlaying(false)
+  }
+
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+
+    if (isLeftSwipe) {
+      nextSlide()
+    } else if (isRightSwipe) {
+      prevSlide()
+    }
+
+    // Resume auto-play after 3 seconds
+    setTimeout(() => setIsAutoPlaying(true), 3000)
+  }
+
+  // Mouse handlers for desktop swipe
+  const onMouseDown = (e) => {
+    setTouchEnd(null)
+    setTouchStart(e.clientX)
+    setIsAutoPlaying(false)
+  }
+
+  const onMouseMove = (e) => {
+    if (touchStart === null) return
+    setTouchEnd(e.clientX)
+  }
+
+  const onMouseUp = () => {
+    if (!touchStart || !touchEnd) return
+
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+
+    if (isLeftSwipe) {
+      nextSlide()
+    } else if (isRightSwipe) {
+      prevSlide()
+    }
+
+    setTouchStart(null)
+    setTouchEnd(null)
+
+    // Resume auto-play after 3 seconds
+    setTimeout(() => setIsAutoPlaying(true), 3000)
+  }
+
+  const nextSlide = () => {
+    setCurrentIndex((prevIndex) => (prevIndex === bannerImages.length - 1 ? 0 : prevIndex + 1))
+  }
+
+  const prevSlide = () => {
+    setCurrentIndex((prevIndex) => (prevIndex === 0 ? bannerImages.length - 1 : prevIndex - 1))
+  }
+
+  const goToSlide = (index) => {
+    setCurrentIndex(index)
+    setIsAutoPlaying(false)
+    setTimeout(() => setIsAutoPlaying(true), 3000)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="relative w-full h-16 mb-6 overflow-hidden rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 animate-pulse">
+        <div className="w-full h-full bg-gray-200 rounded-lg"></div>
+      </div>
+    )
+  }
+
+  if (error || bannerImages.length === 0) {
+    return (
+      <div className="relative w-full h-16 mb-6 overflow-hidden rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 flex items-center justify-center">
+        <p className="text-sm text-muted-foreground">{error || "No banner images available"}</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="relative w-full h-16 mb-6 overflow-hidden rounded-lg bg-gradient-to-r from-primary/10 to-primary/5">
+    <div
+      className="relative w-full h-16 mb-6 overflow-hidden rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 cursor-grab active:cursor-grabbing select-none"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+    >
       <div
         className="flex h-full transition-transform duration-500 ease-in-out"
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
       >
         {bannerImages.map((image, index) => (
-          <div key={index} className="flex-shrink-0 w-full h-auto relative">
+          <div key={image._id || index} className="flex-shrink-0 w-full h-full relative">
             <Image
-              src={image}
-              alt={`Banner ${index + 1}`}
+              src={image.imageUrl || "/placeholder.svg"}
+              alt={image.altText || `Banner ${index + 1}`}
               fill
-              className="object-cover"
+              className="object-cover object-center"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              priority={index === 0}
               onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.parentElement.style.background = 
-                  `linear-gradient(45deg, hsl(var(--primary)) ${index * 25}%, hsl(var(--primary)) ${(index + 1) * 25}%)`;
+                e.target.style.display = "none"
+                e.target.parentElement.style.background = `linear-gradient(45deg, hsl(var(--primary)) ${index * 25}%, hsl(var(--primary)) ${(index + 1) * 25}%)`
               }}
             />
+            {image.link && (
+              <Link
+                href={image.link}
+                className="absolute inset-0 z-10"
+                aria-label={`Go to ${image.altText || "banner link"}`}
+              />
+            )}
           </div>
         ))}
       </div>
-      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-2">
-        {bannerImages.map((_, index) => (
+
+      {/* Navigation arrows */}
+      {bannerImages.length > 1 && (
+        <>
           <button
-            key={index}
-            onClick={() => setCurrentIndex(index)}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              index === currentIndex 
-                ? 'bg-white shadow-lg' 
-                : 'bg-white/50 hover:bg-white/70'
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
-      </div>
-      <div className="absolute top-2 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
-        {currentIndex + 1} / {bannerImages.length}
+            onClick={prevSlide}
+            className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full transition-all duration-200 z-20"
+            aria-label="Previous image"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={nextSlide}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full transition-all duration-200 z-20"
+            aria-label="Next image"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </>
+      )}
+
+      {/* Dots indicator */}
+      {bannerImages.length > 1 && (
+        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-2">
+          {bannerImages.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                index === currentIndex ? "bg-white shadow-lg" : "bg-white/50 hover:bg-white/70"
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Counter */}
+      {bannerImages.length > 1 && (
+        <div className="absolute top-2 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+          {currentIndex + 1} / {bannerImages.length}
+        </div>
+      )}
+
+      {/* Auto-play indicator */}
+      <div className="absolute top-2 left-3 flex items-center space-x-1">
+        <div className={`w-2 h-2 rounded-full ${isAutoPlaying ? "bg-green-400" : "bg-gray-400"}`}></div>
+        <span className="text-xs text-white/70">{isAutoPlaying ? "Auto" : "Manual"}</span>
       </div>
     </div>
-  );
-};
+  )
+}
 
 export function HeroSection() {
-  const [isLoading, setIsLoading] = useState(false); // For button actions
-  const [isContentLoading, setIsContentLoading] = useState(true); // For page content
-  const [isMobile, setIsMobile] = useState(false);
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false) // For button actions
+  const [isContentLoading, setIsContentLoading] = useState(true) // For page content
+  const [isMobile, setIsMobile] = useState(false)
+  const router = useRouter()
 
   // Simulate content loading (replace with actual data fetching if needed)
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsContentLoading(false);
-    }, 2000); // Simulate 2-second loading
+      setIsContentLoading(false)
+    }, 1000) // Reduced loading time
 
-    return () => clearTimeout(timer);
-  }, []);
+    return () => clearTimeout(timer)
+  }, [])
 
   // Detect mobile device
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
+      setIsMobile(window.innerWidth < 640)
+    }
 
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
 
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
   const handleNavigation = async (e, href) => {
-    e.preventDefault();
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate async action
-    router.push(href);
-    setIsLoading(false);
-  };
+    e.preventDefault()
+    setIsLoading(true)
+    await new Promise((resolve) => setTimeout(resolve, 1000)) // Simulate async action
+    router.push(href)
+    setIsLoading(false)
+  }
 
   if (isContentLoading) {
-    return <SkeletonLoader />;
+    return <SkeletonLoader />
   }
 
   return (
@@ -214,7 +373,7 @@ export function HeroSection() {
                   </Button>
                 </Link>
                 <Link href="/about" onClick={(e) => handleNavigation(e, "/about")}>
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto bg-transparent">
                     Learn More
                   </Button>
                 </Link>
@@ -266,15 +425,15 @@ export function HeroSection() {
             </div>
             <div className="relative">
               <div className="absolute -inset-4 bg-primary/5 mt-0 rounded-full"></div>
-                <div className="relative rounded-lg overflow-hidden aspect-square">
-                  <Image
-                    src={img}
-                    alt="Fresh organic vegetables"
-                    width={1000}
-                    height={1000}
-                    className="object-cover rounded-lg mt-20"
-                  />
-                </div>
+              <div className="relative rounded-lg overflow-hidden aspect-square">
+                <Image
+                  src={img || "/placeholder.svg"}
+                  alt="Fresh organic vegetables"
+                  width={1000}
+                  height={1000}
+                  className="object-cover rounded-lg mt-20"
+                />
+              </div>
               <div className="fixed -bottom-0 -right-0 bg-primary/10 rounded-full p-6">
                 <div className="bg-background rounded-full p-4 shadow-lg">
                   <div className="text-center">
@@ -288,5 +447,5 @@ export function HeroSection() {
         </div>
       </section>
     </>
-  );
+  )
 }
