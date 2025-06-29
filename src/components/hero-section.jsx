@@ -261,26 +261,6 @@ const ImageBanner = ({ isMobile }) => {
         ))}
       </div>
 
-      {/* Navigation arrows */}
-      {bannerImages.length > 1 && (
-        <>
-          <button
-            onClick={prevSlide}
-            className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full transition-all duration-200 z-20"
-            aria-label="Previous image"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            onClick={nextSlide}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full transition-all duration-200 z-20"
-            aria-label="Next image"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </>
-      )}
-
       {/* Dots indicator */}
       {bannerImages.length > 1 && (
         <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-2">

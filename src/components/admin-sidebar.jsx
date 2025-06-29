@@ -28,6 +28,9 @@ import {
   Laptop,
   MapPinIcon,
   MessageSquareShareIcon,
+  TicketPercentIcon,
+  LayoutTemplate,
+  Megaphone,
 } from "lucide-react";
 import { clearAuth } from "@/lib/auth-utils";
 import { getUserProfile } from "@/lib/fetch-without-auth";
@@ -133,7 +136,8 @@ export default function AdminSidebar() {
     { name: "Cancellations", href: "/admin/cancellations", icon: AlertTriangle },
     { name: "Returns", href: "/admin/returns", icon: RefreshCw },
     { name: "Users", href: "/admin/users", icon: Users },
-    { name: "Coupons", href: "/admin/coupons", icon: ShoppingBagIcon },
+    { name: "Coupons", href: "/admin/coupons", icon: TicketPercentIcon },
+    { name: "banners", href: "/admin/banner-management", icon: Megaphone },
     { name: "Service-Areas", href: "/admin/service-areas", icon: MapPinIcon },
     { name: "Sellers", href: "/admin/sellers", icon: Store },
     { name: "Static Pages", href: "/admin/pages", icon: FileEdit },

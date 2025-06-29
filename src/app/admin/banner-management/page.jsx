@@ -45,6 +45,7 @@ export default function BannerManagement() {
   const [activeTab, setActiveTab] = useState("desktop");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState(null);
+  const [showInactive, setShowInactive] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     altText: "",
@@ -61,10 +62,12 @@ export default function BannerManagement() {
   const fetchBannerImages = async (type = "desktop") => {
     try {
       setLoading(true);
-      const response = await getBannerImages(type);
+      console.log("Fetching banners with params:", { type, showInactive });
+      const response = await getBannerImages(type, { admin: true, showInactive });
+      console.log("API response:", response);
       setBannerImages(response.images || []);
     } catch (error) {
-      console.error("Failed to fetch banner images:", error);
+      console.error("Failed to fetch banner images:", error.message);
       toast({
         title: "Error",
         description: "Failed to fetch banner images",
@@ -77,7 +80,7 @@ export default function BannerManagement() {
 
   useEffect(() => {
     fetchBannerImages(activeTab);
-  }, [activeTab]);
+  }, [activeTab, showInactive]);
 
   // Handle file selection
   const handleFileSelect = (e) => {
@@ -272,132 +275,145 @@ export default function BannerManagement() {
           <h1 className="text-3xl font-bold">Banner Management</h1>
           <p className="text-muted-foreground">Manage hero section banner images for desktop and mobile</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Banner
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingBanner ? "Edit Banner Image" : "Add New Banner Image"}</DialogTitle>
-              <DialogDescription>Upload and configure a banner image for the hero section</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                    placeholder="Banner title"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="type">Type</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, type: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="desktop">Desktop</SelectItem>
-                      <SelectItem value="mobile">Mobile</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="altText">Alt Text</Label>
-                <Input
-                  id="altText"
-                  value={formData.altText}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, altText: e.target.value }))}
-                  placeholder="Alternative text for accessibility"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="link">Link (Optional)</Label>
-                <Input
-                  id="link"
-                  value={formData.link}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, link: e.target.value }))}
-                  placeholder="https://example.com"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="order">Display Order</Label>
-                  <Input
-                    id="order"
-                    type="number"
-                    min="0"
-                    value={formData.order}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, order: Number.parseInt(e.target.value) || 0 }))}
-                  />
-                </div>
-                <div className="flex items-center space-x-2 pt-6">
-                  <Switch
-                    id="isActive"
-                    checked={formData.isActive}
-                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isActive: checked }))}
-                  />
-                  <Label htmlFor="isActive">Active</Label>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="image">Banner Image</Label>
-                <Input id="image" type="file" accept="image/*" onChange={handleFileSelect} className="cursor-pointer" />
-                <p className="text-sm text-muted-foreground">
-                  Recommended: 1200x300px for desktop, 600x150px for mobile. Max 5MB.
-                </p>
-              </div>
-
-              {previewUrl && (
-                <div className="space-y-2">
-                  <Label>Preview</Label>
-                  <div className="relative w-full max-h-64 border rounded-lg overflow-hidden">
-                    <Image
-                      src={previewUrl || "/placeholder.svg"}
-                      alt="Preview"
-                      width={1200}
-                      height={300}
-                      style={{ objectFit: "contain" }}
-                      className="w-full h-auto"
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="show-inactive"
+              checked={showInactive}
+              onCheckedChange={(checked) => {
+                setShowInactive(checked);
+                console.log("Show Inactive toggled:", checked);
+              }}
+            />
+            <Label htmlFor="show-inactive">Show Inactive Banners</Label>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Banner
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingBanner ? "Edit Banner Image" : "Add New Banner Image"}</DialogTitle>
+                <DialogDescription>Upload and configure a banner image for the hero section</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title</Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                      placeholder="Banner title"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Type</Label>
+                    <Select
+                      value={formData.type}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, type: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="desktop">Desktop</SelectItem>
+                        <SelectItem value="mobile">Mobile</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              )}
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={uploading}>
-                  {uploading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      {editingBanner ? "Updating..." : "Creating..."}
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      {editingBanner ? "Update" : "Create"}
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="space-y-2">
+                  <Label htmlFor="altText">Alt Text</Label>
+                  <Input
+                    id="altText"
+                    value={formData.altText}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, altText: e.target.value }))}
+                    placeholder="Alternative text for accessibility"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="link">Link (Optional)</Label>
+                  <Input
+                    id="link"
+                    value={formData.link}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, link: e.target.value }))}
+                    placeholder="https://example.com"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="order">Display Order</Label>
+                    <Input
+                      id="order"
+                      type="number"
+                      min="0"
+                      value={formData.order}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, order: Number.parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2 pt-6">
+                    <Switch
+                      id="isActive"
+                      checked={formData.isActive}
+                      onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isActive: checked }))}
+                    />
+                    <Label htmlFor="isActive">Active</Label>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="image">Banner Image</Label>
+                  <Input id="image" type="file" accept="image/*" onChange={handleFileSelect} className="cursor-pointer" />
+                  <p className="text-sm text-muted-foreground">
+                    Recommended: 1200x300px for desktop, 600x150px for mobile. Max 5MB.
+                  </p>
+                </div>
+
+                {previewUrl && (
+                  <div className="space-y-2">
+                    <Label>Preview</Label>
+                    <div className="relative w-full max-h-64 border rounded-lg overflow-hidden">
+                      <Image
+                        src={previewUrl || "/placeholder.svg"}
+                        alt="Preview"
+                        width={1200}
+                        height={300}
+                        style={{ objectFit: "contain" }}
+                        className="w-full h-auto"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={uploading}>
+                    {uploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        {editingBanner ? "Updating..." : "Creating..."}
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        {editingBanner ? "Update" : "Create"}
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -437,7 +453,6 @@ export default function BannerManagement() {
                   <Plus className="h-4 w-4 mr-2" />
                   Add Banner
                 </Button>
-第九百四十七行
               </CardContent>
             </Card>
           ) : (
@@ -465,14 +480,8 @@ export default function BannerManagement() {
                         width={1200}
                         height={300}
                         style={{ objectFit: "contain" }}
-                        className={`w-full h-auto ${!banner.isActive ? "opacity-60" : ""}`}
+                        className="w-full h-auto"
                       />
-                      {!banner.isActive && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                          <EyeOff className="h-8 w-8 text-white" />
-                          <span className="text-white text-lg ml-2">Deactivated</span>
-                        </div>
-                      )}
                     </div>
 
                     {banner.altText && <p className="text-xs text-muted-foreground truncate">{banner.altText}</p>}
