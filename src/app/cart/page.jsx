@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-context";
 import { validateCoupon } from "@/lib/api";
@@ -37,6 +37,11 @@ const LeafLoader = () => {
 };
 
 export default function CartPage() {
+  useEffect(() => {
+  // Reset free shipping when coming back to Cart
+  sessionStorage.setItem("isFreeShipping", "false");
+}, []);
+
   const router = useRouter();
   const { cart, removeFromCart, updateQuantity, clearCart } = useCart();
   const [couponCode, setCouponCode] = useState("");
@@ -56,83 +61,49 @@ const handleApplyCoupon = async () => {
       title: "No Coupon Code Entered",
       description: "Please enter a coupon code to apply.",
       variant: "destructive",
-      duration: 5000,
     });
     return;
   }
 
+  setActionLoading(true);
+
   try {
-  const response = await validateCoupon(couponCode);
+    const response = await validateCoupon(couponCode, subtotal);
 
-  let discountAmount = 0;
-if (response.discountType === "percentage") {
-  discountAmount = (orderSummary.subtotal * response.discountValue) / 100;
-} else if (response.discountType === "fixed") {
-  discountAmount = response.discountValue;
-}
+    let discountAmount = 0;
+    if (response.discountType === "percentage") {
+      discountAmount = (subtotal * response.discountValue) / 100;
+    } else if (response.discountType === "fixed") {
+      discountAmount = response.discountValue;
+    }
 
-// ✅ Apply free delivery if it exists
-const isFreeDelivery = response.isFreeDelivery;
+    const freeShipping = response.isFreeDelivery === true;
 
-// ✅ Update session storage
-sessionStorage.setItem("cartDiscount", discountAmount.toString());
-sessionStorage.setItem("appliedCoupon", couponCode);
-sessionStorage.setItem("isFreeShipping", isFreeShipping.toString());
+    // ✅ Save correct values to sessionStorage
+    sessionStorage.setItem("cartDiscount", discountAmount.toString());
+    sessionStorage.setItem("appliedCoupon", couponCode);
+    sessionStorage.setItem("isFreeShipping", freeShipping.toString());
 
-// ✅ Update Order Summary
-sessionStorage.setItem("isFreeShipping", response.isFreeDelivery?.toString());
+    // ✅ Update state
+    setDiscount(discountAmount);
+    setIsFreeShipping(freeShipping);
+    setAppliedCoupon(couponCode.toUpperCase());
 
-
-
-    // ✅ Coupon applied successfully
     toast({
-      title: "Coupon Applied",
-      description: `You got a ${response.discount}% discount!`,
-      variant: "success",
-      duration: 5000,
+      title: "Coupon Applied Successfully!",
+      description: `Coupon ${couponCode.toUpperCase()} applied.${freeShipping ? " Free delivery activated!" : ""}`,
     });
 
-    // Optionally update price/total state here
-    setDiscount(response.discount); // Example
   } catch (error) {
-    console.error("Coupon validation failed:", error);
-
-    // ❌ Handle invalid coupon or backend error
     toast({
       title: "Invalid Coupon",
-      description: error?.error || "This coupon is not valid.",
+      description: error?.message || "This coupon is not valid.",
       variant: "destructive",
-      duration: 5000,
     });
+  } finally {
+    setActionLoading(false);
   }
-
-    setActionLoading(true);
-    try {
-      const response = await validateCoupon(couponCode, subtotal);
-      setDiscount(response.discount);
-      setAppliedCoupon(couponCode.toUpperCase());
-      const freeShipping = response.isFreeShipping || false;
-      setIsFreeShipping(freeShipping);
-      toast({
-        title: "Coupon Applied Successfully!",
-        description: `Coupon ${couponCode.toUpperCase()} has been applied.${
-          freeShipping ? " Free delivery activated!" : ""
-        }`,
-        duration: 5000,
-      });
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || error.message || "The coupon code is not valid.";
-      toast({
-        title: "Invalid Coupon Code",
-        description: errorMessage,
-        variant: "destructive",
-        duration: 5000,
-      });
-    } finally {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setActionLoading(false);
-    }
-  };
+};
 
   const handleCheckout = async () => {
     if (cart.length === 0) {
