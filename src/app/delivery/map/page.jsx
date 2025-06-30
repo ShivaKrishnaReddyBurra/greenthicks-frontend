@@ -1,76 +1,130 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { DeliveryLayout } from "@/components/delivery-layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { MapPin, Navigation, Truck } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { DeliveryLayout } from "@/components/delivery-layout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { MapPin, Navigation, Truck } from "lucide-react";
+import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
+import { useToast } from "@/hooks/use-toast";
+import { getDeliveryOrders, getUserProfile } from "@/lib/api";
+
+const mapContainerStyle = {
+  width: "100%",
+  height: "100%",
+};
 
 export default function DeliveryMapPage() {
-  const [loading, setLoading] = useState(true)
-  const [currentLocation, setCurrentLocation] = useState(null)
-  const [deliveries, setDeliveries] = useState([])
+  const router = useRouter();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [deliveries, setDeliveries] = useState([]);
+  const [mapCenter, setMapCenter] = useState({ lat: 17.385, lng: 78.4867 });
+  const [mapError, setMapError] = useState(null);
 
   useEffect(() => {
-    // Simulate loading map data
+    console.log("API Key:", process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
     const loadMapData = async () => {
       try {
-        // In a real app, this would be an API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        // Fetch user profile to get current location
+        const userProfile = await getUserProfile();
+        
+        // Fetch delivery orders
+        const deliveryData = await getDeliveryOrders(1, 10);
+        const pendingDeliveries = deliveryData.orders.filter(
+          (order) => order.deliveryStatus !== "delivered"
+        );
 
-        // Mock current location
-        setCurrentLocation({
-          lat: 17.385,
-          lng: 78.4867,
-          address: "Hyderabad, Telangana, India",
-        })
+        // Set current location from geolocation or user profile
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              setCurrentLocation({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+                address: userProfile.address || "Current Location",
+              });
+              setMapCenter({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              });
+            },
+            (error) => {
+              toast({
+                title: "Error",
+                description: "Failed to get current location",
+                variant: "destructive",
+              });
+              // Fallback to default or profile-based location
+              setCurrentLocation({
+                lat: userProfile.location?.latitude || 17.385,
+                lng: userProfile.location?.longitude || 78.4867,
+                address: userProfile.address || "Hyderabad, Telangana, India",
+              });
+              setMapCenter({
+                lat: userProfile.location?.latitude || 17.385,
+                lng: userProfile.location?.longitude || 78.4867,
+              });
+            }
+          );
+        } else {
+          setCurrentLocation({
+            lat: userProfile.location?.latitude || 17.385,
+            lng: userProfile.location?.longitude || 78.4867,
+            address: userProfile.address || "Hyderabad, Telangana, India",
+          });
+          setMapCenter({
+            lat: userProfile.location?.latitude || 17.385,
+            lng: userProfile.location?.longitude || 78.4867,
+          });
+        }
 
-        // Mock delivery locations
-        setDeliveries([
-          {
-            id: "ORD-7652",
-            customer: "Rahul Sharma",
-            address: "123 Main St, Hyderabad, 500001",
-            lat: 17.385,
-            lng: 78.4867,
-            status: "in_transit",
-          },
-          {
-            id: "ORD-7653",
-            customer: "Priya Patel",
-            address: "456 Oak St, Hyderabad, 500002",
-            lat: 17.395,
-            lng: 78.4967,
-            status: "assigned",
-          },
-          {
-            id: "ORD-7654",
-            customer: "Amit Kumar",
-            address: "789 Pine St, Hyderabad, 500003",
-            lat: 17.375,
-            lng: 78.4767,
-            status: "assigned",
-          },
-        ])
+        // Transform deliveries to match the expected format
+        const formattedDeliveries = pendingDeliveries.map((order) => ({
+          id: order.globalId,
+          customer: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
+          address: `${order.shippingAddress.address}, ${order.shippingAddress.city}, ${order.shippingAddress.state}`,
+          lat: parseFloat(order.shippingAddress.location?.latitude) || 17.385,
+          lng: parseFloat(order.shippingAddress.location?.longitude) || 78.4867,
+          status: order.deliveryStatus,
+        }));
+
+        setDeliveries(formattedDeliveries);
       } catch (error) {
-        console.error("Error loading map data:", error)
+        console.error("Error loading map data:", error);
+        setMapError(error.message || "Failed to load map data");
+        if (error.message.includes("Token expired")) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          router.push("/delivery/login");
+        }
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadMapData()
-  }, [])
+    loadMapData();
+  }, [router, toast]);
 
   const handleShareLocation = () => {
-    // In a real app, this would update the location in the backend
-    alert("Your location has been shared with the customer")
-  }
+    if (currentLocation) {
+      toast({
+        title: "Success",
+        description: "Your location has been shared with the customer",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Current location not available",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleNavigate = (delivery) => {
-    // In a real app, this would open navigation in a maps app
-    window.open(`https://maps.google.com/?q=${delivery.lat},${delivery.lng}`, "_blank")
-  }
+    window.open(`https://maps.google.com/?q=${delivery.lat},${delivery.lng}`, "_blank");
+  };
 
   return (
     <DeliveryLayout>
@@ -88,25 +142,55 @@ export default function DeliveryMapPage() {
             <CardHeader>
               <CardTitle>Live Map</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="h-full">
               {loading ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
                 </div>
+              ) : mapError ? (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-red-500">Error: {mapError}</p>
+                </div>
+              ) : !process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-red-500">Error: Google Maps API key is missing</p>
+                </div>
               ) : (
-                <div className="relative h-full w-full bg-gray-200 rounded-md">
-                  {/* In a real app, this would be a Google Maps or Mapbox component */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <MapPin className="h-12 w-12 text-primary mx-auto mb-4" />
-                      <p className="font-medium">Map View</p>
-                      <p className="text-sm text-muted-foreground">
-                        In a real app, this would show a Google Maps or Mapbox map with delivery locations
-                      </p>
-                      <p className="text-sm font-medium mt-4">Current Location:</p>
-                      <p className="text-sm text-muted-foreground">{currentLocation?.address}</p>
-                    </div>
-                  </div>
+                <div className="map-container h-full" style={{ backgroundColor: "#f0f0f0" }}>
+                  <LoadScript
+                    googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+                    onLoad={() => console.log("Google Maps script loaded")}
+                    onError={(e) => {
+                      console.error("Google Maps script failed to load:", e);
+                      setMapError("Failed to load Google Maps script");
+                    }}
+                  >
+                    <GoogleMap
+                      mapContainerStyle={mapContainerStyle}
+                      center={mapCenter}
+                      zoom={12}
+                      onLoad={() => console.log("Map rendered successfully")}
+                      onError={(e) => console.error("Map rendering error:", e)}
+                    >
+                      {currentLocation && (
+                        <Marker
+                          position={{ lat: currentLocation.lat, lng: currentLocation.lng }}
+                          icon={{
+                            url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+                          }}
+                          title="Your Location"
+                        />
+                      )}
+                      {deliveries.map((delivery) => (
+                        <Marker
+                          key={delivery.id}
+                          position={{ lat: delivery.lat, lng: delivery.lng }}
+                          title={delivery.customer}
+                          label={delivery.customer[0]}
+                        />
+                      ))}
+                    </GoogleMap>
+                  </LoadScript>
                 </div>
               )}
             </CardContent>
@@ -159,5 +243,5 @@ export default function DeliveryMapPage() {
         </div>
       </div>
     </DeliveryLayout>
-  )
+  );
 }

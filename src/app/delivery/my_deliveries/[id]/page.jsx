@@ -491,8 +491,8 @@ export default function DeliveryDetailsPage() {
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center">
               <Link
-                href="/delivery/my-deliveries"
-                onClick={(e) => handleNavigation(e, "/delivery/my-deliveries")}
+                href="/delivery/my_deliveries"
+                onClick={(e) => handleNavigation(e, "/delivery/my_deliveries")}
                 className="mr-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
