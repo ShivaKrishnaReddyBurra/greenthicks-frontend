@@ -3,14 +3,40 @@
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Calendar, CreditCard, User, Mail, Phone, AlertTriangle, CheckCircle, XCircle } from "lucide-react"
-import { getCancellationById } from "@/lib/fetch-without-auth" // Updated import path
+import { ArrowLeft, Calendar, CreditCard, User, Mail, Phone, AlertTriangle, CheckCircle, XCircle, Leaf } from "lucide-react"
+import { getCancellationById } from "@/lib/fetch-without-auth"
 
 export default function CancellationDetails() {
   const params = useParams()
   const [cancellation, setCancellation] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [isPageLoading, setIsPageLoading] = useState(true)
+  const [isLeafLoading, setIsLeafLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  // Leaf loader component
+const LeafLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
   useEffect(() => {
     const fetchCancellation = async () => {
@@ -22,7 +48,7 @@ export default function CancellationDetails() {
         console.error("Error fetching cancellation:", error)
         setError(error.message)
       } finally {
-        setLoading(false)
+        setTimeout(() => setIsPageLoading(false), 1000) // Simulate loading delay
       }
     }
 
@@ -79,19 +105,91 @@ export default function CancellationDetails() {
     }
   }
 
-  if (loading) {
+  const handleBackClick = () => {
+    setIsLeafLoading(true)
+    setTimeout(() => {
+      setIsLeafLoading(false)
+      window.location.href = "/admin/cancellations"
+    }, 1000) // Simulate navigation delay
+  }
+
+  if (isPageLoading) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6">
         <div className="max-w-6xl mx-auto">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
-              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
-              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+              <div className="flex items-center space-x-4">
+                <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                <div>
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 sm:w-64"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-64 sm:w-96 mt-2"></div>
+                </div>
+              </div>
+              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-24"></div>
             </div>
-            <div className="h-60 bg-gray-200 dark:bg-gray-700 rounded mt-6"></div>
-            <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded mt-6"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="bg-gray-200 dark:bg-gray-700 rounded-xl p-6">
+                <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-40 mb-4"></div>
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex justify-between">
+                      <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/3"></div>
+                      <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-gray-200 dark:bg-gray-700 rounded-xl p-6">
+                <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-40 mb-4"></div>
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-start">
+                      <div className="h-5 w-5 bg-gray-300 dark:bg-gray-600 rounded-full mr-3"></div>
+                      <div>
+                        <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-32"></div>
+                        <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-20 mt-1"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-gray-200 dark:bg-gray-700 rounded-xl p-6">
+                <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-40 mb-4"></div>
+                <div className="h-24 bg-gray-300 dark:bg-gray-600 rounded"></div>
+              </div>
+            </div>
+            <div className="bg-gray-200 dark:bg-gray-700 rounded-xl">
+              <div className="p-6">
+                <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-40 mb-4"></div>
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center">
+                      <div className="h-20 w-20 bg-gray-300 dark:bg-gray-600 rounded mr-4"></div>
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-200 dark:bg-gray-700 rounded-xl mt-6">
+              <div className="p-6">
+                <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-40 mb-4"></div>
+                <div className="space-y-6">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="ml-6">
+                      <div className="h-6 w-6 bg-gray-300 dark:bg-gray-600 rounded-full -ml-9 mb-2"></div>
+                      <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-48 mb-2"></div>
+                      <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-32 mb-2"></div>
+                      <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-64"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -100,17 +198,19 @@ export default function CancellationDetails() {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6">
+        {isLeafLoading && <LeafLoader />}
         <div className="max-w-6xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Error Loading Cancellation</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white mb-4">Error Loading Cancellation</h2>
           <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
-          <Link
-            href="/admin/cancellations"
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          <button
+            onClick={handleBackClick}
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+            disabled={isLeafLoading}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Cancellations
-          </Link>
+          </button>
         </div>
       </div>
     )
@@ -118,38 +218,44 @@ export default function CancellationDetails() {
 
   if (!cancellation) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6">
+        {isLeafLoading && <LeafLoader />}
         <div className="max-w-6xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Cancellation Not Found</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white mb-4">Cancellation Not Found</h2>
           <p className="text-gray-600 dark:text-gray-300 mb-6">
             The cancellation record you are looking for does not exist or has been removed.
           </p>
-          <Link
-            href="/admin/cancellations"
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          <button
+            onClick={handleBackClick}
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+            disabled={isLeafLoading}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Cancellations
-          </Link>
+          </button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6 min-h-screen">
+      {isLeafLoading && <LeafLoader />}
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div className="flex items-center">
-            <Link
-              href="/admin/cancellations"
-              className="mr-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            <button
+              onClick={handleBackClick}
+              className="mr-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+              disabled={isLeafLoading}
             >
               <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-            </Link>
+            </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Cancellation #{cancellation._id}</h1>
-              <p className="text-gray-500 dark:text-gray-400">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
+                Cancellation #{cancellation._id}
+              </h1>
+              <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
                 for Order #{cancellation.orderId} • {formatDate(cancellation.createdAt)}
               </p>
             </div>

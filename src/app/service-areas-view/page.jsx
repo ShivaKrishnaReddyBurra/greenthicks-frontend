@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 export default function ServiceAreasView() {
   const [serviceAreas, setServiceAreas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isButtonLoading, setIsButtonLoading] = useState(false);
   const [searchPincode, setSearchPincode] = useState("");
   const [searchResult, setSearchResult] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
@@ -19,6 +20,47 @@ export default function ServiceAreasView() {
 
   const mapRef = useRef(null);
   const googleMapRef = useRef(null);
+
+  // Skeleton Loader Component
+  const SkeletonCard = () => (
+    <div className="animate-pulse">
+      <Card className="hover:shadow-md transition-shadow">
+        <CardContent className="p-4 space-y-2">
+          <div className="h-5 w-3/4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-4 w-1/3 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-4 w-1/4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-4 w-1/3 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  // Leaf Loader Component for Buttons
+const LeafLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
   useEffect(() => {
     fetchServiceAreas();
@@ -52,26 +94,25 @@ export default function ServiceAreasView() {
   };
 
   const fetchServiceAreas = async () => {
-  try {
-    setIsLoading(true);
-    const data = await getServiceAreas({ limit: 100, active: true });
+    try {
+      setIsLoading(true);
+      const data = await getServiceAreas({ limit: 100, active: true });
 
-    const areas = Array.isArray(data?.serviceAreas) ? data.serviceAreas : [];
+      const areas = Array.isArray(data?.serviceAreas) ? data.serviceAreas : [];
 
-    setServiceAreas(
-      areas.map((area) => ({
-        ...area,
-        estimatedDeliveryTime: formatDeliveryTime(area.estimatedDeliveryTime),
-      }))
-    );
-  } catch (error) {
-    console.error("Error fetching service areas:", error);
-    setServiceAreas([]);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+      setServiceAreas(
+        areas.map((area) => ({
+          ...area,
+          estimatedDeliveryTime: formatDeliveryTime(area.estimatedDeliveryTime),
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching service areas:", error);
+      setServiceAreas([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const formatDeliveryTime = (minutes) => {
     if (typeof minutes === "string") return minutes; // Already formatted
@@ -82,7 +123,7 @@ export default function ServiceAreasView() {
     if (!window.google || !mapRef.current || googleMapRef.current) return;
 
     const map = new window.google.maps.Map(mapRef.current, {
-      center: { lat: 17.9784, lng: 79.5941 }, // ✅ Warangal
+      center: { lat: 17.9784, lng: 79.5941 }, // Warangal
       zoom: 6,
       mapTypeControl: false,
       streetViewControl: false,
@@ -123,32 +164,31 @@ export default function ServiceAreasView() {
         }
 
         const infoWindow = new window.google.maps.InfoWindow({
-  content: `
-    <div style="
-      padding: 12px;
-      background-color: #ecfdf5;
-      border: 1px solid #22c55e;
-      color: #065f46;
-      border-radius: 8px;
-      font-family: sans-serif;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      max-width: 260px;
-    ">
-      <h3 style="margin: 0 0 6px 0; font-weight: bold; font-size: 16px;">
-        ${area.city}, ${area.state}
-      </h3>
-      <p style="margin: 2px 0; font-size: 14px;">Pincode: ${area.pincode}</p>
-      <p style="margin: 2px 0; font-size: 14px;">Delivery Radius: ${area.deliveryRadius || 5} km</p>
-      <p style="margin: 2px 0; font-size: 14px;">Est. Time: ${area.estimatedDeliveryTime}</p>
-      ${
-        area.deliveryFee > 0
-          ? `<p style="margin: 2px 0; font-size: 14px;">Delivery Fee: ₹${area.deliveryFee}</p>`
-          : `<p style="margin: 2px 0; font-size: 14px; color: #15803d;">Free Delivery</p>`
-      }
-    </div>
-  `,
-});
-
+          content: `
+            <div style="
+              padding: 12px;
+              background-color: #ecfdf5;
+              border: 1px solid #22c55e;
+              color: #065f46;
+              border-radius: 8px;
+              font-family: sans-serif;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+              max-width: 260px;
+            ">
+              <h3 style="margin: 0 0 6px 0; font-weight: bold; font-size: 16px;">
+                ${area.city}, ${area.state}
+              </h3>
+              <p style="margin: 2px 0; font-size: 14px;">Pincode: ${area.pincode}</p>
+              <p style="margin: 2px 0; font-size: 14px;">Delivery Radius: ${area.deliveryRadius || 5} km</p>
+              <p style="margin: 2px 0; font-size: 14px;">Est. Time: ${area.estimatedDeliveryTime}</p>
+              ${
+                area.deliveryFee > 0
+                  ? `<p style="margin: 2px 0; font-size: 14px;">Delivery Fee: ₹${area.deliveryFee}</p>`
+                  : `<p style="margin: 2px 0; font-size: 14px; color: #15803d;">Free Delivery</p>`
+              }
+            </div>
+          `,
+        });
 
         marker.addListener("click", () => {
           infoWindow.open(map, marker);
@@ -163,6 +203,7 @@ export default function ServiceAreasView() {
       return;
     }
 
+    setIsButtonLoading(true);
     try {
       const response = await checkPincode(searchPincode);
       setSearchResult(response);
@@ -175,11 +216,14 @@ export default function ServiceAreasView() {
         available: false,
         message: error.message || "Error checking pincode availability",
       });
+    } finally {
+      setIsButtonLoading(false);
     }
   };
 
-  const getCurrentLocation = () => {
+  const getCurrentLocation = async () => {
     if (navigator.geolocation) {
+      setIsButtonLoading(true);
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const location = {
@@ -217,21 +261,80 @@ export default function ServiceAreasView() {
               },
             });
           }
+          setIsButtonLoading(false);
         },
         (error) => {
           console.error("Geolocation error:", error);
           alert("Could not get your location. Please check permissions.");
+          setIsButtonLoading(false);
         }
       );
     } else {
       alert("Geolocation is not supported by this browser.");
+      setIsButtonLoading(false);
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="bg-white dark:bg-gray-800 shadow-sm">
+          <div className="container mx-auto px-4 py-6">
+            <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+            <div className="h-5 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </div>
+        </div>
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1 space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="lg:col-span-2">
+              <Card className="h-full">
+                <CardHeader>
+                  <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                  <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="w-full h-96 lg:h-[600px] bg-gray-200 dark:bg-gray-700 rounded-b-lg animate-pulse"></div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+          <div className="mt-12">
+            <div className="h-7 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6"></div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <SkeletonCard key={index} />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -266,7 +369,9 @@ export default function ServiceAreasView() {
                       placeholder="e.g., 110001"
                       pattern="\d{5,6}"
                     />
-                    <Button onClick={handlePincodeSearch}>Check</Button>
+                    <Button onClick={handlePincodeSearch} disabled={isButtonLoading}>
+                      {isButtonLoading ? <LeafLoader /> : "Check"}
+                    </Button>
                   </div>
                 </div>
 
@@ -312,15 +417,20 @@ export default function ServiceAreasView() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Button onClick={getCurrentLocation} variant="outline" className="w-full">
-                  Find Service Areas Near Me
+                <Button
+                  onClick={getCurrentLocation}
+                  variant="outline"
+                  className="w-full"
+                  disabled={isButtonLoading}
+                >
+                  {isButtonLoading ? <LeafLoader /> : "Find Service Areas Near Me"}
                 </Button>
 
                 {nearbyAreas.length > 0 && (
                   <div className="mt-4 space-y-2">
                     <p className="font-medium">Nearby Service Areas:</p>
                     {nearbyAreas.slice(0, 3).map((area) => (
-                      <div key={area.pincode} className="p-2 bg-gray-50 dark:bg-gray-800 rounded text-sm">
+                      <div key={area._id} className="p-2 bg-gray-50 dark:bg-gray-800 rounded text-sm">
                         <p className="font-medium">
                           {area.city}, {area.state}
                         </p>
@@ -380,7 +490,7 @@ export default function ServiceAreasView() {
           {serviceAreas.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {serviceAreas.map((area) => (
-                <Card key={area.pincode} className="hover:shadow-md transition-shadow">
+                <Card key={area._id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <h3 className="font-semibold">{area.city}</h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">{area.state}</p>

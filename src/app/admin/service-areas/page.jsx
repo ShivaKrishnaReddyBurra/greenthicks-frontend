@@ -18,6 +18,7 @@ export default function ServiceAreaAdmin() {
   const [filteredServiceAreas, setFilteredServiceAreas] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isButtonLoading, setIsButtonLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -29,6 +30,7 @@ export default function ServiceAreaAdmin() {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [deliveryRadius, setDeliveryRadius] = useState(5);
   const [radiusUnit, setRadiusUnit] = useState("km");
+  const itemsPerPage = 6;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -50,6 +52,66 @@ export default function ServiceAreaAdmin() {
   const circleRef = useRef(null);
   const autocompleteRef = useRef(null);
   const autocompleteRetryCount = useRef(0);
+
+  // Skeleton Loader Component
+  const SkeletonCard = () => (
+    <div className="animate-pulse">
+      <Card className="hover:shadow-lg transition-shadow">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="h-6 w-3/4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-4 w-14 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          </div>
+          <div className="flex items-center">
+            <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          </div>
+          <div className="flex justify-end space-x-2 pt-2">
+            <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  // Leaf Loader Component for Buttons
+const LeafLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
   // Converts radius from specified unit to kilometers for backend storage
   const convertToKilometers = (value, unit) => {
@@ -132,10 +194,10 @@ export default function ServiceAreaAdmin() {
     loadGoogleMaps().catch((error) => console.error("Google Maps load error:", error));
   }, []);
 
-  // Fetches service areas when currentPage changes
+  // Fetches all service areas
   useEffect(() => {
     fetchServiceAreas();
-  }, [currentPage]);
+  }, []);
 
   // Initializes Google Places Autocomplete for location search
   const initializeAutocomplete = useCallback(() => {
@@ -210,7 +272,6 @@ export default function ServiceAreaAdmin() {
             googleMapRef.current.panTo(location);
           }
           reverseGeocode(location);
-          // Do not update formData or close modal here
         } else {
           console.error("No geometry data for selected place");
           setError("Invalid location selected. Please try again or click the map.");
@@ -232,7 +293,7 @@ export default function ServiceAreaAdmin() {
     }
   }, [showMapModal, initializeAutocomplete]);
 
-  // Filters service areas based on search query
+  // Filters and paginates service areas
   useEffect(() => {
     if (Array.isArray(serviceAreas)) {
       const filtered = serviceAreas.filter((area) => {
@@ -245,9 +306,11 @@ export default function ServiceAreaAdmin() {
         );
       });
       setFilteredServiceAreas(filtered);
+      setTotalPages(Math.ceil(filtered.length / itemsPerPage));
       console.log("Filtered service areas:", filtered);
     } else {
       setFilteredServiceAreas([]);
+      setTotalPages(1);
       console.warn("serviceAreas is not an array:", serviceAreas);
     }
   }, [searchQuery, serviceAreas]);
@@ -258,13 +321,13 @@ export default function ServiceAreaAdmin() {
     console.log("filteredServiceAreas state:", filteredServiceAreas);
   }, [serviceAreas, filteredServiceAreas]);
 
-  // Fetches service areas from the backend
+  // Fetches all service areas from the backend
   const fetchServiceAreas = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log(`Fetching service areas for page ${currentPage}...`);
-      const response = await fetchWithAuth(`/api/service-areas?page=${currentPage}&limit=10`);
+      console.log("Fetching all service areas...");
+      const response = await fetchWithAuth("/api/service-areas");
       console.log("Raw API response:", response);
 
       const data = response.data || response;
@@ -272,7 +335,7 @@ export default function ServiceAreaAdmin() {
       console.log("Parsed service areas:", serviceAreasData);
 
       setServiceAreas(serviceAreasData);
-      setTotalPages(data.totalPages || 1);
+      setTotalPages(Math.ceil(serviceAreasData.length / itemsPerPage));
       if (serviceAreasData.length === 0) {
         setError("No service areas found.");
       }
@@ -280,6 +343,7 @@ export default function ServiceAreaAdmin() {
       console.error("Fetch service areas error:", err);
       setError(err.message || "Failed to fetch service areas.");
       setServiceAreas([]);
+      setTotalPages(1);
     } finally {
       setIsLoading(false);
     }
@@ -420,6 +484,7 @@ export default function ServiceAreaAdmin() {
   // Handles submission of new service area form
   const handleAddServiceArea = async (e) => {
     e.preventDefault();
+    setIsButtonLoading(true);
     try {
       const radiusKm = convertToKilometers(deliveryRadius, radiusUnit);
       if (radiusKm < 0.1) {
@@ -464,12 +529,15 @@ export default function ServiceAreaAdmin() {
         description: err.message || "Failed to add service area.",
         variant: "destructive",
       });
+    } finally {
+      setIsButtonLoading(false);
     }
   };
 
   // Handles submission of edit service area form
   const handleUpdateServiceArea = async (e) => {
     e.preventDefault();
+    setIsButtonLoading(true);
     if (!selectedServiceArea) return;
     try {
       const radiusKm = convertToKilometers(deliveryRadius, radiusUnit);
@@ -516,12 +584,15 @@ export default function ServiceAreaAdmin() {
         description: err.message || "Failed to update service area.",
         variant: "destructive",
       });
+    } finally {
+      setIsButtonLoading(false);
     }
   };
 
   // Deletes a service area after user confirmation
   const handleDeleteServiceArea = async (id) => {
     if (!confirm("Are you sure you want to delete this service area?")) return;
+    setIsButtonLoading(true);
     try {
       await fetchWithAuth(`/api/service-areas/${id}`, {
         method: "DELETE",
@@ -539,6 +610,8 @@ export default function ServiceAreaAdmin() {
         description: err.message || "Failed to delete service area.",
         variant: "destructive",
       });
+    } finally {
+      setIsButtonLoading(false);
     }
   };
 
@@ -611,10 +684,27 @@ export default function ServiceAreaAdmin() {
     );
   };
 
+  // Calculate paginated service areas
+  const paginatedServiceAreas = filteredServiceAreas.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+      <div className="p-4 sm:p-6 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+          <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <div className="h-10 w-40 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+            <div className="h-10 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <SkeletonCard key={index} />
+          ))}
+        </div>
       </div>
     );
   }
@@ -633,9 +723,16 @@ export default function ServiceAreaAdmin() {
               setShowAddModal(true);
             }}
             className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm sm:text-base"
+            disabled={isButtonLoading}
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Service Area
+            {isButtonLoading ? (
+              <LeafLoader />
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Service Area
+              </>
+            )}
           </Button>
           <div className="w-full sm:w-64">
             <Input
@@ -660,8 +757,8 @@ export default function ServiceAreaAdmin() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        {filteredServiceAreas.length > 0 ? (
-          filteredServiceAreas.map((area) => (
+        {paginatedServiceAreas.length > 0 ? (
+          paginatedServiceAreas.map((area) => (
             <Card key={area._id} className="hover:shadow-lg transition-shadow">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -708,16 +805,18 @@ export default function ServiceAreaAdmin() {
                     variant="outline"
                     size="sm"
                     onClick={() => openEditModal(area)}
+                    disabled={isButtonLoading}
                   >
-                    <Edit size={16} />
+                    {isButtonLoading ? <LeafLoader /> : <Edit size={16} />}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleDeleteServiceArea(area._id)}
                     className="text-red-600 hover:text-red-700 dark:hover:bg-red-900/30"
+                    disabled={isButtonLoading}
                   >
-                    <Trash2 size={16} />
+                    {isButtonLoading ? <LeafLoader /> : <Trash2 size={16} />}
                   </Button>
                 </div>
               </CardContent>
@@ -734,10 +833,10 @@ export default function ServiceAreaAdmin() {
         <Button
           type="button"
           onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-          disabled={currentPage === 1}
+          disabled={currentPage === 1 || isButtonLoading}
           variant="outline"
         >
-          Previous
+          {isButtonLoading ? <LeafLoader /> : "Previous"}
         </Button>
         <span className="text-sm text-muted-foreground">
           Page {currentPage} of {totalPages}
@@ -745,10 +844,10 @@ export default function ServiceAreaAdmin() {
         <Button
           type="button"
           onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-          disabled={currentPage === totalPages}
+          disabled={currentPage === totalPages || isButtonLoading}
           variant="outline"
         >
-          Next
+          {isButtonLoading ? <LeafLoader /> : "Next"}
         </Button>
       </div>
 
@@ -896,9 +995,16 @@ export default function ServiceAreaAdmin() {
               variant="outline"
               onClick={openMapModal}
               className="w-full flex items-center gap-2"
+              disabled={isButtonLoading}
             >
-              <MapPin size={16} />
-              {selectedLocation ? "Change Location & Radius" : "Set Location & Radius"}
+              {isButtonLoading ? (
+                <LeafLoader />
+              ) : (
+                <>
+                  <MapPin size={16} />
+                  {selectedLocation ? "Change Location & Radius" : "Set Location & Radius"}
+                </>
+              )}
             </Button>
             {selectedLocation && (
               <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md text-sm">
@@ -915,10 +1021,13 @@ export default function ServiceAreaAdmin() {
                   setShowAddModal(false);
                   resetForm();
                 }}
+                disabled={isButtonLoading}
               >
-                Cancel
+                {isButtonLoading ? <LeafLoader /> : "Cancel"}
               </Button>
-              <Button type="submit">Add Area</Button>
+              <Button type="submit" disabled={isButtonLoading}>
+                {isButtonLoading ? <LeafLoader /> : "Add Area"}
+              </Button>
             </div>
           </form>
         </DialogContent>
@@ -948,6 +1057,7 @@ export default function ServiceAreaAdmin() {
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+浪
                 required
                 placeholder="e.g., Downtown Delivery"
               />
@@ -1083,9 +1193,16 @@ export default function ServiceAreaAdmin() {
               variant="outline"
               onClick={openMapModal}
               className="w-full flex items-center gap-2"
+              disabled={isButtonLoading}
             >
-              <MapPin size={16} />
-              {selectedLocation ? "Change Location & Radius" : "Set Location & Radius"}
+              {isButtonLoading ? (
+                <LeafLoader />
+              ) : (
+                <>
+                  <MapPin size={16} />
+                  {selectedLocation ? "Change Location & Radius" : "Set Location & Radius"}
+                </>
+              )}
             </Button>
             {selectedLocation && (
               <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md text-sm">
@@ -1103,10 +1220,13 @@ export default function ServiceAreaAdmin() {
                   setSelectedServiceArea(null);
                   resetForm();
                 }}
+                disabled={isButtonLoading}
               >
-                Cancel
+                {isButtonLoading ? <LeafLoader /> : "Cancel"}
               </Button>
-              <Button type="submit">Update Area</Button>
+              <Button type="submit" disabled={isButtonLoading}>
+                {isButtonLoading ? <LeafLoader /> : "Update Area"}
+              </Button>
             </div>
           </form>
         </DialogContent>
@@ -1205,7 +1325,7 @@ export default function ServiceAreaAdmin() {
                 onValueChange={(value) => {
                   const currentKm = convertToKilometers(deliveryRadius, radiusUnit);
                   setRadiusUnit(value);
-                  setDeliveryRadius(Math.max(convertFromKilometers(currentKm, value), unitMinRadius(value)));
+                  setDeliveryRadius(Math.max(convertFromKilometers(current, enumKm, value), unitMinRadius(value)));
                   if (circleRef.current) {
                     circleRef.current.setRadius(currentKm * 1000);
                   }
@@ -1232,8 +1352,12 @@ export default function ServiceAreaAdmin() {
               </div>
             )}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowMapModal(false)}>
-                Cancel
+              <Button
+                variant="outline"
+                onClick={() => setShowMapModal(false)}
+                disabled={isButtonLoading}
+              >
+                {isButtonLoading ? <LeafLoader /> : "Cancel"}
               </Button>
               <Button
                 onClick={(e) => {
@@ -1248,10 +1372,16 @@ export default function ServiceAreaAdmin() {
                   }));
                   setShowMapModal(false);
                 }}
-                disabled={!selectedLocation}
+                disabled={!selectedLocation || isButtonLoading}
               >
-                <Save size={16} className="mr-2" />
-                Save Location
+                {isButtonLoading ? (
+                  <LeafLoader />
+                ) : (
+                  <>
+                    <Save size={16} className="mr-2" />
+                    Save Location
+                  </>
+                )}
               </Button>
             </div>
           </div>
