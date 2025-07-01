@@ -21,97 +21,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// This would normally come from a database or API
-const partnerData = {
-  id: "DEL-001",
-  name: "Rajesh Kumar",
-  email: "rajesh.kumar@example.com",
-  phone: "+91 98765 43210",
-  avatar: "/placeholder.svg",
-  status: "active",
-  rating: 4.8,
-  totalDeliveries: 1247,
-  onTimeRate: 98,
-  successRate: 99.5,
-  vehicleType: "Motorcycle",
-  vehicleNumber: "MH 01 AB 1234",
-  joinedDate: "15 Mar 2022",
-  serviceArea: "South Mumbai",
-  currentLocation: "Colaba, Mumbai",
-  lastActive: "10 minutes ago",
-  earnings: {
-    today: 1250,
-    week: 8750,
-    month: 35000,
-  },
-  recentDeliveries: [
-    {
-      id: "ORD-7890",
-      customer: "Priya Sharma",
-      location: "Bandra West",
-      time: "Today, 2:45 PM",
-      status: "delivered",
-      amount: 450,
-    },
-    {
-      id: "ORD-7889",
-      customer: "Amit Patel",
-      location: "Andheri East",
-      time: "Today, 1:30 PM",
-      status: "delivered",
-      amount: 650,
-    },
-    {
-      id: "ORD-7885",
-      customer: "Neha Singh",
-      location: "Worli",
-      time: "Today, 11:15 AM",
-      status: "delivered",
-      amount: 350,
-    },
-    {
-      id: "ORD-7880",
-      customer: "Vikram Mehta",
-      location: "Dadar",
-      time: "Today, 9:30 AM",
-      status: "delivered",
-      amount: 550,
-    },
-    {
-      id: "ORD-7870",
-      customer: "Sanjay Gupta",
-      location: "Lower Parel",
-      time: "Yesterday, 6:45 PM",
-      status: "delivered",
-      amount: 750,
-    },
-  ],
-  performance: {
-    ratings: [5, 5, 4, 5, 5, 5, 4, 5, 5, 4],
-    feedback: [
-      {
-        customer: "Priya Sharma",
-        rating: 5,
-        comment: "Very professional and delivered on time!",
-        date: "Today",
-      },
-      {
-        customer: "Amit Patel",
-        rating: 4,
-        comment: "Good service, but package was slightly damaged.",
-        date: "Today",
-      },
-      {
-        customer: "Neha Singh",
-        rating: 5,
-        comment: "Excellent service, very polite delivery person.",
-        date: "Today",
-      },
-    ],
-  },
-};
+export default function DeliveryPartnerDetailsPage({ params, partnerData }) {
+  // If no partnerData is provided, you can handle the loading or error state
+  if (!partnerData) {
+    return <div>Loading partner data...</div>;
+  }
 
-export default function DeliveryPartnerDetailsPage({ params }) {
   return (
     <div className="container mx-auto px-4 py-6">
       {/* Breadcrumb */}
@@ -134,7 +49,7 @@ export default function DeliveryPartnerDetailsPage({ params }) {
             <AvatarImage src={partnerData.avatar || "/placeholder.svg"} alt={partnerData.name} />
             <AvatarFallback>
               {partnerData.name
-                .split(" ")
+                ?.split(" ")
                 .map((n) => n[0])
                 .join("")}
             </AvatarFallback>
@@ -225,7 +140,7 @@ export default function DeliveryPartnerDetailsPage({ params }) {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {partnerData.recentDeliveries.map((delivery) => (
+                    {partnerData.recentDeliveries?.map((delivery) => (
                       <div
                         key={delivery.id}
                         className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
@@ -286,14 +201,16 @@ export default function DeliveryPartnerDetailsPage({ params }) {
                       ))}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      Based on {partnerData.performance.ratings.length} ratings
+                      Based on {partnerData.performance.ratings?.length || 0} ratings
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     {[5, 4, 3, 2, 1].map((rating) => {
-                      const count = partnerData.performance.ratings.filter((r) => r === rating).length;
-                      const percentage = (count / partnerData.performance.ratings.length) * 100;
+                      const count = partnerData.performance.ratings?.filter((r) => r === rating).length || 0;
+                      const percentage = partnerData.performance.ratings?.length
+                        ? (count / partnerData.performance.ratings.length) * 100
+                        : 0;
 
                       return (
                         <div key={rating} className="flex items-center gap-2">
@@ -314,7 +231,7 @@ export default function DeliveryPartnerDetailsPage({ params }) {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {partnerData.performance.feedback.map((feedback, index) => (
+                    {partnerData.performance.feedback?.map((feedback, index) => (
                       <div key={index} className="border-b pb-4 last:border-0 last:pb-0">
                         <div className="flex justify-between items-start mb-2">
                           <div className="font-medium">{feedback.customer}</div>

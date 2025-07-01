@@ -706,7 +706,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background leaf-pattern-2 min-h-screen">
       {actionLoading && <LeafLoader />}
       {showAddressPrompt && (
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mx-auto max-w-2xl mt-4">

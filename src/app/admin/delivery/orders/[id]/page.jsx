@@ -18,23 +18,94 @@ import {
 import { getOrder, assignDeliveryBoy, updateDeliveryStatus, getAllUsers } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
-import { useParams } from "next/navigation"; // Import useParams
+import { useParams } from "next/navigation";
 
+const SkeletonLoader = () => (
+  <div className="animate-pulse space-y-4">
+    <div className="h-8 w-48 bg-gray-200 rounded"></div>
+    <div className="h-4 w-64 bg-gray-200 rounded"></div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-4">
+        <div className="bg-card rounded-lg shadow-md p-6">
+          <div className="h-6 w-32 bg-gray-200 rounded mb-4"></div>
+          <div className="space-y-2">
+            {[1, 2, 3].map((_, index) => (
+              <div key={index} className="flex items-center p-4">
+                <div className="w-16 h-16 bg-gray-200 rounded-md mr-4"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+                  <div className="h-4 w-1/4 bg-gray-200 rounded"></div>
+                </div>
+                <div className="h-4 w-16 bg-gray-200 rounded"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-card rounded-lg shadow-md p-6">
+          <div className="h-6 w-32 bg-gray-200 rounded mb-4"></div>
+          <div className="space-y-4">
+            {[1, 2].map((_, index) => (
+              <div key={index} className="flex items-center">
+                <div className="w-6 h-6 bg-gray-200 rounded-full mr-3"></div>
+                <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="space-y-4">
+        {[1, 2, 3].map((_, index) => (
+          <div key={index} className="bg-card rounded-lg shadow-md p-6">
+            <div className="h-6 w-32 bg-gray-200 rounded mb-4"></div>
+            <div className="space-y-2">
+              <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+              <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const LeafLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
 export default function OrderDetails() {
-  const params = useParams(); // Get params using useParams hook
-  const { id } = params; // Directly destructure params (plain object)
+  const params = useParams();
+  const { id } = params;
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [assignModal, setAssignModal] = useState(false);
   const [partners, setPartners] = useState([]);
+  const [buttonLoading, setButtonLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchOrder = async () => {
       setLoading(true);
       try {
-        // Fetch order details
         const orderData = await getOrder(id);
         const mappedOrder = {
           id: orderData.globalId,
@@ -74,7 +145,6 @@ export default function OrderDetails() {
           })),
         };
 
-        // Fetch delivery partners
         const usersData = await getAllUsers();
         const deliveryPartners = usersData.filter((user) => user.isDeliveryBoy).map((user) => ({
           id: `DEL-${user.globalId}`,
@@ -85,7 +155,6 @@ export default function OrderDetails() {
         }));
         setPartners(deliveryPartners);
 
-        // Update delivery partner info if assigned
         if (mappedOrder.deliveryPartner) {
           const partner = deliveryPartners.find((p) => p.id === mappedOrder.deliveryPartner.id);
           if (partner) {
@@ -110,6 +179,7 @@ export default function OrderDetails() {
   }, [id, toast]);
 
   const assignDeliveryPartner = async (partnerId) => {
+    setButtonLoading(true);
     try {
       const deliveryBoyId = parseInt(partnerId.replace("DEL-", ""));
       await assignDeliveryBoy(id, deliveryBoyId);
@@ -139,15 +209,18 @@ export default function OrderDetails() {
         description: error.message || "Failed to assign delivery partner.",
         variant: "destructive",
       });
+    } finally {
+      setButtonLoading(false);
     }
   };
 
   const updateOrderStatus = async (status) => {
+    setButtonLoading(true);
     try {
       await updateDeliveryStatus(id, status);
       const statusMessages = {
         assigned: "Order has been assigned",
-        "out-for-delivery": "Order is out for delivery", // Fixed to use hyphens
+        "out-for-delivery": "Order is out for delivery",
         delivered: "Order has been delivered",
       };
       setOrder({
@@ -173,7 +246,17 @@ export default function OrderDetails() {
         description: error.message || "Failed to update order status.",
         variant: "destructive",
       });
+    } finally {
+      setButtonLoading(false);
     }
+  };
+
+  const handlePrint = () => {
+    setButtonLoading(true);
+    setTimeout(() => {
+      alert("Order details printed");
+      setButtonLoading(false);
+    }, 1000);
   };
 
   const getStatusBadge = (status) => {
@@ -217,11 +300,7 @@ export default function OrderDetails() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <SkeletonLoader />;
   }
 
   if (error || !order) {
@@ -260,17 +339,23 @@ export default function OrderDetails() {
           {!order.deliveryPartner && (
             <button
               onClick={() => setAssignModal(true)}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded-md flex items-center hover:bg-primary/90 transition-colors"
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-md flex items-center hover:bg-primary/90 transition-colors disabled:opacity-50"
+              disabled={buttonLoading}
             >
-              <Truck size={18} className="mr-2" />
-              Assign Delivery Partner
+              {buttonLoading ? <LeafLoader /> : (
+                <>
+                  <Truck size={18} className="mr-2" />
+                  Assign Delivery Partner
+                </>
+              )}
             </button>
           )}
           <button
-            onClick={() => alert("Order details printed")}
-            className="bg-muted hover:bg-muted/80 px-4 py-2 rounded-md"
+            onClick={handlePrint}
+            className="bg-muted hover:bg-muted/80 px-4 py-2 rounded-md flex items-center justify-center disabled:opacity-50"
+            disabled={buttonLoading}
           >
-            Print Details
+            {buttonLoading ? <LeafLoader /> : "Print Details"}
           </button>
         </div>
       </div>
@@ -313,7 +398,7 @@ export default function OrderDetails() {
                 <span>Subtotal</span>
                 <span>₹{order.subtotal}</span>
               </div>
-              {order.discount > 0 && (
+              { order.discount > 0 && (
                 <div className="flex justify-between mb-2 text-green-600">
                   <span>Discount</span>
                   <span>-₹{order.discount}</span>
@@ -359,24 +444,24 @@ export default function OrderDetails() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => updateOrderStatus("assigned")}
-                  className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm hover:bg-blue-200"
-                  disabled={order.status === "assigned"}
+                  className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm hover:bg-blue-200 disabled:opacity-50 flex items-center justify-center"
+                  disabled={order.status === "assigned" || buttonLoading}
                 >
-                  Assigned
+                  {buttonLoading && order.status === "assigned" ? <LeafLoader /> : "Assigned"}
                 </button>
                 <button
                   onClick={() => updateOrderStatus("out-for-delivery")}
-                  className="px-3 py-1 bg-purple-100 text-purple-800 rounded-md text-sm hover:bg-purple-200"
-                  disabled={order.status === "out-for-delivery"}
+                  className="px-3 py-1 bg-purple-100 text-purple-800 rounded-md text-sm hover:bg-purple-200 disabled:opacity-50 flex items-center justify-center"
+                  disabled={order.status === "out-for-delivery" || buttonLoading}
                 >
-                  Out for Delivery
+                  {buttonLoading && order.status === "out-for-delivery" ? <LeafLoader /> : "Out for Delivery"}
                 </button>
                 <button
                   onClick={() => updateOrderStatus("delivered")}
-                  className="px-3 py-1 bg-green-100 text-green-800 rounded-md text-sm hover:bg-green-200"
-                  disabled={order.status === "delivered"}
+                  className="px-3 py-1 bg-green-100 text-green-800 rounded-md text-sm hover:bg-green-200 disabled:opacity-50 flex items-center justify-center"
+                  disabled={order.status === "delivered" || buttonLoading}
                 >
-                  Delivered
+                  {buttonLoading && order.status === "delivered" ? <LeafLoader /> : "Delivered"}
                 </button>
               </div>
             </div>
@@ -442,9 +527,10 @@ export default function OrderDetails() {
                 <div className="mt-4 pt-4 border-t">
                   <button
                     onClick={() => setAssignModal(true)}
-                    className="w-full bg-muted hover:bg-muted/80 py-2 rounded-md"
+                    className="w-full bg-muted hover:bg-muted/80 py-2 rounded-md flex items-center justify-center disabled:opacity-50"
+                    disabled={buttonLoading}
                   >
-                    Reassign Delivery Partner
+                    {buttonLoading ? <LeafLoader /> : "Reassign Delivery Partner"}
                   </button>
                 </div>
               </div>
@@ -454,9 +540,10 @@ export default function OrderDetails() {
                 <p className="text-muted-foreground">No delivery partner assigned yet</p>
                 <button
                   onClick={() => setAssignModal(true)}
-                  className="mt-4 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
+                  className="mt-4 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center"
+                  disabled={buttonLoading}
                 >
-                  Assign Delivery Partner
+                  {buttonLoading ? <LeafLoader /> : "Assign Delivery Partner"}
                 </button>
               </div>
             )}
@@ -485,7 +572,8 @@ export default function OrderDetails() {
                     <button
                       key={partner.id}
                       onClick={() => assignDeliveryPartner(partner.id)}
-                      className="w-full text-left p-3 border rounded-md hover:bg-muted/50 transition-colors flex justify-between items-center"
+                      className="w-full text-left p-3 border rounded-md hover:bg-muted/50 transition-colors flex justify-between items-center disabled:opacity-50"
+                      disabled={buttonLoading}
                     >
                       <div>
                         <p className="font-medium">{partner.name}</p>
@@ -504,9 +592,10 @@ export default function OrderDetails() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setAssignModal(false)}
-                className="px-4 py-2 border rounded-md hover:bg-muted transition-colors"
+                className="px-4 py-2 border rounded-md hover:bg-muted transition-colors disabled:opacity-50"
+                disabled={buttonLoading}
               >
-                Cancel
+                {buttonLoading ? <LeafLoader /> : "Cancel"}
               </button>
             </div>
           </div>

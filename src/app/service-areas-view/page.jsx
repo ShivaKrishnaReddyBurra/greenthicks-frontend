@@ -340,7 +340,7 @@ const LeafLoader = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen leaf-pattern-2 bg-gray-50 dark:bg-gray-900">
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="container mx-auto px-4 py-6">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Our Service Areas</h1>

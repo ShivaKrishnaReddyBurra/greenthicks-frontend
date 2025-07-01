@@ -119,6 +119,7 @@ export default function Footer() {
                 </Link>
               </div>
             </div>
+{/*
             <div>
               <h3 className="font-medium text-base sm:text-lg mb-4">Quick Links</h3>
               <ul className="space-y-2 text-sm sm:text-base">
@@ -174,6 +175,39 @@ export default function Footer() {
                     className="text-muted-foreground hover:text-primary"
                   >
                     Delivery Partner
+                  </Link>
+                </li>
+              </ul>
+            </div>
+*/}
+            <div>
+              <h3 className="font-medium text-base sm:text-lg mb-4">GreenThicks Tech</h3>
+              <ul className="space-y-2 text-sm sm:text-base">
+                <li>
+                  <Link
+                    href="https://greenthicks.tech"
+                    onClick={(e) => handleNavigation(e, "https://greenthicks.tech")}
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    IntenShip Platform
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="google.com"
+                    onClick={(e) => handleNavigation(e, "google.com")}
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    Intenship registeration Form
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/about"
+                    onClick={(e) => handleNavigation(e, "https://greenthicks-interns.vercel.app")}
+                    className="text-muted-foreground hover:text-primary"
+                  >
+                    Inten verification
                   </Link>
                 </li>
               </ul>

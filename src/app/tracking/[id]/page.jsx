@@ -192,7 +192,7 @@ export default function OrderTrackingPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12">
+    <div className="container leaf-pattern-3 mx-auto px-4 py-12">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <Link href="/" className="inline-flex items-center text-primary hover:underline">

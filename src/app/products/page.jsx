@@ -188,7 +188,7 @@ export default function ProductsPage() {
   return (
     <>
       {actionLoading && <SkeletonLoader />}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container leaf-pattern-3 mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-2">

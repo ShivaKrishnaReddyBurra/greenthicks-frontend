@@ -151,7 +151,7 @@ export default function CheckoutSuccessPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fffef4] dark:bg-black flex flex-col items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen leaf-pattern-2 bg-[#fffef4] dark:bg-black flex flex-col items-center justify-center p-4 sm:p-6">
       <style jsx global>{`
         @keyframes particle {
           0% {

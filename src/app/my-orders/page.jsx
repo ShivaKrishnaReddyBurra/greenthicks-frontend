@@ -364,7 +364,7 @@ export default function MyOrdersPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container leaf-pattern-3 mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">My Orders</h1>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div className="hidden md:flex w-full md:w-auto">

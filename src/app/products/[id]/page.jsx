@@ -555,7 +555,7 @@ export default function ProductDetailPage() {
   return (
     <>
       {actionLoading && <LeafLoader />}
-      <div className="container mx-auto px-4 py-6 sm:py-8 max-w-screen-2xl">
+      <div className="container leaf-pattern-3 mx-auto px-4 py-6 sm:py-8 max-w-screen-2xl">
         {isFullScreen && (
           <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
             <Button

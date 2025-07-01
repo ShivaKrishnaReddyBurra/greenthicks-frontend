@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -14,6 +14,7 @@ export default function UserManagement() {
   const router = useRouter();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -55,6 +56,7 @@ export default function UserManagement() {
       return;
     }
 
+    setActionLoading(true);
     try {
       await fetchWithAuth(`/api/auth/user/${globalId}`, { method: "DELETE" });
       setUsers(users.filter((user) => user.globalId !== globalId));
@@ -69,6 +71,8 @@ export default function UserManagement() {
         description: "Failed to delete user. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -112,16 +116,41 @@ export default function UserManagement() {
     }
   };
 
+  // Calculate total orders and cancellations
+  const totalOrders = users.reduce((sum, user) => sum + (user.totalOrders || 0), 0);
+  const totalCancellations = users.reduce((sum, user) => sum + (user.totalCancellations || 0), 0);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-t-2 border-b-2 border-green-500"></div>
+        <div className="space-y-4 w-full max-w-4xl p-4">
+          {/* Skeleton Loader */}
+          {[...Array(5)].map((_, index) => (
+            <div key={index} className="animate-pulse">
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-2"></div>
+              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="p-4 sm:p-6 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+      {/* LeafLoader for actions */}
+      {actionLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-green-500 border-t-transparent"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="animate-pulse h-6 w-6 bg-green-500 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">User Management</h1>
         <Button asChild className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm text-sm sm:text-base">
@@ -130,6 +159,19 @@ export default function UserManagement() {
             Add New User
           </a>
         </Button>
+      </div>
+
+      {/* Order Statistics */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6 mb-6 border border-gray-100 dark:border-gray-700">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Order Statistics</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="font-medium">Total Orders:</span> {totalOrders}
+          </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="font-medium">Total Cancellations:</span> {totalCancellations}
+          </div>
+        </div>
       </div>
 
       {/* Filters and Search */}
@@ -188,6 +230,9 @@ export default function UserManagement() {
                   Orders
                 </th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Cancellations
+                </th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Total Spent
                 </th>
                 <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -215,6 +260,9 @@ export default function UserManagement() {
                   </td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     {user.totalOrders || 0}
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                    {user.totalCancellations || 0}
                   </td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                     ₹{(user.totalSpent || 0).toLocaleString()}
@@ -295,6 +343,7 @@ export default function UserManagement() {
                 <div className="text-sm text-gray-500 dark:text-gray-300">Email: {user.email || "N/A"}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-300">Location: {user.location || user.city || "N/A"}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-300">Orders: {user.totalOrders || 0}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-300">Cancellations: {user.totalCancellations || 0}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-300">Total Spent: ₹{(user.totalSpent || 0).toLocaleString()}</div>
                 <div className="flex justify-end space-x-2">
                   <Button variant="ghost" size="icon" asChild>

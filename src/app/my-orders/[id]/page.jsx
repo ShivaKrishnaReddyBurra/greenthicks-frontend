@@ -411,7 +411,7 @@ export default function OrderDetailPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container leaf-pattern-3 mx-auto px-4 py-8">
       <div className="mb-6">
         <Link
           href="/my-orders"

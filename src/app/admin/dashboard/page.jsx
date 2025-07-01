@@ -21,9 +21,9 @@ import {
   Store,
   Import,
 } from "lucide-react"
-import { getAdminStats, getRecentOrders, getTopProducts, getSalesTrend } from "@/lib/api" // Updated import
+import { getAdminStats, getRecentOrders, getTopProducts, getSalesTrend } from "@/lib/api"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card" 
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -48,12 +48,12 @@ export default function AdminDashboard() {
     monthChange: 0,
     yearChange: 0,
   })
+  const [isButtonLoading, setIsButtonLoading] = useState(false)
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       setIsLoading(true)
       try {
-        // Fetch all dashboard data using the new API functions
         const [statsData, ordersData, productsData, trendData] = await Promise.all([
           getAdminStats(),
           getRecentOrders(),
@@ -67,7 +67,6 @@ export default function AdminDashboard() {
         setSalesTrend(trendData)
       } catch (error) {
         console.error("Error fetching dashboard data:", error)
-        // You might want to show an error message to the user here
       } finally {
         setIsLoading(false)
       }
@@ -130,10 +129,85 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleButtonClick = () => {
+    setIsButtonLoading(true)
+    setTimeout(() => {
+      setIsButtonLoading(false)
+    }, 1000) // Simulating a delay for the leaf loader
+  }
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+      <div className="p-4 md:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+        <div className="animate-pulse">
+          <div className="flex justify-between mb-6">
+            <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="flex space-x-2">
+              <div className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            {[...Array(3)].map((_, index) => (
+              <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                    <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  </div>
+                  <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                </div>
+                <div className="h-4 w-36 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            {[...Array(3)].map((_, index) => (
+              <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                <div className="flex items-center">
+                  <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full mr-4"></div>
+                  <div>
+                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                    <div className="h-4 w-36 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+              <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+                <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+              <div className="p-4">
+                {[...Array(5)].map((_, index) => (
+                  <div key={index} className="flex py-4">
+                    <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded mr-4"></div>
+                    <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded mr-4"></div>
+                    <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded mr-4"></div>
+                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+              <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+                <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+              <div className="p-4">
+                {[...Array(3)].map((_, index) => (
+                  <div key={index} className="flex py-4">
+                    <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded mr-3"></div>
+                    <div className="flex-1">
+                      <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                      <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -146,12 +220,28 @@ export default function AdminDashboard() {
           <p className="text-gray-500 dark:text-gray-400 mt-1">Welcome back, Admin</p>
         </div>
         <div className="mt-4 md:mt-0 flex space-x-2">
-          <Button className="flex items-center px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
-            <Calendar className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+          <Button 
+            onClick={handleButtonClick} 
+            className="flex items-center px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+            disabled={isButtonLoading}
+          >
+            {isButtonLoading ? (
+              <div className="h-4 w-4 border-2 border-gray-500 dark:border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+            ) : (
+              <Calendar className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+            )}
             Today
           </Button>
-          <Button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm">
-            <Download className="h-4 w-4 mr-2" />
+          <Button 
+            onClick={handleButtonClick} 
+            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+            disabled={isButtonLoading}
+          >
+            {isButtonLoading ? (
+              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
             Export Report
           </Button>
         </div>
@@ -264,6 +354,7 @@ export default function AdminDashboard() {
               <Link
                 href="/admin/delivery"
                 className="text-sm text-yellow-600 dark:text-yellow-400 hover:underline mt-2 inline-flex items-center"
+                onClick={handleButtonClick}
               >
                 View Orders
                 <ChevronRight size={16} className="ml-1" />
@@ -283,6 +374,7 @@ export default function AdminDashboard() {
               <Link
                 href="/admin/products"
                 className="text-sm text-red-600 dark:text-red-400 hover:underline mt-2 inline-flex items-center"
+                onClick={handleButtonClick}
               >
                 Check Inventory
                 <ChevronRight size={16} className="ml-1" />
@@ -302,6 +394,7 @@ export default function AdminDashboard() {
               <Link
                 href="/admin/users"
                 className="text-sm text-green-600 dark:text-green-400 hover:underline mt-2 inline-flex items-center"
+                onClick={handleButtonClick}
               >
                 View Users
                 <ChevronRight size={16} className="ml-1" />
@@ -320,6 +413,7 @@ export default function AdminDashboard() {
             <Link
               href="/admin/orders"
               className="text-sm text-green-600 dark:text-green-400 hover:underline flex items-center"
+              onClick={handleButtonClick}
             >
               View All
               <ChevronRight size={16} className="ml-1" />
@@ -364,12 +458,14 @@ export default function AdminDashboard() {
                         <Link
                           href={`/admin/orders/${order.id.replace("ORD-", "")}`}
                           className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                          onClick={handleButtonClick}
                         >
                           View
                         </Link>
                         <Link
                           href={`/admin/invoices/${order.id.replace("ORD-", "")}`}
                           className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                          onClick={handleButtonClick}
                         >
                           Invoice
                         </Link>
@@ -389,6 +485,7 @@ export default function AdminDashboard() {
             <Link
               href="/admin/products"
               className="text-sm text-green-600 dark:text-green-400 hover:underline flex items-center"
+              onClick={handleButtonClick}
             >
               View All
               <ChevronRight size={16} className="ml-1" />
@@ -420,6 +517,7 @@ export default function AdminDashboard() {
             <Link
               href="/admin/analytics"
               className="text-sm text-center block w-full text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+              onClick={handleButtonClick}
             >
               View Sales Analytics
             </Link>

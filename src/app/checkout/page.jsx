@@ -542,7 +542,7 @@ export default function CheckoutPage() {
   return (
     <>
       {actionLoading && <LeafLoader />}
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="container leaf-pattern-3 mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-6">
           <Link
             href="/cart"

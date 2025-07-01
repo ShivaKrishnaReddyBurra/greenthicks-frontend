@@ -9,6 +9,167 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
+const SkeletonLoader = () => (
+  <div className="p-3 sm:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen animate-pulse">
+    {/* Header Skeleton */}
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+      <div className="h-6 w-48 bg-gray-200 rounded"></div>
+    </div>
+
+    {/* Delivery Partners Summary Skeleton */}
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 mb-4 border border-gray-100 dark:border-gray-700">
+      <div className="h-5 w-32 bg-gray-200 rounded mb-3"></div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {[1, 2, 3].map((_, index) => (
+          <div key={index} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 sm:p-3 flex items-center">
+            <div className="h-8 w-8 bg-gray-200 rounded-full mr-2 sm:mr-3"></div>
+            <div>
+              <div className="h-3 w-24 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 w-16 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Orders Section Skeleton */}
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
+      <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="h-5 w-32 bg-gray-200 rounded"></div>
+      </div>
+      {/* Desktop Table View Skeleton */}
+      <div className="hidden sm:block overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700">
+            <tr>
+              {["Order ID", "Customer", "Address", "Items", "Total", "Status", "Delivery Partner", "Actions"].map((header, index) => (
+                <th key={index} className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            {[1, 2, 3, 4, 5].map((_, index) => (
+              <tr key={index}>
+                <td className="px-3 sm:px-4 py-3"><div className="h-4 w-24 bg-gray-200 rounded"></div></td>
+                <td className="px-3 sm:px-4 py-3"><div className="h-4 w-32 bg-gray-200 rounded"></div></td>
+                <td className="px-3 sm:px-4 py-3"><div className="h-4 w-48 bg-gray-200 rounded"></div></td>
+                <td className="px-3 sm:px-4 py-3"><div className="h-4 w-16 bg-gray-200 rounded"></div></td>
+                <td className="px-3 sm:px-4 py-3"><div className="h-4 w-20 bg-gray-200 rounded"></div></td>
+                <td className="px-3 sm:px-4 py-3"><div className="h-4 w-24 bg-gray-200 rounded"></div></td>
+                <td className="px-3 sm:px-4 py-3"><div className="h-4 w-32 bg-gray-200 rounded"></div></td>
+                <td className="px-3 sm:px-4 py-3 text-right"><div className="h-4 w-16 bg-gray-200 rounded"></div></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {/* Mobile Card View Skeleton */}
+      <div className="sm:hidden space-y-3 p-3">
+        {[1, 2, 3, 4, 5].map((_, index) => (
+          <div key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 border border-gray-100 dark:border-gray-700">
+            <div className="flex flex-col space-y-2">
+              <div className="flex justify-between items-center">
+                <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                <div className="h-4 w-20 bg-gray-200 rounded"></div>
+              </div>
+              <div className="h-3 w-32 bg-gray-200 rounded"></div>
+              <div className="h-3 w-48 bg-gray-200 rounded"></div>
+              <div className="h-3 w-16 bg-gray-200 rounded"></div>
+              <div className="h-3 w-20 bg-gray-200 rounded"></div>
+              <div className="h-3 w-32 bg-gray-200 rounded"></div>
+              <div className="flex justify-end">
+                <div className="h-4 w-16 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="p-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex flex-col items-center gap-3">
+        <div className="h-3 w-24 bg-gray-200 rounded"></div>
+        <div className="flex space-x-2">
+          <div className="h-8 w-20 bg-gray-200 rounded"></div>
+          <div className="h-8 w-20 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    </div>
+
+    {/* Delivery Partners Section Skeleton */}
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+      <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="h-5 w-32 bg-gray-200 rounded"></div>
+      </div>
+      <div className="hidden sm:block overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700">
+            <tr>
+              {["ID", "Name", "Location", "Status", "Orders Delivered", "Actions"].map((header, index) => (
+                <th key={index} className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            {[1, 2, 3].map((_, index) => (
+              <tr key={index}>
+                <td className="px-3 sm:px-4 py-3"><div className="h-4 w-24 bg-gray-200 rounded"></div></td>
+                <td className="px-3 sm:px-4 py-3"><div className="h-4 w-32 bg-gray-200 rounded"></div></td>
+                <td className="px-3 sm:px-4 py-3"><div className="h-4 w-28 bg-gray-200 rounded"></div></td>
+                <td className="px-3 sm:px-4 py-3"><div className="h-4 w-20 bg-gray-200 rounded"></div></td>
+                <td className="px-3 sm:px-4 py-3"><div className="h-4 w-16 bg-gray-200 rounded"></div></td>
+                <td className="px-3 sm:px-4 py-3 text-right"><div className="h-4 w-16 bg-gray-200 rounded"></div></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="sm:hidden space-y-3 p-3">
+        {[1, 2, 3].map((_, index) => (
+          <div key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 border border-gray-100 dark:border-gray-700">
+            <div className="flex flex-col space-y-2">
+              <div className="flex justify-between items-center">
+                <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                <div className="h-4 w-20 bg-gray-200 rounded"></div>
+              </div>
+              <div className="h-3 w-24 bg-gray-200 rounded"></div>
+              <div className="h-3 w-28 bg-gray-200 rounded"></div>
+              <div className="h-3 w-16 bg-gray-200 rounded"></div>
+              <div className="flex justify-end">
+                <div className="h-4 w-16 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const LeafLoader = () => (
+  <div className="flex items-center justify-center">
+    <div className="relative w-6 h-6">
+      <div className="absolute inset-0 animate-spin">
+        <svg viewBox="0 0 24 24" className="w-6 h-6 text-primary">
+          <path
+            fill="currentColor"
+            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13h-2v6l5.2 3.2.8-1.3-4-2.4V7z"
+          />
+        </svg>
+      </div>
+      <div className="absolute inset-0 animate-ping">
+        <svg viewBox="0 0 24 24" className="w-6 h-6 text-primary/50">
+          <path
+            fill="currentColor"
+            d="M12,3C7.03,3,3,7.03,3,12s4.03,9,9,9s9-4.03,9-9S16.97,3,12,3z M12,15c-1.66,0-3-1.34-3-3s1.34-3,3-3s3,1.34,3,3 S13.66,15,12,15z"
+          />
+        </svg>
+      </div>
+    </div>
+  </div>
+);
+
 export default function DeliveryManagement() {
   const [orders, setOrders] = useState([]);
   const [partners, setPartners] = useState([]);
@@ -17,6 +178,7 @@ export default function DeliveryManagement() {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [buttonLoading, setButtonLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -96,6 +258,7 @@ export default function DeliveryManagement() {
   };
 
   const closeAssignModal = () => {
+    setButtonLoading(false);
     setAssignModalOpen(false);
     setSelectedOrder(null);
   };
@@ -103,6 +266,7 @@ export default function DeliveryManagement() {
   const assignDeliveryPartner = async (partnerId) => {
     if (!selectedOrder) return;
 
+    setButtonLoading(true);
     try {
       const globalId = selectedOrder.id;
       const deliveryBoyId = parseInt(partnerId.replace("DEL-", ""));
@@ -126,7 +290,17 @@ export default function DeliveryManagement() {
         description: error.message || "Failed to assign delivery partner.",
         variant: "destructive",
       });
+    } finally {
+      setButtonLoading(false);
     }
+  };
+
+  const handlePagination = (direction) => {
+    setButtonLoading(true);
+    setTimeout(() => {
+      setCurrentPage((prev) => direction === "prev" ? Math.max(prev - 1, 1) : Math.min(prev + 1, totalPages));
+      setButtonLoading(false);
+    }, 1000);
   };
 
   const getStatusBadge = (status) => {
@@ -189,11 +363,7 @@ export default function DeliveryManagement() {
   const locationCounts = getPartnersCountByLocation();
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
-      </div>
-    );
+    return <SkeletonLoader />;
   }
 
   return (
@@ -261,7 +431,7 @@ export default function DeliveryManagement() {
                     <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Delivery Partner
                     </th>
-                    <th className="px-3 sm:px-4 py-2 text-right text-xs font-medium text-gray-500 dark:textgray-400 uppercase tracking-wider">
+                    <th className="px-3 sm:px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -301,8 +471,9 @@ export default function DeliveryManagement() {
                             variant="link"
                             onClick={() => openAssignModal(order)}
                             className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-0"
+                            disabled={buttonLoading}
                           >
-                            {order.assignedTo ? "Reassign" : "Assign"}
+                            {buttonLoading ? <LeafLoader /> : (order.assignedTo ? "Reassign" : "Assign")}
                           </Button>
                         ) : (
                           <Link
@@ -340,8 +511,9 @@ export default function DeliveryManagement() {
                           variant="link"
                           onClick={() => openAssignModal(order)}
                           className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-0 text-xs"
+                          disabled={buttonLoading}
                         >
-                          {order.assignedTo ? "Reassign" : "Assign"}
+                          {buttonLoading ? <LeafLoader /> : (order.assignedTo ? "Reassign" : "Assign")}
                         </Button>
                       ) : (
                         <Link
@@ -363,20 +535,20 @@ export default function DeliveryManagement() {
                 </div>
                 <div className="flex space-x-2">
                   <Button
-                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
+                    onClick={() => handlePagination("prev")}
+                    disabled={currentPage === 1 || buttonLoading}
                     variant="outline"
                     className="px-3 py-1 text-xs"
                   >
-                    Previous
+                    {buttonLoading ? <LeafLoader /> : "Previous"}
                   </Button>
                   <Button
-                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
+                    onClick={() => handlePagination("next")}
+                    disabled={currentPage === totalPages || buttonLoading}
                     variant="outline"
                     className="px-3 py-1 text-xs"
                   >
-                    Next
+                    {buttonLoading ? <LeafLoader /> : "Next"}
                   </Button>
                 </div>
               </div>
@@ -499,7 +671,7 @@ export default function DeliveryManagement() {
       {/* Assign Delivery Partner Modal */}
       {assignModalOpen && selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p четырех w-full max-w-[95vw] max-h-[75vh] overflow-y-auto border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 w-full max-w-[95vw] max-h-[75vh] overflow-y-auto border border-gray-100 dark:border-gray-700">
             <h3 className="text-base font-bold mb-3 text-gray-800 dark:text-white">Assign Delivery Partner</h3>
             <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
               <span className="font-semibold">Order:</span> {selectedOrder.id}
@@ -526,16 +698,21 @@ export default function DeliveryManagement() {
                         onClick={() => assignDeliveryPartner(partner.id)}
                         variant="outline"
                         className="w-full text-left p-2 flex justify-between items-center text-xs hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                        disabled={buttonLoading}
                       >
-                        <div>
-                          <p className="font-medium text-gray-800 dark:text-white">{partner.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {partner.id} - {partner.location}
-                          </p>
-                        </div>
-                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-full">
-                          {partner.ordersDelivered} orders
-                        </span>
+                        {buttonLoading ? <LeafLoader /> : (
+                          <>
+                            <div>
+                              <p className="font-medium text-gray-800 dark:text-white">{partner.name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {partner.id} - {partner.location}
+                              </p>
+                            </div>
+                            <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-full">
+                              {partner.ordersDelivered} orders
+                            </span>
+                          </>
+                        )}
                       </Button>
                     ))}
                 </div>
@@ -547,8 +724,9 @@ export default function DeliveryManagement() {
                 onClick={closeAssignModal}
                 variant="outline"
                 className="px-3 py-1 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                disabled={buttonLoading}
               >
-                Cancel
+                {buttonLoading ? <LeafLoader /> : "Cancel"}
               </Button>
             </div>
           </div>
