@@ -613,19 +613,25 @@ export const getProductReviews = async (globalId) => {
 }
 
 // updateReviewStatus function - update review status (approve/reject)
-export const updateReviewStatus = async (productId, reviewId, approved) => {
+export const updateReviewStatus = async (productId, reviewId, isApproved) => {
   if (!Number.isInteger(Number(productId)) || Number(productId) < 1) {
-    throw new Error("Invalid productId: must be a positive integer")
+    throw new Error("Invalid productId: must be a positive integer");
   }
   if (!reviewId || !/^[0-9a-fA-F]{24}$/.test(reviewId)) {
-    throw new Error("Invalid reviewId: must be a valid MongoDB ObjectId")
+    throw new Error("Invalid reviewId: must be a valid MongoDB ObjectId");
   }
+
+  const status = isApproved ? "approved" : "rejected";
 
   return fetchWithAuth(`/api/products/${productId}/reviews/${reviewId}`, {
     method: "PUT",
-    body: JSON.stringify({ approved }),
-  })
-}
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+};
+
 
 // deleteReview function - delete a review
 export const deleteReview = async (globalId, reviewId) => {

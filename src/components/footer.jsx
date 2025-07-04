@@ -204,7 +204,7 @@ export default function Footer() {
                 <li>
                   <Link
                     href="/about"
-                    onClick={(e) => handleNavigation(e, "https://greenthicks-interns.vercel.app")}
+                    onClick={(e) => handleNavigation(e, "https://careers.greenthicks.live")}
                     className="text-muted-foreground hover:text-primary"
                   >
                     Inten verification
