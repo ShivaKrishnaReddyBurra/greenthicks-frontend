@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, use } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,13 +43,38 @@ const SkeletonLoader = () => (
   </div>
 );
 
-export default function ProductEditor({ params }) {
-  const { id } = use(params);
+const LeafLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="leafbase">
+        <div className="lf">
+          <div className="leaf1">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf2">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="leaf3">
+            <div className="leaf11"></div>
+            <div className="leaf12"></div>
+          </div>
+          <div className="tail"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function ProductEditor() {
+  const { id } = useParams();
   const router = useRouter();
   const { toast } = useToast();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isDeletingTag, setIsDeletingTag] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
   const [newTag, setNewTag] = useState("");
   const [newVitamin, setNewVitamin] = useState({ name: "", amount: "", daily: "" });
@@ -106,8 +131,23 @@ export default function ProductEditor({ params }) {
     }
   };
 
-  const handleRemoveTag = (tagToRemove) => {
-    setProduct({ ...product, tags: product.tags.filter((tag) => tag !== tagToRemove) });
+  const handleRemoveTag = async (tagToRemove) => {
+    setIsDeletingTag(true);
+    try {
+      setProduct({ ...product, tags: product.tags.filter((tag) => tag !== tagToRemove) });
+      toast({
+        title: "Success",
+        description: "Tag removed successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove tag.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingTag(false);
+    }
   };
 
   const handleAddVitamin = () => {
@@ -331,569 +371,635 @@ export default function ProductEditor({ params }) {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Edit Product</h1>
-          <p>Make changes to your product information, images, and settings.</p>
+    <>
+      {isDeletingTag && <LeafLoader />}
+      <style jsx>{`
+        .leafbase {
+          width: 80px;
+          height: 80px;
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        .lf {
+          width: 40px;
+          height: 40px;
+          position: relative;
+          animation: rotate 2s linear infinite;
+        }
+        .leaf1, .leaf2, .leaf3 {
+          position: absolute;
+          width: 20px;
+          height: 20px;
+          transform-origin: center;
+        }
+        .leaf1 {
+          transform: rotate(0deg);
+        }
+        .leaf2 {
+          transform: rotate(120deg);
+        }
+        .leaf3 {
+          transform: rotate(240deg);
+        }
+        .leaf11, .leaf12 {
+          position: absolute;
+          width: 10px;
+          height: 20px;
+          background: #22c55e;
+          border-radius: 10px 0 0 10px;
+          transform-origin: bottom;
+        }
+        .leaf11 {
+          transform: rotate(45deg);
+        }
+        .leaf12 {
+          transform: rotate(-45deg);
+          left: 10px;
+        }
+        .tail {
+          position: absolute;
+          width: 4px;
+          height: 20px;
+          background: #22c55e;
+          bottom: -20px;
+          border-radius: 2px;
+        }
+        @keyframes rotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Edit Product</h1>
+            <p>Make changes to your product information, images, and settings.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => router.push("/admin/products")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <Button variant="outline" onClick={() => window.open(`/products/${product.globalId}`, "_blank")}>
+              <Eye className="mr-2 h-4 w-4" />
+              Preview
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <div className="animate-spin mr-2 h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => router.push("/admin/products")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-          <Button variant="outline" onClick={() => window.open(`/products/${product.globalId}`, "_blank")}>
-            <Eye className="mr-2 h-4 w-4" />
-            Preview
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <>
-                <div className="animate-spin mr-2 h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div>
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="images">Images</TabsTrigger>
-          <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
-          <TabsTrigger value="policies">Policies</TabsTrigger>
-        </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="images">Images</TabsTrigger>
+            <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
+            <TabsTrigger value="policies">Policies</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="general" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Basic Information</CardTitle>
-              <CardDescription>Edit the basic details of your product.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Product Name *</Label>
-                  <Input
-                    id="name"
-                    value={product.name}
-                    onChange={(e) => setProduct({ ...product, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sku">SKU</Label>
-                  <Input
-                    id="sku"
-                    value={product.sku || ""}
-                    onChange={(e) => setProduct({ ...product, sku: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
-                <Textarea
-                  id="description"
-                  rows={4}
-                  value={product.description || ""}
-                  onChange={(e) => setProduct({ ...product, description: e.target.value })}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price (₹) *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    step="0.01"
-                    value={product.price || ""}
-                    onChange={(e) => setProduct({ ...product, price: parseFloat(e.target.value) || 0 })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="originalPrice">Original Price (₹)</Label>
-                  <Input
-                    id="originalPrice"
-                    type="number"
-                    step="0.01"
-                    value={product.originalPrice || ""}
-                    onChange={(e) => setProduct({ ...product, originalPrice: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="stock">Stock Quantity *</Label>
-                  <Input
-                    id="stock"
-                    type="number"
-                    value={product.stock || ""}
-                    onChange={(e) => setProduct({ ...product, stock: parseInt(e.target.value) || 0 })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select
-                    value={product.category}
-                    onValueChange={(value) => setProduct({ ...product, category: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="unit">Unit *</Label>
-                  <Input
-                    id="unit"
-                    value={product.unit || ""}
-                    onChange={(e) => setProduct({ ...product, unit: e.target.value })}
-                    placeholder="e.g., kg, pack"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tags</Label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {product.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                      {tag}
-                      <button onClick={() => handleRemoveTag(tag)} className="ml-1 rounded-full hover:bg-muted p-0.5">
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add a tag"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
-                  />
-                  <Button onClick={handleAddTag} size="sm">
-                    Add
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Product Status</CardTitle>
-              <CardDescription>Control the visibility and status of your product.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="published">Published</Label>
-                  <p className="text-sm text-muted-foreground">Make this product visible on your store.</p>
-                </div>
-                <Switch
-                  id="published"
-                  checked={product.published}
-                  onCheckedChange={(checked) => setProduct({ ...product, published: checked })}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="featured">Featured</Label>
-                  <p className="text-sm text-muted-foreground">Show in featured sections.</p>
-                </div>
-                <Switch
-                  id="featured"
-                  checked={product.featured}
-                  onCheckedChange={(checked) => setProduct({ ...product, featured: checked })}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="bestseller">Bestseller</Label>
-                  <p className="text-sm text-muted-foreground">Mark as a top-selling product.</p>
-                </div>
-                <Switch
-                  id="bestseller"
-                  checked={product.bestseller}
-                  onCheckedChange={(checked) => setProduct({ ...product, bestseller: checked })}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="seasonal">Seasonal</Label>
-                  <p className="text-sm text-muted-foreground">Mark as a seasonal product.</p>
-                </div>
-                <Switch
-                  id="seasonal"
-                  checked={product.seasonal}
-                  onCheckedChange={(checked) => setProduct({ ...product, seasonal: checked })}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="new">New</Label>
-                  <p className="text-sm text-muted-foreground">Mark as a new product.</p>
-                </div>
-                <Switch
-                  id="new"
-                  checked={product.new}
-                  onCheckedChange={(checked) => setProduct({ ...product, new: checked })}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="organic">Organic</Label>
-                  <p className="text-sm text-muted-foreground">Mark as an organic product.</p>
-                </div>
-                <Switch
-                  id="organic"
-                  checked={product.organic}
-                  onCheckedChange={(checked) => setProduct({ ...product, organic: checked })}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="images" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Product Images</CardTitle>
-              <CardDescription>Manage product images. The primary image is displayed first.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Keep Existing Images</Label>
-                <Switch
-                  checked={keepExistingImages}
-                  onCheckedChange={setKeepExistingImages}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {product.images.map((image) => (
-                  <div key={`${image.url}`} className="border rounded-lg overflow-hidden">
-                    <div className="relative aspect-square">
-                      <Image
-                        src={image.url || "/placeholder.png"}
-                        alt="Product image"
-                        fill
-                        className="object-cover"
-                      />
-                      {image.primary && (
-                        <div className="absolute top-2 left-2">
-                          <Badge variant="default">Primary</Badge>
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-3 flex justify-between items-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleSetPrimaryImage(image.url)}
-                        disabled={image.primary}
-                      >
-                        {image.primary ? "Primary" : "Set as Primary"}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleRemoveImage(image.url)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+          <TabsContent value="general" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Basic Information</CardTitle>
+                <CardDescription>Edit the basic details of your product.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Product Name *</Label>
+                    <Input
+                      id="name"
+                      value={product.name}
+                      onChange={(e) => setProduct({ ...product, name: e.target.value })}
+                      required
+                    />
                   </div>
-                ))}
-
-                {imagePreviews.map((preview, index) => (
-                  <div key={index} className="border rounded-lg overflow-hidden">
-                    <div className="relative aspect-square">
-                      <Image
-                        src={preview}
-                        alt={`New image preview ${index + 1}`}
-                        fill
-                        className="object-cover"
-                      />
-                      {newImagesPrimary[index] && (
-                        <div className="absolute top-2 left-2">
-                          <Badge variant="default">Primary</Badge>
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-3 flex justify-between items-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleSetPrimaryNewImage(index)}
-                        disabled={newImagesPrimary[index]}
-                      >
-                        {newImagesPrimary[index] ? "Primary" : "Set as Primary"}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleRemoveNewImage(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sku">SKU</Label>
+                    <Input
+                      id="sku"
+                      value={product.sku || ""}
+                      onChange={(e) => setProduct({ ...product, sku: e.target.value })}
+                    />
                   </div>
-                ))}
+                </div>
 
-                <div className="border border-dashed rounded-lg overflow-hidden">
-                  <div className="aspect-square flex flex-col items-center justify-center p-6 text-center">
-                    <ImagePlus className="h-10 w-10 text-muted-foreground mb-2" />
-                    <h3 className="font-medium">Add Image</h3>
-                    <p className="text-sm text-muted-foreground mb-4">Upload a new product image (max 3MB)</p>
-                    <Button variant="secondary" size="sm" asChild>
-                      <label>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          className="hidden"
-                          onChange={handleImageChange}
-                        />
-                      </label>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description *</Label>
+                  <Textarea
+                    id="description"
+                    rows={4}
+                    value={product.description || ""}
+                    onChange={(e) => setProduct({ ...product, description: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Price (₹) *</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      value={product.price || ""}
+                      onChange={(e) => setProduct({ ...product, price: parseFloat(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="originalPrice">Original Price (₹)</Label>
+                    <Input
+                      id="originalPrice"
+                      type="number"
+                      step="0.01"
+                      value={product.originalPrice || ""}
+                      onChange={(e) => setProduct({ ...product, originalPrice: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="stock">Stock Quantity *</Label>
+                    <Input
+                      id="stock"
+                      type="number"
+                      value={product.stock || ""}
+                      onChange={(e) => setProduct({ ...product, stock: parseInt(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category *</Label>
+                    <Select
+                      value={product.category}
+                      onValueChange={(value) => setProduct({ ...product, category: value })}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="unit">Unit *</Label>
+                    <Input
+                      id="unit"
+                      value={product.unit || ""}
+                      onChange={(e) => setProduct({ ...product, unit: e.target.value })}
+                      placeholder="e.g., kg, pack"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Tags</Label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {product.tags.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                        {tag}
+                        <button
+                          onClick={() => handleRemoveTag(tag)}
+                          className="ml-1 rounded-full hover:bg-muted p-0.5"
+                          disabled={isDeletingTag}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add a tag"
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
+                    />
+                    <Button onClick={handleAddTag} size="sm">
+                      Add
                     </Button>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardContent>
+            </Card>
 
-        <TabsContent value="nutrition" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Nutrition Facts</CardTitle>
-              <CardDescription>Add nutritional information for your product.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="calories">Calories</Label>
-                  <Input
-                    id="calories"
-                    type="number"
-                    value={product.nutrition.calories || ""}
-                    onChange={(e) =>
-                      setProduct({
-                        ...product,
-                        nutrition: { ...product.nutrition, calories: parseFloat(e.target.value) || 0 },
-                      })
-                    }
+            <Card>
+              <CardHeader>
+                <CardTitle>Product Status</CardTitle>
+                <CardDescription>Control the visibility and status of your product.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="published">Published</Label>
+                    <p className="text-sm text-muted-foreground">Make this product visible on your store.</p>
+                  </div>
+                  <Switch
+                    id="published"
+                    checked={product.published}
+                    onCheckedChange={(checked) => setProduct({ ...product, published: checked })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="protein">Protein (g)</Label>
-                  <Input
-                    id="protein"
-                    type="number"
-                    step="0.1"
-                    value={product.nutrition.protein || ""}
-                    onChange={(e) =>
-                      setProduct({
-                        ...product,
-                        nutrition: { ...product.nutrition, protein: parseFloat(e.target.value) || 0 },
-                      })
-                    }
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="featured">Featured</Label>
+                    <p className="text-sm text-muted-foreground">Show in featured sections.</p>
+                  </div>
+                  <Switch
+                    id="featured"
+                    checked={product.featured}
+                    onCheckedChange={(checked) => setProduct({ ...product, featured: checked })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="carbs">Carbs (g)</Label>
-                  <Input
-                    id="carbs"
-                    type="number"
-                    step="0.1"
-                    value={product.nutrition.carbs || ""}
-                    onChange={(e) =>
-                      setProduct({
-                        ...product,
-                        nutrition: { ...product.nutrition, carbs: parseFloat(e.target.value) || 0 },
-                      })
-                    }
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="bestseller">Bestseller</Label>
+                    <p className="text-sm text-muted-foreground">Mark as a top-selling product.</p>
+                  </div>
+                  <Switch
+                    id="bestseller"
+                    checked={product.bestseller}
+                    onCheckedChange={(checked) => setProduct({ ...product, bestseller: checked })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fat">Fat (g)</Label>
-                  <Input
-                    id="fat"
-                    type="number"
-                    step="0.1"
-                    value={product.nutrition.fat || ""}
-                    onChange={(e) =>
-                      setProduct({
-                        ...product,
-                        nutrition: { ...product.nutrition, fat: parseFloat(e.target.value) || 0 },
-                      })
-                    }
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="seasonal">Seasonal</Label>
+                    <p className="text-sm text-muted-foreground">Mark as a seasonal product.</p>
+                  </div>
+                  <Switch
+                    id="seasonal"
+                    checked={product.seasonal}
+                    onCheckedChange={(checked) => setProduct({ ...product, seasonal: checked })}
                   />
                 </div>
-              </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="new">New</Label>
+                    <p className="text-sm text-muted-foreground">Mark as a new product.</p>
+                  </div>
+                  <Switch
+                    id="new"
+                    checked={product.new}
+                    onCheckedChange={(checked) => setProduct({ ...product, new: checked })}
+                  />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="organic">Organic</Label>
+                    <p className="text-sm text-muted-foreground">Mark as an organic product.</p>
+                  </div>
+                  <Switch
+                    id="organic"
+                    checked={product.organic}
+                    onCheckedChange={(checked) => setProduct({ ...product, organic: checked })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <div className="space-y-2">
-                <Label htmlFor="fiber">Fiber (g)</Label>
-                <Input
-                  id="fiber"
-                  type="number"
-                  step="0.1"
-                  value={product.nutrition.fiber || ""}
-                  onChange={(e) =>
-                    setProduct({
-                      ...product,
-                      nutrition: { ...product.nutrition, fiber: parseFloat(e.target.value) || 0 },
-                    })
-                  }
-                />
-              </div>
-
-              <div className="space-y-4">
-                <Label>Vitamins & Minerals</Label>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>% Daily Value</TableHead>
-                      <TableHead className="w-[100px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {product.nutrition.vitamins.map((vitamin, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{vitamin.name}</TableCell>
-                        <TableCell>{vitamin.amount}</TableCell>
-                        <TableCell>{vitamin.daily}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" onClick={() => handleRemoveVitamin(index)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+          <TabsContent value="images" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Product Images</CardTitle>
+                <CardDescription>Manage product images. The primary image is displayed first.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Keep Existing Images</Label>
+                  <Switch
+                    checked={keepExistingImages}
+                    onCheckedChange={setKeepExistingImages}
+                  />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {product.images.map((image) => (
+                    <div key={`${image.url}`} className="border rounded-lg overflow-hidden">
+                      <div className="relative aspect-square">
+                        <Image
+                          src={image.url || "/placeholder.png"}
+                          alt="Product image"
+                          fill
+                          className="object-cover"
+                        />
+                        {image.primary && (
+                          <div className="absolute top-2 left-2">
+                            <Badge variant="default">Primary</Badge>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3 flex justify-between items-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSetPrimaryImage(image.url)}
+                          disabled={image.primary}
+                        >
+                          {image.primary ? "Primary" : "Set as Primary"}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemoveImage(image.url)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="border rounded-lg overflow-hidden">
+                      <div className="relative aspect-square">
+                        <Image
+                          src={preview}
+                          alt={`New image preview ${index + 1}`}
+                          fill
+                          className="object-cover"
+                        />
+                        {newImagesPrimary[index] && (
+                          <div className="absolute top-2 left-2">
+                            <Badge variant="default">Primary</Badge>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3 flex justify-between items-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSetPrimaryNewImage(index)}
+                          disabled={newImagesPrimary[index]}
+                        >
+                          {newImagesPrimary[index] ? "Primary" : "Set as Primary"}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRemoveNewImage(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="border border-dashed rounded-lg overflow-hidden">
+                    <div className="aspect-square flex flex-col items-center justify-center p-6 text-center">
+                      <ImagePlus className="h-10 w-10 text-muted-foreground mb-2" />
+                      <h3 className="font-medium">Add Image</h3>
+                      <p className="text-sm text-muted-foreground mb-4">Upload a new product image (max 3MB)</p>
+                      <Button variant="secondary" size="sm" asChild>
+                        <label>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={handleImageChange}
+                          />
+                        </label>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="nutrition" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Nutrition Facts</CardTitle>
+                <CardDescription>Add nutritional information for your product.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="vitaminName">Name</Label>
+                    <Label htmlFor="calories">Calories</Label>
                     <Input
-                      id="vitaminName"
-                      value={newVitamin.name}
-                      onChange={(e) => setNewVitamin({ ...newVitamin, name: e.target.value })}
-                      placeholder="e.g., Vitamin C"
+                      id="calories"
+                      type="number"
+                      value={product.nutrition.calories || ""}
+                      onChange={(e) =>
+                        setProduct({
+                          ...product,
+                          nutrition: { ...product.nutrition, calories: parseFloat(e.target.value) || 0 },
+                        })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="vitaminAmount">Amount</Label>
+                    <Label htmlFor="protein">Protein (g)</Label>
                     <Input
-                      id="vitaminAmount"
-                      value={newVitamin.amount}
-                      onChange={(e) => setNewVitamin({ ...newVitamin, amount: e.target.value })}
-                      placeholder="e.g., 90mg"
+                      id="protein"
+                      type="number"
+                      step="0.1"
+                      value={product.nutrition.protein || ""}
+                      onChange={(e) =>
+                        setProduct({
+                          ...product,
+                          nutrition: { ...product.nutrition, protein: parseFloat(e.target.value) || 0 },
+                        })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="vitaminDaily">% Daily Value</Label>
+                    <Label htmlFor="carbs">Carbs (g)</Label>
                     <Input
-                      id="vitaminDaily"
-                      value={newVitamin.daily}
-                      onChange={(e) => setNewVitamin({ ...newVitamin, daily: e.target.value })}
-                      placeholder="e.g., 100%"
+                      id="carbs"
+                      type="number"
+                      step="0.1"
+                      value={product.nutrition.carbs || ""}
+                      onChange={(e) =>
+                        setProduct({
+                          ...product,
+                          nutrition: { ...product.nutrition, carbs: parseFloat(e.target.value) || 0 },
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fat">Fat (g)</Label>
+                    <Input
+                      id="fat"
+                      type="number"
+                      step="0.1"
+                      value={product.nutrition.fat || ""}
+                      onChange={(e) =>
+                        setProduct({
+                          ...product,
+                          nutrition: { ...product.nutrition, fat: parseFloat(e.target.value) || 0 },
+                        })
+                      }
                     />
                   </div>
                 </div>
-                <Button onClick={handleAddVitamin} size="sm">
-                  Add Vitamin/Mineral
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="policies" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Product Policies</CardTitle>
-              <CardDescription>Describe your product policies.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="returnPolicy">Return Policy</Label>
-                <Textarea
-                  id="returnPolicy"
-                  rows="3"
-                  value={product.policies.return || ""}
-                  onChange={(e) =>
-                    setProduct({
-                      ...product,
-                      policies: { ...product.policies, return: e.target.value },
-                    })
-                  }
-                  placeholder="Describe the return policy..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="shippingPolicy">Shipping Policy</Label>
-                <Textarea
-                  id="shippingPolicy"
-                  rows="3"
-                  value={product.policies.shipping || ""}
-                  onChange={(e) =>
-                    setProduct({
-                      ...product,
-                      policies: { ...product.policies, shipping: e.target.value },
-                    })
-                  }
-                  placeholder="Describe the shipping policy..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="availability">Availability</Label>
-                <Textarea
-                  id="availability"
-                  rows="3"
-                  value={product.policies.availability || ""}
-                  onChange={(e) =>
-                    setProduct({
-                      ...product,
-                      policies: { ...product.policies, availability: e.target.value },
-                    })
-                  }
-                  placeholder="Describe availability..."
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fiber">Fiber (g)</Label>
+                  <Input
+                    id="fiber"
+                    type="number"
+                    step="0.1"
+                    value={product.nutrition.fiber || ""}
+                    onChange={(e) =>
+                      setProduct({
+                        ...product,
+                        nutrition: { ...product.nutrition, fiber: parseFloat(e.target.value) || 0 },
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <Label>Vitamins & Minerals</Label>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>% Daily Value</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {product.nutrition.vitamins.map((vitamin, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{vitamin.name}</TableCell>
+                          <TableCell>{vitamin.amount}</TableCell>
+                          <TableCell>{vitamin.daily}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" onClick={() => handleRemoveVitamin(index)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="vitaminName">Name</Label>
+                      <Input
+                        id="vitaminName"
+                        value={newVitamin.name}
+                        onChange={(e) => setNewVitamin({ ...newVitamin, name: e.target.value })}
+                        placeholder="e.g., Vitamin C"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="vitaminAmount">Amount</Label>
+                      <Input
+                        id="vitaminAmount"
+                        value={newVitamin.amount}
+                        onChange={(e) => setNewVitamin({ ...newVitamin, amount: e.target.value })}
+                        placeholder="e.g., 90mg"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="vitaminDaily">% Daily Value</Label>
+                      <Input
+                        id="vitaminDaily"
+                        value={newVitamin.daily}
+                        onChange={(e) => setNewVitamin({ ...newVitamin, daily: e.target.value })}
+                        placeholder="e.g., 100%"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={handleAddVitamin} size="sm">
+                    Add Vitamin/Mineral
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="policies" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Product Policies</CardTitle>
+                <CardDescription>Describe your product policies.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="returnPolicy">Return Policy</Label>
+                  <Textarea
+                    id="returnPolicy"
+                    rows="3"
+                    value={product.policies.return || ""}
+                    onChange={(e) =>
+                      setProduct({
+                        ...product,
+                        policies: { ...product.policies, return: e.target.value },
+                      })
+                    }
+                    placeholder="Describe the return policy..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shippingPolicy">Shipping Policy</Label>
+                  <Textarea
+                    id="shippingPolicy"
+                    rows="3"
+                    value={product.policies.shipping || ""}
+                    onChange={(e) =>
+                      setProduct({
+                        ...product,
+                        policies: { ...product.policies, shipping: e.target.value },
+                      })
+                    }
+                    placeholder="Describe the shipping policy..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="availability">Availability</Label>
+                  <Textarea
+                    id="availability"
+                    rows="3"
+                    value={product.policies.availability || ""}
+                    onChange={(e) =>
+                      setProduct({
+                        ...product,
+                        policies: { ...product.policies, availability: e.target.value },
+                      })
+                    }
+                    placeholder="Describe availability..."
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </>
   );
 }
