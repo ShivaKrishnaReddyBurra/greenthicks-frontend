@@ -102,8 +102,8 @@ export default function Footer() {
                   <span className="sr-only">YouTube</span>
                 </Link>
                 <Link
-                  href="https://wa.me/9705045597"
-                  onClick={(e) => handleNavigation(e, "https://wa.me/9705045597")}
+                  href="https://wa.me/8919512741"
+                  onClick={(e) => handleNavigation(e, "https://wa.me/8919512741")}
                   className="text-muted-foreground hover:text-primary"
                 >
                   <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -292,7 +292,7 @@ export default function Footer() {
                 <div className="flex items-center space-x-3">
                   <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   <span className="text-muted-foreground text-sm sm:text-base">
-                    +91 9705045597
+                    +91 8919512741
                   </span>
                 </div>
                 <div className="flex items-center space-x-3">

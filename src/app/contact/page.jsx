@@ -114,7 +114,7 @@ export default function ContactPage() {
               <p className="text-muted-foreground">
                 Customer Service:
                 <br />
-                +91 9705045597
+                +91 8919512741
               </p>
             </div>
 

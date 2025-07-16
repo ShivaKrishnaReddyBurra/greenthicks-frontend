@@ -180,7 +180,7 @@ export default function TermsPage() {
             <p>If you have any questions about these Terms, please contact us at:</p>
             <ul className="list-none pl-0 mb-4">
               <li>Email: greenthickss@gmail.com</li>
-              <li>Phone: +91 9705045597</li>
+              <li>Phone: +91 8919512741</li>
               <li>Address: Hanamkonda, Warangal, Telangana, India</li>
             </ul>
           </section>

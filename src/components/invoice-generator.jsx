@@ -171,7 +171,7 @@ export default function InvoiceGenerator({ order }) {
                 <img src={logo.src || "/placeholder.svg"} alt="Green Thicks" className="h-8 xs:h-10 sm:h-12 mb-1 xs:mb-2 inline-block" />
                 <p className="font-bold text-[10px] xs:text-sm sm:text-base">Green Thicks</p>
                 <p className="text-gray-600 text-[8px] xs:text-xs sm:text-sm">Hanmakonda, Telangana, India</p>
-                <p className="text-gray-600 text-[8px] xs:text-xs sm:text-sm">Tel: +91 9705045597</p>
+                <p className="text-gray-600 text-[8px] xs:text-xs sm:text-sm">Tel: +91 8919512741</p>
                 <p className="text-gray-600 text-[8px] xs:text-xs sm:text-sm">Email: greenthickss@gmail.com</p>
               </div>
             </div>
